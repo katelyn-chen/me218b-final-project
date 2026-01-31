@@ -22,5 +22,7 @@
 // prototypes for event checkers
 
 bool Check4Keystroke(void);
+bool Check4Beacon(void);
+bool Check4Command(void);
 
 #endif /* EventCheckers_H */

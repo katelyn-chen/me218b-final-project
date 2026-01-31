@@ -119,3 +119,25 @@ bool Check4Keystroke(void)
   return false;
 }
 
+
+
+bool Check4Beacon(void)
+{
+  // read from beacon sensor input pin
+  // if beacon detected, post ES_BEACON_DETECTED event
+    ES_Event_t ThisEvent;
+    ThisEvent.EventType   = ES_BEACON_DETECTED;
+    ThisEvent.EventParam  = 0;
+    ES_PostAll(ThisEvent);
+    return true;
+}
+
+bool Check4Command(void)
+{
+  // send query byte to Command generator (OxAA)
+  // if OxFF command received:
+    // read next byte for command value
+    // create ES_COMMAND_RECEIVED event
+    // set EventParam to command value
+    // post ES_COMMAND_RECEIVED event
+}
