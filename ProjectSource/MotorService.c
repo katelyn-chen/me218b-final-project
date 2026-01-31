@@ -15,6 +15,28 @@
 #include "dbprintf.h"
 #include "ADService.h"
 
+/*----------------------------- Module Defines ----------------------------*/
+// Period = Target / (PBClk * Prescaler) - 1
+#define PWM_PERIOD 49999 // 200Hz PWM for PBClk = 20MHz;
+//#define PWM_PERIOD 39999 // 250Hz, 1:2; 500Hz, 1:1
+//#define PWM_PERIOD 19999 // 1000Hz, 1:1
+//#define PWM_PERIOD 9999 // 2000Hz, 1:1
+// #define PWM_PERIOD 1999 // 10000Hz, 1:1
+
+#define PRESCALE 2.0
+#define PERCENT 1.0
+#define MAX_RPM 150.0 // Approximate for large motor
+
+// Pin Definitions
+#define IO_LINE                 LATBbits.LATB8
+/*---------------------------- Module Functions ---------------------------*/
+/* prototypes for private functions for this service.They should be functions
+   relevant to the behavior of this service
+*/
+void InitTimer2();
+void InitTimer4();
+void InitTimer3();
+void InitPins();
 
 /*---------------------------- Module Variables ---------------------------*/
 // with the introduction of Gen2, we need a module level Priority variable
@@ -25,89 +47,29 @@ static bool NewEdge = false;
 static volatile uint32_t RolloverCount=0;
 static volatile float targetRPM=0;
 
-// Period = Target / (PBClk * Prescaler) - 1
-#define PWM_PERIOD 49999 // 200Hz PWM for PBClk = 20MHz;
-//#define PWM_PERIOD 39999 // 250Hz, 1:2; 500Hz, 1:1
-//#define PWM_PERIOD 19999 // 1000Hz, 1:1
-//#define PWM_PERIOD 9999 // 2000Hz, 1:1
-// #define PWM_PERIOD 1999 // 10000Hz, 1:1
-
-#define PRESCALE 2.0
-#define PERCENT 1.0
-
 static float Kp = 0.5; 
 static float Ki = 0.2;
 static float accumulatedError = 0;
-#define MAX_RPM 150.0 // Approximate for large motor
 
 /*------------------------------ Module Code ------------------------------*/
 
 bool InitMotorService(uint8_t Priority)
-{
-    DB_printf("MotorService init\n");
-    
+{    
     MyPriority = Priority;
     ES_Event_t ThisEvent;
     ThisEvent.EventType = ES_INIT;
-
-    // configure h-bridge pins as digital outputs (RB2, RB3)
-    TRISBbits.TRISB2 = 0; // RB2 output
-    ANSELBbits.ANSB2 = 0;
-    TRISBbits.TRISB3 = 0; // RB3 output
-    ANSELBbits.ANSB3 = 0;
-    RPB3Rbits.RPB3R = 0b0101;
-
-    TRISBbits.TRISB8 = 1; // RB8 digital input
     
-    TRISBbits.TRISB10 = 1; // RB10, encoder input
+    InitPins();
+    InitTimer2();
+    InitTimer3();
+    InitTimer4();
 
-    // configure pins for 74ACT244 (RB4,5,9,11,12,13,14,15)
-    TRISBbits.TRISB4 = 0; // RB4 output
-    TRISBbits.TRISB5 = 0; // RB5 output
-    TRISBbits.TRISB9 = 0; // RB9 output
-    TRISBbits.TRISB11 = 0; // RB11 output
-    TRISBbits.TRISB12 = 0; // RB12 output
-    TRISBbits.TRISB13 = 0; // RB13 output
-    TRISBbits.TRISB14 = 0; // RB14 output
-    TRISBbits.TRISB15 = 0; // RB15 output
-    ANSELBbits.ANSB12 = 0;
-    ANSELBbits.ANSB13 = 0;
-    ANSELBbits.ANSB14 = 0;
-    ANSELBbits.ANSB15 = 0;
-
-   
-    // (configure Timer 2 for PWM)
-    T2CONbits.ON = 0; // turn off Timer2
-    T2CONbits.TCS = 0; // select internal PBCLK source
-//    T2CONbits.TCKPS = 0b010; // select prescaler 1:2        
-    // T2CONbits.TCKPS = 0b000; // prescaler 1:1        
-
-    // measuring time constant
-    T2CONbits.TCKPS = 0b110; // Change prescaler to 1:64 for a slow clock
-    PR2 = 31249;             // Set for 10Hz (20MHz / 64 / 10Hz - 1)
-
-    TMR2 = 0; // clear timer 2 counter
-    // PR2 = PWM_PERIOD; // set period for 200Hz PWM
-    IFS0CLR = _IFS0_T2IF_MASK; // clear interrupt flag
-
-    
     // (configure output compare)
     OC1CONbits.ON = 0;
     OC1CONbits.OCTSEL = 0;
     OC1R = 0;
     OC1RS = 0; // initialize duty cycle to 0%
     OC1CONbits.OCM = 0b110; // PWM mode on Timer2
-    
-    // (configure Timer 3 for input capture)
-    T3CONbits.ON = 0; // turn off Timer3
-    T3CONbits.TCS = 0;
-   T3CONbits.TCKPS = 0b010; // select prescaler 1:2        
-    // T3CONbits.TCKPS = 0b000; // prescaler 1:1        
-    TMR3 = 0; // clear timer 3 counter
-    PR3 = 0xFFFF;
-    IPC3bits.T3IP = 6;
-    IEC0SET = _IEC0_T3IE_MASK; // enables IC  for timer 3
-    IFS0CLR = _IFS0_T3IF_MASK; // clear interrupt flag
     
     // (configure input capture)
     INTCONbits.MVEC=1;
@@ -121,25 +83,16 @@ bool InitMotorService(uint8_t Priority)
     IEC0SET = _IEC0_IC2IE_MASK; // enables IC  for timer 3
     IFS0CLR = _IFS0_IC2IF_MASK; // clear interrupt flag
 
-    // (configure Timer 4 for control loop timing)
-    T4CONbits.ON = 0; // turn off Timer4
-    T4CONbits.TCS = 0;
-//    T4CONbits.TCKPS = 0b010; // select prescaler 1:2        
-    T4CONbits.TCKPS = 0b000; // prescaler 1:1        
-    TMR4 = 0; // clear timer 4 counter
-    PR4 = 19999; // 200MHz control loop with 1:2 prescaler
-    IPC4bits.T4IP = 5;
-    IEC0SET = _IEC0_T4IE_MASK; // enables IC  for timer 4
-    IFS0CLR = _IFS0_T4IF_MASK; // clear interrupt flag
+    
 
     IC2CONbits.ON = 1;
-    // (start timer)
+    // start timers 
     OC1CONbits.ON = 1; // turn on OC1 module
     T2CONbits.ON = 1; // start Timer2
     T3CONbits.ON = 1; // start Timer3
     // T4CONbits.ON = 1; // start Timer4
     
-    __builtin_enable_interrupts(); // ?
+    __builtin_enable_interrupts();
     
     if (ES_PostToService(MyPriority, ThisEvent) == true) {
         return true;
@@ -218,6 +171,75 @@ ES_Event_t RunMotorService(ES_Event_t ThisEvent)
     return ReturnEvent;
 }
 
+void InitPins() {
+    // configure h-bridge pins as digital outputs (RB2, RB3)
+    TRISBbits.TRISB2 = 0; // RB2 output
+    ANSELBbits.ANSB2 = 0;
+    TRISBbits.TRISB3 = 0; // RB3 output
+    ANSELBbits.ANSB3 = 0;
+    RPB3Rbits.RPB3R = 0b0101;
+
+    TRISBbits.TRISB8 = 1; // RB8 digital input
+    
+    TRISBbits.TRISB10 = 1; // RB10, encoder input
+
+    // configure pins for 74ACT244 (RB4,5,9,11,12,13,14,15)
+    TRISBbits.TRISB4 = 0; // RB4 output
+    TRISBbits.TRISB5 = 0; // RB5 output
+    TRISBbits.TRISB9 = 0; // RB9 output
+    TRISBbits.TRISB11 = 0; // RB11 output
+    TRISBbits.TRISB12 = 0; // RB12 output
+    TRISBbits.TRISB13 = 0; // RB13 output
+    TRISBbits.TRISB14 = 0; // RB14 output
+    TRISBbits.TRISB15 = 0; // RB15 output
+    ANSELBbits.ANSB12 = 0;
+    ANSELBbits.ANSB13 = 0;
+    ANSELBbits.ANSB14 = 0;
+    ANSELBbits.ANSB15 = 0;
+    
+}
+void InitTimer2() {
+    // (configure Timer 2 for PWM)
+    T2CONbits.ON = 0; // turn off Timer2
+    T2CONbits.TCS = 0; // select internal PBCLK source
+    // T2CONbits.TCKPS = 0b010; // select prescaler 1:2        
+    // T2CONbits.TCKPS = 0b000; // prescaler 1:1        
+
+    // measuring time constant
+    T2CONbits.TCKPS = 0b110; // Change prescaler to 1:64 for a slow clock
+    PR2 = 31249;             // Set for 10Hz (20MHz / 64 / 10Hz - 1)
+
+    TMR2 = 0; // clear timer 2 counter
+    // PR2 = PWM_PERIOD; // set period for 200Hz PWM
+    IFS0CLR = _IFS0_T2IF_MASK; // clear interrupt flag
+}
+
+void InitTimer3() {
+    // (configure Timer 3 for input capture)
+    T3CONbits.ON = 0; // turn off Timer3
+    T3CONbits.TCS = 0;
+    T3CONbits.TCKPS = 0b010; // select prescaler 1:2        
+    // T3CONbits.TCKPS = 0b000; // prescaler 1:1        
+    TMR3 = 0; // clear timer 3 counter
+    PR3 = 0xFFFF;
+    IPC3bits.T3IP = 6;
+    IEC0SET = _IEC0_T3IE_MASK; // enables IC  for timer 3
+    IFS0CLR = _IFS0_T3IF_MASK; // clear interrupt flag
+}
+
+void InitTimer4() {
+    // (configure Timer 4 for control loop timing)
+    T4CONbits.ON = 0; // turn off Timer4
+    T4CONbits.TCS = 0;
+    T4CONbits.TCKPS = 0b000; // prescaler 1:1        
+    TMR4 = 0; // clear timer 4 counter
+    PR4 = 19999; // 200MHz control loop with 1:2 prescaler
+    IPC4bits.T4IP = 5;
+    IEC0SET = _IEC0_T4IE_MASK; // enables IC  for timer 4
+    IFS0CLR = _IFS0_T4IF_MASK; // clear interrupt flag
+    
+}
+
  void __ISR(_INPUT_CAPTURE_2_VECTOR, IPL7SOFT) IC2Handler(void)
  {
      uint32_t CaptureTime = IC2BUF; // read the captured time
@@ -245,7 +267,7 @@ ES_Event_t RunMotorService(ES_Event_t ThisEvent)
 
  void __ISR(_TIMER_4_VECTOR, IPL5SOFT) TIMER4Handler(void) {
     __builtin_disable_interrupts();
-    LATBbits.LATB8 = 1; 
+    IO_LINE = 1; 
 
     if (Period != 0) {
         // Calculate Actual RPM (Large Motor: 512 PPR, 5.9:1 Gearbox)
@@ -275,7 +297,7 @@ ES_Event_t RunMotorService(ES_Event_t ThisEvent)
     }
     
     // Lower I/O line 
-    LATBbits.LATB8 = 0; 
+    IO_LINE = 0; 
     IFS0CLR = _IFS0_T4IF_MASK;
     __builtin_enable_interrupts();
 }
