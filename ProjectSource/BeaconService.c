@@ -56,13 +56,13 @@ ES_Event_t RunBeaconService(ES_Event_t ThisEvent)
   ES_Event_t ReturnEvent;
   ReturnEvent.EventType = ES_NO_EVENT; // assume no errors
   // if ES_BEACON_DETECTED event
-    if (ThisEvent.EventType == ES_BEACON_DETECTED)
+    if (ThisEvent.EventType == ES_BEACON_FOUND)
     {
         // create new event to post to motor service
         ES_Event_t NewEvent;
-        NewEvent.EventType = ES_STOP_MOTOR;
+        NewEvent.EventType = ES_BEACON_FOUND;
         // post to motor service
-        ES_PostToService(MotorServicePriority, NewEvent);
+        PostMotorService(NewEvent);
     }
   // post to motor service
   return ReturnEvent;

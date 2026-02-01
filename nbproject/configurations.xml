@@ -52,6 +52,7 @@
       <itemPath>ProjectHeaders/PWM_PIC32.h</itemPath>
       <itemPath>ProjectHeaders/MotorService.h</itemPath>
       <itemPath>ProjectHeaders/BeaconService.h</itemPath>
+      <itemPath>ProjectHeaders/SPIService.h</itemPath>
     </logicalFolder>
     <logicalFolder name="LinkerScript"
                    displayName="Linker Files"
@@ -71,6 +72,7 @@
       <itemPath>ProjectSource/MotorService.c</itemPath>
       <itemPath>ProjectSource/ADService.c</itemPath>
       <itemPath>ProjectSource/BeaconService.c</itemPath>
+      <itemPath>ProjectSource/SPIService.c</itemPath>
     </logicalFolder>
     <logicalFolder name="ExternalFiles"
                    displayName="Important Files"

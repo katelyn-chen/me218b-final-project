@@ -37,9 +37,26 @@ void InitTimer2();
 void InitTimer4();
 void InitTimer3();
 void InitPins();
+void StopMotors();
+void ConfigureRotation(uint16_t);
+void ConfigureTranslation(uint16_t);
+void StartSearchRotation();
+void StartRotationTimer();
+void SetLeftMotorPWM(uint16_t);
+void SetRightMotorPWM(uint16_t);
+void OCSetup(uint16_t);
 
 /*---------------------------- Module Variables ---------------------------*/
 // with the introduction of Gen2, we need a module level Priority variable
+typedef enum {
+    MOTOR_STOP,
+    MOTOR_ROTATE,
+    MOTOR_TRANSLATE,
+    MOTOR_TAPE_DETECT,
+    MOTOR_BEACON_ALIGN
+} MotorState_t;
+static MotorState_t CurrentState;
+
 static uint8_t MyPriority;
 static volatile uint32_t LastCapture=0;
 static volatile uint32_t Period=0;
@@ -61,39 +78,25 @@ bool InitMotorService(uint8_t Priority)
     
     InitPins();
     InitTimer2();
-    InitTimer3();
     InitTimer4();
-
-    // (configure output compare)
-    OC1CONbits.ON = 0;
-    OC1CONbits.OCTSEL = 0;
-    OC1R = 0;
-    OC1RS = 0; // initialize duty cycle to 0%
-    OC1CONbits.OCM = 0b110; // PWM mode on Timer2
+    OCSetup(1);
+    OCSetup(2);
+    OCSetup(3);
+    OCSetup(4);
     
-    // (configure input capture)
-    INTCONbits.MVEC=1;
-    IC2R = 0b0011; // map IC1 to RB10
-    IC2CONbits.ON = 0;
-    IC2CONbits.C32 = 0;
-    IC2CONbits.ICTMR = 0; // use Timer3
-    IC2CONbits.ICM = 0b011; // capture every rising edge on Timer3
-    IC2CONbits.ICI = 0b000;
-    IPC2bits.IC2IP = 7;
-    IEC0SET = _IEC0_IC2IE_MASK; // enables IC  for timer 3
-    IFS0CLR = _IFS0_IC2IF_MASK; // clear interrupt flag
+    CurrentState = MOTOR_STOP;
 
-    
-
-    IC2CONbits.ON = 1;
     // start timers 
     OC1CONbits.ON = 1; // turn on OC1 module
+    OC2CONbits.ON = 1; // turn on OC2 module
+    OC3CONbits.ON = 1; // turn on OC3 module
+    OC4CONbits.ON = 1; // turn on OC4 module
+
     T2CONbits.ON = 1; // start Timer2
-    T3CONbits.ON = 1; // start Timer3
     // T4CONbits.ON = 1; // start Timer4
     
     __builtin_enable_interrupts();
-    
+    StopMotors();
     if (ES_PostToService(MyPriority, ThisEvent) == true) {
         return true;
     } else {
@@ -110,74 +113,78 @@ ES_Event_t RunMotorService(ES_Event_t ThisEvent)
 {
     ES_Event_t ReturnEvent;
     ReturnEvent.EventType = ES_NO_EVENT;
-    switch (ThisEvent.EventType) {
-        case ES_INIT:
-        {
-          DB_printf("\rES_INIT received in MotorService\n");
-        }
-        break;
-
-        case ES_TIMEOUT:
-        {
-            if (ThisEvent.EventParam == MotorTimer) {
-                // Force direction to Forward
-                LATBbits.LATB2 = 1;
-                LATBbits.LATB3 = 0;
-                
-                // --- MODIFICATION FOR TESTING ---
-                // Set a constant 50% Duty Cycle step
-                OC1RS = PR2 / 2; 
-                
-                // Print status just to confirm code is running
-                DB_printf("Testing Mode: 10Hz Step Active\n");
-                
-                ES_Timer_InitTimer(MotorTimer, 500); // Slow down the print rate
-//                 if (PORTBbits.RB8 == 1) {
-//                     // set motor direction forward
-//                     LATBbits.LATB2 = 1;
-//                     LATBbits.LATB3 = 0;
-//                 } else {
-//                     // set motor direction reverse
-//                     LATBbits.LATB2 = 0;
-//                     LATBbits.LATB3 = 1;
-//                 }
-              
-//                 // query ADService for next time interval
-//                 int32_t PotValue = GetPotValue();
-// //                DB_printf("PotValue: %d \n:", PotValue);
-//                 // set OC1RS for new duty cycle
-//                 OC1RS = PotValue * PWM_PERIOD * PERCENT / 1023; // scale 0-1023 to 0-PWM_PERIOD
-//                 targetRPM = (float)PotValue * MAX_RPM / 1023.0;
-//                 DB_printf("Duty: %d \n", OC1RS);
-//                 DB_printf("Percent: %d \n", PERCENT);
-// //                DB_printf("LastCapture: %d\n", LastCapture);
-// //                DB_printf("RolloverCount: %d\n", RolloverCount);
-//                 if (NewEdge == true) {
-//                     uint32_t currentPeriod = Period;
-//                     DB_printf("Current Period: %d\n", currentPeriod);
-//                     NewEdge = false;
-//                  }
-//                 // calculate RPM
-//                 uint32_t rpm = 0;
-//                 if (Period != 0) {
-//                     rpm = (60 * (20000000 / Period) / (512 * 3));
-//                 }
-//                 DB_printf("rpm: %d\n", rpm);
-//                 ES_Timer_InitTimer(MotorTimer, 100);
-            }
-        }
-        break;
-    }
-    return ReturnEvent;
+    switch (CurrentState)
+   {
+       case MOTOR_STOP:
+           if (ThisEvent.EventType == ES_ROTATE)
+           {
+               ConfigureRotation(ThisEvent.EventParam);
+               StartRotationTimer(ThisEvent.EventParam);
+               CurrentState = MOTOR_ROTATE;
+           }
+           else if (ThisEvent.EventType == ES_TRANSLATE)
+           {
+               ConfigureTranslation(ThisEvent.EventParam);
+               CurrentState = MOTOR_TRANSLATE;
+           }
+           else if (ThisEvent.EventType == ES_TAPE_DETECT)
+           {
+               StartSlowForwardMotion();
+               CurrentState = MOTOR_TAPE_DETECT;
+           }
+           else if (ThisEvent.EventType == ES_ALIGN)
+           {
+               StartSearchRotation();
+               CurrentState = MOTOR_BEACON_ALIGN;
+           }
+           break;
+       case MOTOR_ROTATE:
+           if (ThisEvent.EventType == ES_TIMEOUT)
+           {
+               StopMotors();
+               CurrentState = MOTOR_STOP;
+           }
+           break;
+       case MOTOR_TRANSLATE:
+           if (ThisEvent.EventType == ES_STOP)
+           {
+               StopMotors();
+               CurrentState = MOTOR_STOP;
+           }
+           break;
+       case MOTOR_TAPE_DETECT:
+           if (ThisEvent.EventType == ES_TAPE_FOUND)
+           {
+               StopMotors();
+               CurrentState = MOTOR_STOP;
+           }
+           break;
+       case MOTOR_BEACON_ALIGN:
+           if (ThisEvent.EventType == ES_BEACON_FOUND)
+           {
+               StopMotors();
+               CurrentState = MOTOR_STOP;
+           }
+           break;
+       default:
+           StopMotors();
+           CurrentState = MOTOR_STOP;
+           break;
+   }
+   return ReturnEvent;
 }
 
 void InitPins() {
-    // configure h-bridge pins as digital outputs (RB2, RB3)
+    // configure h-bridge pins as digital outputs (RA1, RB9, RB3, RB2)
     TRISBbits.TRISB2 = 0; // RB2 output
     ANSELBbits.ANSB2 = 0;
     TRISBbits.TRISB3 = 0; // RB3 output
     ANSELBbits.ANSB3 = 0;
-    RPB3Rbits.RPB3R = 0b0101;
+    TRISBbits.TRISB9 = 0; // RB9 output
+    TRISAbits.TRISA1 = 0; // RA1 output
+    ANSELAbits.ANSA1 = 0;
+    
+    /*RPB3Rbits.RPB3R = 0b0101;
 
     TRISBbits.TRISB8 = 1; // RB8 digital input
     
@@ -186,7 +193,6 @@ void InitPins() {
     // configure pins for 74ACT244 (RB4,5,9,11,12,13,14,15)
     TRISBbits.TRISB4 = 0; // RB4 output
     TRISBbits.TRISB5 = 0; // RB5 output
-    TRISBbits.TRISB9 = 0; // RB9 output
     TRISBbits.TRISB11 = 0; // RB11 output
     TRISBbits.TRISB12 = 0; // RB12 output
     TRISBbits.TRISB13 = 0; // RB13 output
@@ -196,8 +202,55 @@ void InitPins() {
     ANSELBbits.ANSB13 = 0;
     ANSELBbits.ANSB14 = 0;
     ANSELBbits.ANSB15 = 0;
-    
+     */
 }
+
+void OCSetup(uint16_t channel) {
+    // (configure output compare)
+    if (channel == 1) {
+        OC1CONbits.ON = 0;
+        OC1CONbits.OCTSEL = 0;
+        OC1R = 0;
+        OC1RS = 0; // initialize duty cycle to 0%
+        OC1CONbits.OCM = 0b110; // PWM mode on Timer2
+    } else if (channel == 2) {
+        OC2CONbits.ON = 0;
+        OC2CONbits.OCTSEL = 0;
+        OC2R = 0;
+        OC2RS = 0; // initialize duty cycle to 0%
+        OC2CONbits.OCM = 0b110; // PWM mode on Timer2
+    } else if (channel == 3) {
+        OC3CONbits.ON = 0;
+        OC3CONbits.OCTSEL = 0;
+        OC3R = 0;
+        OC3RS = 0; // initialize duty cycle to 0%
+        OC3CONbits.OCM = 0b110; // PWM mode on Timer2
+    } else if (channel == 4) {
+        OC4CONbits.ON = 0;
+        OC4CONbits.OCTSEL = 0;
+        OC4R = 0;
+        OC4RS = 0; // initialize duty cycle to 0%
+        OC4CONbits.OCM = 0b110; // PWM mode on Timer2
+    }
+}
+
+void ICSetup(uint16_t channel) {
+    // (configure input capture)
+    INTCONbits.MVEC=1;
+    if (channel == 2) {
+        IC2R = 0b0011; // map IC1 to RB10; TO CHANGE AFTER
+        IC2CONbits.ON = 0;
+        IC2CONbits.C32 = 0;
+        IC2CONbits.ICTMR = 0; // use Timer3
+        IC2CONbits.ICM = 0b011; // capture every rising edge on Timer3
+        IC2CONbits.ICI = 0b000;
+        IPC2bits.IC2IP = 7;
+        IEC0SET = _IEC0_IC2IE_MASK; // enables IC  for timer 3
+        IFS0CLR = _IFS0_IC2IF_MASK; // clear interrupt flag
+    }
+}
+
+
 void InitTimer2() {
     // (configure Timer 2 for PWM)
     T2CONbits.ON = 0; // turn off Timer2
@@ -239,6 +292,68 @@ void InitTimer4() {
     IFS0CLR = _IFS0_T4IF_MASK; // clear interrupt flag
     
 }
+
+void SetLeftMotorPWM(uint16_t PWM) {
+    // controls motor connected to 1st H-Bridge
+    // pins RA1, RB9 on pic
+    OC2RS = PWM;
+    OC3RS = 0;
+}
+
+void SetRightMotorPWM(uint16_t PWM) {
+    // controls motor connected to 2nd H-Bridge
+    // pins RB3, RB2 on pic
+    OC1RS = PWM;
+    OC4RS = 0;
+}
+void StopMotors(void)
+{
+   SetLeftMotorPWM(0);
+   SetRightMotorPWM(0);
+}
+
+void ConfigureRotation(uint16_t RotationCommand)
+{
+   if (RotationCommand == ROTATE_CW)
+   {
+       SetLeftMotorPWM(ROTATE_SPEED);
+       SetRightMotorPWM(-ROTATE_SPEED);
+   }
+   else if (RotationCommand == ROTATE_CCW)
+   {
+       SetLeftMotorPWM(-ROTATE_SPEED);
+       SetRightMotorPWM(ROTATE_SPEED);
+   }
+}
+
+void ConfigureTranslation(uint16_t TranslateCommand)
+{
+   if (TranslateCommand == FORWARD)
+   {
+       SetLeftMotorPWM(TRANS_SPEED);
+       SetRightMotorPWM(TRANS_SPEED);
+   }
+   else if (TranslateCommand == REVERSE)
+   {
+       SetLeftMotorPWM(-TRANS_SPEED);
+       SetRightMotorPWM(-TRANS_SPEED);
+   }
+}
+
+void StartSearchRotation(void)
+{
+   SetLeftMotorPWM(SEARCH_SPEED);
+   SetRightMotorPWM(-SEARCH_SPEED);
+}
+
+void StartRotationTimer(uint16_t RotationParam)
+{
+   if (RotationParam == ROTATE_45)
+       ES_Timer_InitTimer(ROTATE_TIMER, ROTATE_45_TIME);
+   else if (RotationParam == ROTATE_90)
+       ES_Timer_InitTimer(ROTATE_TIMER, ROTATE_90_TIME);
+}
+
 
  void __ISR(_INPUT_CAPTURE_2_VECTOR, IPL7SOFT) IC2Handler(void)
  {
