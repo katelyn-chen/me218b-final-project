@@ -53,7 +53,9 @@ typedef enum {
     MOTOR_ROTATE,
     MOTOR_TRANSLATE,
     MOTOR_TAPE_DETECT,
-    MOTOR_BEACON_ALIGN
+    MOTOR_BEACON_ALIGN,
+    DEBUG,
+    INIT
 } MotorState_t;
 static MotorState_t CurrentState;
 
@@ -72,6 +74,7 @@ static float accumulatedError = 0;
 
 bool InitMotorService(uint8_t Priority)
 {    
+    DB_printf("initialized \n");
     MyPriority = Priority;
     ES_Event_t ThisEvent;
     ThisEvent.EventType = ES_INIT;
@@ -84,7 +87,7 @@ bool InitMotorService(uint8_t Priority)
     OCSetup(3);
     OCSetup(4);
     
-    CurrentState = MOTOR_STOP;
+    CurrentState = DEBUG;
 
     // start timers 
     OC1CONbits.ON = 1; // turn on OC1 module
@@ -115,61 +118,70 @@ ES_Event_t RunMotorService(ES_Event_t ThisEvent)
     ReturnEvent.EventType = ES_NO_EVENT;
     switch (CurrentState)
    {
-       case MOTOR_STOP:
-           if (ThisEvent.EventType == ES_ROTATE)
-           {
-               ConfigureRotation(ThisEvent.EventParam);
-               StartRotationTimer(ThisEvent.EventParam);
-               CurrentState = MOTOR_ROTATE;
-           }
-           else if (ThisEvent.EventType == ES_TRANSLATE)
-           {
-               ConfigureTranslation(ThisEvent.EventParam);
-               CurrentState = MOTOR_TRANSLATE;
-           }
-           else if (ThisEvent.EventType == ES_TAPE_DETECT)
-           {
-               StartSlowForwardMotion();
-               CurrentState = MOTOR_TAPE_DETECT;
-           }
-           else if (ThisEvent.EventType == ES_ALIGN)
-           {
-               StartSearchRotation();
-               CurrentState = MOTOR_BEACON_ALIGN;
-           }
-           break;
-       case MOTOR_ROTATE:
-           if (ThisEvent.EventType == ES_TIMEOUT)
-           {
-               StopMotors();
-               CurrentState = MOTOR_STOP;
-           }
-           break;
-       case MOTOR_TRANSLATE:
-           if (ThisEvent.EventType == ES_STOP)
-           {
-               StopMotors();
-               CurrentState = MOTOR_STOP;
-           }
-           break;
-       case MOTOR_TAPE_DETECT:
-           if (ThisEvent.EventType == ES_TAPE_FOUND)
-           {
-               StopMotors();
-               CurrentState = MOTOR_STOP;
-           }
-           break;
-       case MOTOR_BEACON_ALIGN:
-           if (ThisEvent.EventType == ES_BEACON_FOUND)
-           {
-               StopMotors();
-               CurrentState = MOTOR_STOP;
-           }
-           break;
-       default:
+        case INIT:
+            DB_printf("MotorService initialized \n");
+            CurrentState = DEBUG;
+            break;
+        case DEBUG:
+            DB_printf("Debug started \n");
+            SetLeftMotorPWM(50);
+            CurrentState = DEBUG;
+            break;
+//        case MOTOR_STOP:
+//           if (ThisEvent.EventType == ES_ROTATE)
+//           {
+//               ConfigureRotation(ThisEvent.EventParam);
+//               StartRotationTimer(ThisEvent.EventParam);
+//               CurrentState = MOTOR_ROTATE;
+//           }
+//           else if (ThisEvent.EventType == ES_TRANSLATE)
+//           {
+//               ConfigureTranslation(ThisEvent.EventParam);
+//               CurrentState = MOTOR_TRANSLATE;
+//           }
+//           else if (ThisEvent.EventType == ES_TAPE_DETECT)
+//           {
+////               StartSlowForwardMotion();
+//               CurrentState = MOTOR_TAPE_DETECT;
+//           }
+//           else if (ThisEvent.EventType == ES_ALIGN)
+//           {
+//               StartSearchRotation();
+//               CurrentState = MOTOR_BEACON_ALIGN;
+//           }
+//           break;
+//       case MOTOR_ROTATE:
+//           if (ThisEvent.EventType == ES_TIMEOUT)
+//           {
+//               StopMotors();
+//               CurrentState = MOTOR_STOP;
+//           }
+//           break;
+//       case MOTOR_TRANSLATE:
+//           if (ThisEvent.EventType == ES_STOP)
+//           {
+//               StopMotors();
+//               CurrentState = MOTOR_STOP;
+//           }
+//           break;
+//       case MOTOR_TAPE_DETECT:
+//           if (ThisEvent.EventType == ES_TAPE_FOUND)
+//           {
+//               StopMotors();
+//               CurrentState = MOTOR_STOP;
+//           }
+//           break;
+//       case MOTOR_BEACON_ALIGN:
+//           if (ThisEvent.EventType == ES_BEACON_FOUND)
+//           {
+//               StopMotors();
+//               CurrentState = MOTOR_STOP;
+//           }
+//           break;
+       /*default:
            StopMotors();
            CurrentState = MOTOR_STOP;
-           break;
+           break;*/
    }
    return ReturnEvent;
 }
@@ -308,51 +320,52 @@ void SetRightMotorPWM(uint16_t PWM) {
 }
 void StopMotors(void)
 {
+   DB_printf("Stop motor \n");
    SetLeftMotorPWM(0);
    SetRightMotorPWM(0);
 }
 
-void ConfigureRotation(uint16_t RotationCommand)
-{
-   if (RotationCommand == ROTATE_CW)
-   {
-       SetLeftMotorPWM(ROTATE_SPEED);
-       SetRightMotorPWM(-ROTATE_SPEED);
-   }
-   else if (RotationCommand == ROTATE_CCW)
-   {
-       SetLeftMotorPWM(-ROTATE_SPEED);
-       SetRightMotorPWM(ROTATE_SPEED);
-   }
-}
-
-void ConfigureTranslation(uint16_t TranslateCommand)
-{
-   if (TranslateCommand == FORWARD)
-   {
-       SetLeftMotorPWM(TRANS_SPEED);
-       SetRightMotorPWM(TRANS_SPEED);
-   }
-   else if (TranslateCommand == REVERSE)
-   {
-       SetLeftMotorPWM(-TRANS_SPEED);
-       SetRightMotorPWM(-TRANS_SPEED);
-   }
-}
-
-void StartSearchRotation(void)
-{
-   SetLeftMotorPWM(SEARCH_SPEED);
-   SetRightMotorPWM(-SEARCH_SPEED);
-}
-
-void StartRotationTimer(uint16_t RotationParam)
-{
-   if (RotationParam == ROTATE_45)
-       ES_Timer_InitTimer(ROTATE_TIMER, ROTATE_45_TIME);
-   else if (RotationParam == ROTATE_90)
-       ES_Timer_InitTimer(ROTATE_TIMER, ROTATE_90_TIME);
-}
+//void ConfigureRotation(uint16_t RotationCommand)
+//{
+//   if (RotationCommand == ROTATE_CW)
+//   {
+//       SetLeftMotorPWM(ROTATE_SPEED);
+//       SetRightMotorPWM(-ROTATE_SPEED);
+//   }
+//   else if (RotationCommand == ROTATE_CCW)
+//   {
+//       SetLeftMotorPWM(-ROTATE_SPEED);
+//       SetRightMotorPWM(ROTATE_SPEED);
+//   }
+//}
+//
+//void ConfigureTranslation(uint16_t TranslateCommand)
+//{
+//   if (TranslateCommand == FORWARD)
+//   {
+//       SetLeftMotorPWM(TRANS_SPEED);
+//       SetRightMotorPWM(TRANS_SPEED);
+//   }
+//   else if (TranslateCommand == REVERSE)
+//   {
+//       SetLeftMotorPWM(-TRANS_SPEED);
+//       SetRightMotorPWM(-TRANS_SPEED);
+//   }
+//}
+//
+//void StartSearchRotation(void)
+//{
+//   SetLeftMotorPWM(SEARCH_SPEED);
+//   SetRightMotorPWM(-SEARCH_SPEED);
+//}
+//
+//void StartRotationTimer(uint16_t RotationParam)
+//{
+//   if (RotationParam == ROTATE_45)
+//       ES_Timer_InitTimer(ROTATE_TIMER, ROTATE_45_TIME);
+//   else if (RotationParam == ROTATE_90)
+//       ES_Timer_InitTimer(ROTATE_TIMER, ROTATE_90_TIME);
+//}
 
 
  void __ISR(_INPUT_CAPTURE_2_VECTOR, IPL7SOFT) IC2Handler(void)

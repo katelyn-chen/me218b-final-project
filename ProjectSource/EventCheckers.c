@@ -126,7 +126,7 @@ bool Check4Beacon(void)
   // read from beacon sensor input pin
   // if beacon detected, post ES_BEACON_DETECTED event
     ES_Event_t ThisEvent;
-    ThisEvent.EventType   = ES_BEACON_DETECTED;
+    ThisEvent.EventType   = ES_BEACON_FOUND;
     ThisEvent.EventParam  = 0;
     ES_PostAll(ThisEvent);
     return true;

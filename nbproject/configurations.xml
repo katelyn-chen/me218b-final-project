@@ -266,6 +266,10 @@
         <property key="stack-smashing" value=""/>
         <property key="wpo-lto" value="false"/>
       </C32Global>
+      <item path="ProjectHeaders/ADService.h" ex="true" overriding="false">
+      </item>
+      <item path="ProjectSource/ADService.c" ex="true" overriding="false">
+      </item>
       <item path="ProjectSource/TestHarnessService0.c" ex="false" overriding="false">
         <C32>
         </C32>

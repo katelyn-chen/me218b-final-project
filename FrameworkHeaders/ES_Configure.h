@@ -33,7 +33,7 @@
 /****************************************************************************/
 // This macro determines that nuber of services that are *actually* used in
 // a particular application. It will vary in value from 1 to MAX_NUM_SERVICES
-#define NUM_SERVICES 3
+#define NUM_SERVICES 1
 
 /****************************************************************************/
 // These are the definitions for Service 0, the lowest priority service.
@@ -41,11 +41,11 @@
 // services are added in numeric sequence (1,2,3,...) with increasing
 // priorities
 // the header file with the public function prototypes
-#define SERV_0_HEADER "TestHarnessService0.h"
+#define SERV_0_HEADER "MotorService.h"
 // the name of the Init function
-#define SERV_0_INIT InitTestHarnessService0
+#define SERV_0_INIT InitMotorService
 // the name of the run function
-#define SERV_0_RUN RunTestHarnessService0
+#define SERV_0_RUN RunMotorService
 // How big should this services Queue be?
 #define SERV_0_QUEUE_SIZE 5
 
@@ -57,11 +57,11 @@
 // These are the definitions for Service 1
 #if NUM_SERVICES > 1
 // the header file with the public function prototypes
-#define SERV_1_HEADER "ADService.h"
+#define SERV_1_HEADER "MotorService.h"
 // the name of the Init function
-#define SERV_1_INIT InitADService
+#define SERV_1_INIT InitMotorService
 // the name of the run function
-#define SERV_1_RUN RunADService
+#define SERV_1_RUN RunMotorService
 // How big should this services Queue be?
 #define SERV_1_QUEUE_SIZE 3
 #endif
@@ -328,11 +328,9 @@ typedef enum
 #define TIMER10_RESP_FUNC TIMER_UNUSED
 #define TIMER11_RESP_FUNC TIMER_UNUSED
 #define TIMER12_RESP_FUNC TIMER_UNUSED
-//#define TIMER13_RESP_FUNC TIMER_UNUSED
-//#define TIMER14_RESP_FUNC TIMER_UNUSED
-#define TIMER13_RESP_FUNC PostMotorService
-#define TIMER14_RESP_FUNC PostADService
-#define TIMER15_RESP_FUNC PostTestHarnessService0
+#define TIMER13_RESP_FUNC TIMER_UNUSED
+#define TIMER14_RESP_FUNC TIMER_UNUSED
+#define TIMER15_RESP_FUNC TIMER_UNUSED
 
 /****************************************************************************/
 // Give the timer numbers symbolc names to make it easier to move them
@@ -342,8 +340,7 @@ typedef enum
 // These symbolic names should be changed to be relevant to your application
 
 #define SERVICE0_TIMER 15
-#define ADTimer 14
-#define MotorTimer 13
+
 
 
 #endif /* ES_CONFIGURE_H */
