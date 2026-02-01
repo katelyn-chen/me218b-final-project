@@ -1,17 +1,18 @@
-#ifndef BeaconService_H
-#define BeaconService_H
+#ifndef BEACON_SERVICE_H
+#define BEACON_SERVICE_H
 
-#include "ES_Types.h"
 #include <stdint.h>
 #include <stdbool.h>
+#include "ES_Configure.h"
+#include "ES_Framework.h"
 
-#include "ES_Events.h"
-#include "ES_Port.h"  
-
-// Public Function Prototypes
+/*
+  BeaconService watches the IR beacon signal and decides “beacon found”.
+  I’m keeping it event-only: this service posts ES_BEACON_FOUND and that’s it.
+*/
 
 bool InitBeaconService(uint8_t Priority);
 bool PostBeaconService(ES_Event_t ThisEvent);
 ES_Event_t RunBeaconService(ES_Event_t ThisEvent);
 
-#endif /* BeaconService_H */
+#endif
