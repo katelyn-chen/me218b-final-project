@@ -12,6 +12,10 @@
     - Command Generator is the follower (slave)
     - My PIC is the leader (master)
     - I poll on a timer (simple and easy to debug)
+    - Protocol detail:
+        * Send 0xAA to query
+        * When a NEW command is ready, the generator returns one 0xFF,
+          then the next query returns the actual command byte
 ****************************************************************************/
 
 #include "SPIService.h"
@@ -24,13 +28,12 @@
 #include "ES_Framework.h"
 #include "dbprintf.h"
 
-#include "Lab8_Events.h"
 #include "MotorService.h"
 
 /*============================== CONFIG ==============================*/
-/* pick an ES timer ID that is free in your ES_Configure.c */
-#ifndef SPI_POLL_TIMER
-#define SPI_POLL_TIMER  1u
+/* use the symbolic timer names from ES_Configure.h */
+#ifndef SPI_TIMER
+#define SPI_TIMER 0
 #endif
 
 /* how often to ask for a new command (ms) */
@@ -44,8 +47,33 @@
 /* SPI module choice */
 #define USE_SPI1        1
 
+/* ---------------- Command Generator bytes (Appendix A) ----------------
+   I’m keeping these here so SPIService.c is self-contained.
+   Update only if the Command Generator doc changes.
+----------------------------------------------------------------------- */
+#define CMD_QUERY                 0xAA
+#define CMD_NOOP                  0xFF   /* also used as “new cmd ready” marker */
+
+#define CMD_STOP                  0x00
+
+#define CMD_ROT_CW_90             0x02
+#define CMD_ROT_CW_45             0x03
+#define CMD_ROT_CCW_90            0x04
+#define CMD_ROT_CCW_45            0x05
+
+#define CMD_TRANS_FWD_HALF        0x08
+#define CMD_TRANS_FWD_FULL        0x09
+#define CMD_TRANS_REV_HALF        0x10
+#define CMD_TRANS_REV_FULL        0x11
+
+#define CMD_ALIGN                 0x20
+#define CMD_TAPE_DETECT           0x40
+
 /*============================== STATE ==============================*/
 static uint8_t MyPriority;
+
+/* protocol state: when I see a single 0xFF, next query gives the real new cmd */
+static bool ExpectNewCommand = false;
 
 /*====================== PRIVATE FUNCTION PROTOS =====================*/
 static void InitSPIHardware(void);
@@ -54,6 +82,7 @@ static void CG_Deselect(void);
 static uint8_t SPI_TxRxByte(uint8_t outByte);
 
 static void HandleCommandByte(uint8_t cmd);
+static bool IsKnownCommand(uint8_t cmd);
 
 /*=========================== PUBLIC API =============================*/
 bool InitSPIService(uint8_t Priority)
@@ -63,7 +92,7 @@ bool InitSPIService(uint8_t Priority)
   InitSPIHardware();
 
   /* kick the polling timer */
-  ES_Timer_InitTimer(SPI_POLL_TIMER, SPI_POLL_MS);
+  ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
 
   dbprintf("SPIService: init done\r\n");
 
@@ -80,20 +109,48 @@ ES_Event_t RunSPIService(ES_Event_t ThisEvent)
 {
   ES_Event_t ReturnEvent = { ES_NO_EVENT, 0 };
 
-  if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == SPI_POLL_TIMER))
+  if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == SPI_TIMER))
   {
-    /* query follower for next command */
+    /* query follower for next byte */
     CG_Select();
-    uint8_t cmd = SPI_TxRxByte(CMD_QUERY);
+    uint8_t rx = SPI_TxRxByte(CMD_QUERY);
     CG_Deselect();
 
-    /* ignore “noop” if they send that */
-    if (cmd != CMD_NOOP)
+    /* treat unknown bytes as 0xFF per spec */
+    if (!IsKnownCommand(rx))
     {
-      HandleCommandByte(cmd);
+      rx = CMD_NOOP;
     }
 
-    ES_Timer_InitTimer(SPI_POLL_TIMER, SPI_POLL_MS);
+    /* protocol behavior:
+       - 0xFF can mean “not ready yet” OR “new cmd ready marker”
+       - the doc says: whenever a NEW command is ready, it returns a single 0xFF,
+         and the NEXT query returns the new command value
+    */
+    if (rx == CMD_NOOP)
+    {
+      /* if we were waiting for a new command, and got 0xFF again,
+         just keep waiting */
+      ExpectNewCommand = true;
+    }
+    else
+    {
+      /* we received a real command byte */
+      if (ExpectNewCommand)
+      {
+        /* this is the actual “new command” value after the single 0xFF marker */
+        HandleCommandByte(rx);
+        ExpectNewCommand = false;
+      }
+      else
+      {
+        /* even if it’s not “new”, the generator can keep returning the same
+           command byte; I still handle it because it keeps behavior consistent */
+        HandleCommandByte(rx);
+      }
+    }
+
+    ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
   }
 
   return ReturnEvent;
@@ -110,7 +167,7 @@ static void InitSPIHardware(void)
 #if USE_SPI1
   /* Basic SPI1 master setup (8-bit) */
   SPI1CON = 0;
-  SPI1BRG = 19;           /* example: sets SCK speed; adjust if needed */
+  SPI1BRG = 19;           /* sets SCK speed; adjust if needed */
   SPI1STATbits.SPIROV = 0;
   SPI1CONbits.MSTEN = 1;  /* master */
   SPI1CONbits.CKP = 0;
@@ -153,6 +210,29 @@ static uint8_t SPI_TxRxByte(uint8_t outByte)
 }
 
 /*======================= COMMAND -> EVENT MAP =======================*/
+static bool IsKnownCommand(uint8_t cmd)
+{
+  switch (cmd)
+  {
+    case CMD_NOOP:
+    case CMD_STOP:
+    case CMD_ROT_CW_90:
+    case CMD_ROT_CW_45:
+    case CMD_ROT_CCW_90:
+    case CMD_ROT_CCW_45:
+    case CMD_TRANS_FWD_HALF:
+    case CMD_TRANS_FWD_FULL:
+    case CMD_TRANS_REV_HALF:
+    case CMD_TRANS_REV_FULL:
+    case CMD_ALIGN:
+    case CMD_TAPE_DETECT:
+      return true;
+
+    default:
+      return false;
+  }
+}
+
 static void HandleCommandByte(uint8_t cmd)
 {
   ES_Event_t e;
@@ -223,8 +303,7 @@ static void HandleCommandByte(uint8_t cmd)
       break;
 
     default:
-      /* If I get a weird byte, I just print it and ignore it */
-      dbprintf("SPIService: unknown cmd 0x%02X\r\n", cmd);
+      /* unknown bytes are treated like 0xFF anyway, so I just ignore here */
       break;
   }
 }
