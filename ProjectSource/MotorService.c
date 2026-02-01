@@ -47,14 +47,16 @@
 #define DUTY_ROTATE         45u
 #define DUTY_SEARCH         30u
 
-/* rotate timing (ms) — I calibrate these on the floor */
+/* rotate timing (ms) — will calibrate these on the floor */
+// placeholders for now
 #define ROTATE_45_TIME_MS   250u
 #define ROTATE_90_TIME_MS   500u
 
-/* pick an ES timer ID that is free in your ES_Configure.c */
+/* match with ES timer ID in ES_Configure.h */
 #ifndef ROTATE_TIMER
-#define ROTATE_TIMER        0u
+#define ROTATE_TIMER MOTOR_TIMER
 #endif
+
 
 /*============================== STATE ==============================*/
 typedef enum {
