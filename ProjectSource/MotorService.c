@@ -126,7 +126,7 @@ ES_Event_t RunMotorService(ES_Event_t ThisEvent)
             break;
         case DEBUG:
             DB_printf("Debug started \n");
-            SetLeftMotorPWM(50);
+            SetLeftMotorPWM(25);
             SetRightMotorPWM(50);
             CurrentState = DEBUG;
             break;
