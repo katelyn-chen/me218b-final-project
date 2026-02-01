@@ -329,7 +329,7 @@ typedef enum
 #define TIMER11_RESP_FUNC TIMER_UNUSED
 #define TIMER12_RESP_FUNC TIMER_UNUSED
 #define TIMER13_RESP_FUNC TIMER_UNUSED
-#define TIMER14_RESP_FUNC TIMER_UNUSED
+#define TIMER14_RESP_FUNC PostMotorService
 #define TIMER15_RESP_FUNC TIMER_UNUSED
 
 /****************************************************************************/
@@ -340,6 +340,7 @@ typedef enum
 // These symbolic names should be changed to be relevant to your application
 
 #define SERVICE0_TIMER 15
+#define MOTOR_TIMER 14
 
 
 

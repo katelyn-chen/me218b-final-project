@@ -88,6 +88,7 @@ bool InitMotorService(uint8_t Priority)
     OCSetup(4);
     
     CurrentState = DEBUG;
+    ES_Timer_InitTimer(MOTOR_TIMER, 100);
 
     // start timers 
     OC1CONbits.ON = 1; // turn on OC1 module
@@ -116,6 +117,7 @@ ES_Event_t RunMotorService(ES_Event_t ThisEvent)
 {
     ES_Event_t ReturnEvent;
     ReturnEvent.EventType = ES_NO_EVENT;
+    if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == MOTOR_TIMER) {
     switch (CurrentState)
    {
         case INIT:
@@ -125,6 +127,7 @@ ES_Event_t RunMotorService(ES_Event_t ThisEvent)
         case DEBUG:
             DB_printf("Debug started \n");
             SetLeftMotorPWM(50);
+            SetRightMotorPWM(50);
             CurrentState = DEBUG;
             break;
 //        case MOTOR_STOP:
@@ -183,6 +186,8 @@ ES_Event_t RunMotorService(ES_Event_t ThisEvent)
            CurrentState = MOTOR_STOP;
            break;*/
    }
+        ES_Timer_InitTimer(MOTOR_TIMER, 100);
+    }
    return ReturnEvent;
 }
 
@@ -196,13 +201,17 @@ void InitPins() {
     TRISAbits.TRISA1 = 0; // RA1 output
     ANSELAbits.ANSA1 = 0;
     
-    /*RPB3Rbits.RPB3R = 0b0101;
+    RPB2Rbits.RPB2R = 0b0101;
+    RPB3Rbits.RPB3R = 0b0101;
+    RPB9Rbits.RPB9R = 0b0101;
+    RPA1Rbits.RPA1R = 0b0101;
 
     TRISBbits.TRISB8 = 1; // RB8 digital input
     
     TRISBbits.TRISB10 = 1; // RB10, encoder input
 
     // configure pins for 74ACT244 (RB4,5,9,11,12,13,14,15)
+    /*
     TRISBbits.TRISB4 = 0; // RB4 output
     TRISBbits.TRISB5 = 0; // RB5 output
     TRISBbits.TRISB11 = 0; // RB11 output
@@ -214,7 +223,7 @@ void InitPins() {
     ANSELBbits.ANSB13 = 0;
     ANSELBbits.ANSB14 = 0;
     ANSELBbits.ANSB15 = 0;
-     */
+    */
 }
 
 void OCSetup(uint16_t channel) {
@@ -308,14 +317,14 @@ void InitTimer4() {
 void SetLeftMotorPWM(uint16_t PWM) {
     // controls motor connected to 1st H-Bridge
     // pins RA1, RB9 on pic
-    OC2RS = PWM;
+    OC2RS = PWM*PR2/100;
     OC3RS = 0;
 }
 
 void SetRightMotorPWM(uint16_t PWM) {
     // controls motor connected to 2nd H-Bridge
     // pins RB3, RB2 on pic
-    OC1RS = PWM;
+    OC1RS = PWM*PR2/100;
     OC4RS = 0;
 }
 void StopMotors(void)
