@@ -1,0 +1,116 @@
+/****************************************************************************
+  Module
+    ReflectiveSenseService.c  (Lab 8)
+
+  Summary
+    - Configure ADC for reflective sensor
+    - Periodically sample sensor voltage
+    - Apply threshold + confidence logic
+    - Post ES_TAPE_FOUND when black tape is detected
+
+****************************************************************************/
+
+#include "ReflectiveSenseService.h"
+
+#include <xc.h>
+#include <stdint.h>
+#include <stdbool.h>
+
+#include "ES_Configure.h"
+#include "ES_Framework.h"
+#include "dbprintf.h"
+
+#include "Lab8_Events.h"
+#include "MotorService.h"
+
+/* If available in your project template */
+#include "PIC32_AD_Lib.h"
+
+/*============================== CONFIG ==============================*/
+/* pick an ES timer ID that is free in your ES_Configure.c */
+#ifndef REFLECT_TIMER
+#define REFLECT_TIMER      3u
+#endif
+
+#define REFLECT_SAMPLE_MS  10u
+
+/* Choose which analog pin your Pololu sensor output is wired to */
+#define REFLECT_AD_PIN     AD_PORTW5  /* <-- CHANGE THIS to match your wiring */
+
+/* threshold + confidence */
+#define TAPE_THRESHOLD     650u   /* adjust after looking at ADC values */
+#define TAPE_CONFIRM_N     4u     /* must see tape N samples in a row */
+
+/*============================== STATE ==============================*/
+static uint8_t MyPriority;
+static uint8_t TapeCount = 0;
+static bool TapeLatched = false;
+
+/*====================== PRIVATE FUNCTION PROTOS =====================*/
+static void InitReflectiveHardware(void);
+static uint16_t ReadReflectADC(void);
+
+/*=========================== PUBLIC API =============================*/
+bool InitReflectiveSenseService(uint8_t Priority)
+{
+  MyPriority = Priority;
+
+  InitReflectiveHardware();
+
+  ES_Timer_InitTimer(REFLECT_TIMER, REFLECT_SAMPLE_MS);
+
+  dbprintf("ReflectiveSenseService: init done\r\n");
+
+  ES_Event_t ThisEvent = { ES_INIT, 0 };
+  return ES_PostToService(MyPriority, ThisEvent);
+}
+
+bool PostReflectiveSenseService(ES_Event_t ThisEvent)
+{
+  return ES_PostToService(MyPriority, ThisEvent);
+}
+
+ES_Event_t RunReflectiveSenseService(ES_Event_t ThisEvent)
+{
+  ES_Event_t ReturnEvent = { ES_NO_EVENT, 0 };
+
+  if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == REFLECT_TIMER))
+  {
+    uint16_t adc = ReadReflectADC();
+
+    /* basic threshold + confidence */
+    if (adc > TAPE_THRESHOLD)
+    {
+      if (TapeCount < 255) TapeCount++;
+    }
+    else
+    {
+      TapeCount = 0;
+      TapeLatched = false;
+    }
+
+    if (!TapeLatched && (TapeCount >= TAPE_CONFIRM_N))
+    {
+      TapeLatched = true;
+      ES_Event_t e = { ES_TAPE_FOUND, adc };
+      PostMotorService(e);
+    }
+
+    ES_Timer_InitTimer(REFLECT_TIMER, REFLECT_SAMPLE_MS);
+  }
+
+  return ReturnEvent;
+}
+
+/*=========================== ADC HELPERS ============================*/
+static void InitReflectiveHardware(void)
+{
+  /* Typical ME218 ADC init */
+  AD_Init(1);
+  AD_AddPins(REFLECT_AD_PIN);
+}
+
+static uint16_t ReadReflectADC(void)
+{
+  return AD_ReadADPin(REFLECT_AD_PIN);
+}
