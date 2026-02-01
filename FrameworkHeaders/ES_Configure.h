@@ -33,7 +33,15 @@
 /****************************************************************************/
 // This macro determines that nuber of services that are *actually* used in
 // a particular application. It will vary in value from 1 to MAX_NUM_SERVICES
-#define NUM_SERVICES 1
+#define NUM_SERVICES 4
+
+/****************************************************************************/
+/* I include my service headers here so the Post*Service() prototypes exist
+   for the timer response function macros below. */
+#include "MotorService.h"
+#include "SPIService.h"
+#include "BeaconService.h"
+#include "ReflectiveSenseService.h"
 
 /****************************************************************************/
 // These are the definitions for Service 0, the lowest priority service.
@@ -47,7 +55,7 @@
 // the name of the run function
 #define SERV_0_RUN RunMotorService
 // How big should this services Queue be?
-#define SERV_0_QUEUE_SIZE 5
+#define SERV_0_QUEUE_SIZE 8
 
 /****************************************************************************/
 // The following sections are used to define the parameters for each of the
@@ -57,39 +65,39 @@
 // These are the definitions for Service 1
 #if NUM_SERVICES > 1
 // the header file with the public function prototypes
-#define SERV_1_HEADER "MotorService.h"
+#define SERV_1_HEADER "SPIService.h"
 // the name of the Init function
-#define SERV_1_INIT InitMotorService
+#define SERV_1_INIT InitSPIService
 // the name of the run function
-#define SERV_1_RUN RunMotorService
+#define SERV_1_RUN RunSPIService
 // How big should this services Queue be?
-#define SERV_1_QUEUE_SIZE 3
+#define SERV_1_QUEUE_SIZE 6
 #endif
 
 /****************************************************************************/
 // These are the definitions for Service 2
 #if NUM_SERVICES > 2
 // the header file with the public function prototypes
-#define SERV_2_HEADER "MotorService.h"
+#define SERV_2_HEADER "BeaconService.h"
 // the name of the Init function
-#define SERV_2_INIT InitMotorService
+#define SERV_2_INIT InitBeaconService
 // the name of the run function
-#define SERV_2_RUN RunMotorService
+#define SERV_2_RUN RunBeaconService
 // How big should this services Queue be?
-#define SERV_2_QUEUE_SIZE 3
+#define SERV_2_QUEUE_SIZE 4
 #endif
 
 /****************************************************************************/
 // These are the definitions for Service 3
 #if NUM_SERVICES > 3
 // the header file with the public function prototypes
-#define SERV_3_HEADER "TestHarnessService3.h"
+#define SERV_3_HEADER "ReflectiveSenseService.h"
 // the name of the Init function
-#define SERV_3_INIT InitTestHarnessService3
+#define SERV_3_INIT InitReflectiveSenseService
 // the name of the run function
-#define SERV_3_RUN RunTestHarnessService3
+#define SERV_3_RUN RunReflectiveSenseService
 // How big should this services Queue be?
-#define SERV_3_QUEUE_SIZE 3
+#define SERV_3_QUEUE_SIZE 4
 #endif
 
 /****************************************************************************/
@@ -315,8 +323,8 @@ typedef enum
 // Unlike services, any combination of timers may be used and there is no
 // priority in servicing them
 #define TIMER_UNUSED ((pPostFunc)0)
-#define TIMER0_RESP_FUNC TIMER_UNUSED
-#define TIMER1_RESP_FUNC TIMER_UNUSED
+#define TIMER0_RESP_FUNC PostSPIService
+#define TIMER1_RESP_FUNC PostReflectiveSenseService
 #define TIMER2_RESP_FUNC TIMER_UNUSED
 #define TIMER3_RESP_FUNC TIMER_UNUSED
 #define TIMER4_RESP_FUNC TIMER_UNUSED
@@ -340,8 +348,8 @@ typedef enum
 // These symbolic names should be changed to be relevant to your application
 
 #define SERVICE0_TIMER 15
+#define SPI_TIMER 0
+#define REFLECT_TIMER 1
 #define MOTOR_TIMER 14
-
-
 
 #endif /* ES_CONFIGURE_H */
