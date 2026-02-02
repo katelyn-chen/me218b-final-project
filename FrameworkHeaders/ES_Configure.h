@@ -322,10 +322,10 @@ typedef enum
 // a timer, then you should use TIMER_UNUSED
 // Unlike services, any combination of timers may be used and there is no
 // priority in servicing them
-#define TIMER_UNUSED ((pPostFunc)0)
+#define TIMER_UNUSED 0
 #define TIMER0_RESP_FUNC PostSPIService
 #define TIMER1_RESP_FUNC PostReflectiveSenseService
-#define TIMER2_RESP_FUNC TIMER_UNUSED
+#define TIMER2_RESP_FUNC PostBeaconService
 #define TIMER3_RESP_FUNC TIMER_UNUSED
 #define TIMER4_RESP_FUNC TIMER_UNUSED
 #define TIMER5_RESP_FUNC TIMER_UNUSED
@@ -350,6 +350,7 @@ typedef enum
 #define SERVICE0_TIMER 15
 #define SPI_TIMER 0
 #define REFLECT_TIMER 1
+#define BEACON_TIMER 2
 #define MOTOR_TIMER 14
 
 #endif /* ES_CONFIGURE_H */
