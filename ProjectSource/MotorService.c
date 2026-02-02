@@ -29,7 +29,9 @@
 #include "ES_Configure.h"
 #include "ES_Framework.h"
 #include "dbprintf.h"
-#include "Lab8_Events.h"
+
+// Commenting out bc moved this out
+//#include "Lab8_Events.h"
 
 /*============================== CONFIG ==============================*/
 #define PBCLK_HZ            20000000u
