@@ -89,12 +89,12 @@ ES_Event_t RunReflectiveSenseService(ES_Event_t ThisEvent)
       if (tapeDetected)
       {
         TapeCount++;
-        DB_printf("Y");
+        //DB_printf("Y");
       }
       else
       {
         TapeCount = 0;
-        DB_printf("N");
+        //DB_printf("N");
         TapeLatched = false;
       }
 
