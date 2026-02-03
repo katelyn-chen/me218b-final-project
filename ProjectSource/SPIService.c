@@ -42,7 +42,7 @@
 /* Chip Select pin (you MUST set this to match your wiring) */
 #define CG_CS_LAT       LATBbits.LATB7
 #define CG_CS_TRIS      TRISBbits.TRISB7
-#define CG_CS_ANSEL     ANSELBbits.ANSB7
+//#define CG_CS_ANSEL     ANSELBbits.ansB7
 
 /* SPI module choice */
 #define USE_SPI1        1
@@ -94,7 +94,7 @@ bool InitSPIService(uint8_t Priority)
   /* kick the polling timer */
   ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
 
-  dbprintf("SPIService: init done\r\n");
+  DB_printf("SPIService: init done\r\n");
 
   ES_Event_t ThisEvent = { ES_INIT, 0 };
   return ES_PostToService(MyPriority, ThisEvent);
@@ -161,7 +161,7 @@ static void InitSPIHardware(void)
 {
   /* CS pin */
   CG_CS_TRIS = 0;
-  CG_CS_ANSEL = 0;
+//  CG_CS_ANSEL = 0;
   CG_Deselect();
 
 #if USE_SPI1

@@ -1,10 +1,11 @@
 #ifndef MOTOR_SERVICE_H
 #define MOTOR_SERVICE_H
 
-#include <stdint.h>
-#include <stdbool.h>
+//#include <stdint.h>
+//#include <stdbool.h>
 #include "ES_Configure.h"
-#include "ES_Framework.h"
+#include "ES_Types.h"
+#include "ES_Events.h"
 
 /*
   MotorService is the brain for motion.

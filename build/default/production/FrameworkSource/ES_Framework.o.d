@@ -18,9 +18,12 @@ build/default/production/FrameworkSource/ES_Framework.o: \
  FrameworkSource/../FrameworkHeaders/ES_General.h \
  FrameworkSource/../FrameworkHeaders/ES_CheckEvents.h \
  FrameworkHeaders/ES_ServiceHeaders.h FrameworkHeaders/ES_Configure.h \
- ProjectHeaders/MotorService.h FrameworkHeaders/ES_Types.h \
- FrameworkHeaders/ES_Events.h FrameworkHeaders/ES_Port.h \
- ProjectHeaders/EventCheckWrapper.h ProjectHeaders/EventCheckers.h
+ ProjectHeaders/MotorService.h FrameworkHeaders/ES_Configure.h \
+ FrameworkHeaders/ES_Types.h FrameworkHeaders/ES_Events.h \
+ FrameworkHeaders/SPIService.h FrameworkHeaders/ES_Framework.h \
+ ProjectHeaders/BeaconService.h ProjectHeaders/ReflectiveSenseService.h \
+ FrameworkHeaders/ES_Framework.h ProjectHeaders/EventCheckWrapper.h \
+ ProjectHeaders/EventCheckers.h FrameworkHeaders/ES_Port.h
 
 FrameworkSource/../FrameworkHeaders/ES_Configure.h:
 
@@ -62,12 +65,24 @@ FrameworkHeaders/ES_Configure.h:
 
 ProjectHeaders/MotorService.h:
 
+FrameworkHeaders/ES_Configure.h:
+
 FrameworkHeaders/ES_Types.h:
 
 FrameworkHeaders/ES_Events.h:
 
-FrameworkHeaders/ES_Port.h:
+FrameworkHeaders/SPIService.h:
+
+FrameworkHeaders/ES_Framework.h:
+
+ProjectHeaders/BeaconService.h:
+
+ProjectHeaders/ReflectiveSenseService.h:
+
+FrameworkHeaders/ES_Framework.h:
 
 ProjectHeaders/EventCheckWrapper.h:
 
 ProjectHeaders/EventCheckers.h:
+
+FrameworkHeaders/ES_Port.h:

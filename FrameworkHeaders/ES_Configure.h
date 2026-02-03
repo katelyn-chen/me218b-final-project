@@ -38,10 +38,10 @@
 /****************************************************************************/
 /* I include my service headers here so the Post*Service() prototypes exist
    for the timer response function macros below. */
-#include "MotorService.h"
-#include "SPIService.h"
-#include "BeaconService.h"
-#include "ReflectiveSenseService.h"
+//#include "MotorService.h"
+//#include "SPIService.h"
+//#include "BeaconService.h"
+//#include "ReflectiveSenseService.h"
 
 /****************************************************************************/
 // These are the definitions for Service 0, the lowest priority service.
@@ -280,7 +280,7 @@ typedef enum
   ES_BEACON_FOUND,
   /*Command generator events*/
   ES_COMMAND_RECEIVED
-}ES_EventType_t;
+}ES_EventType_t; // changed to be event type
 
 /****************************************************************************/
 // These are the definitions for the Distribution lists. Each definition

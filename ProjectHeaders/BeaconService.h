@@ -1,10 +1,15 @@
 #ifndef BEACON_SERVICE_H
 #define BEACON_SERVICE_H
 
-#include <stdint.h>
-#include <stdbool.h>
+//#include <stdint.h>
+//#include <stdbool.h>
+//#include "ES_Configure.h"
+////#include "ES_Framework.h"
+//#include "ES_Types.h"     /* gets bool type for returns */
+
 #include "ES_Configure.h"
-#include "ES_Framework.h"
+#include "ES_Types.h"
+#include "ES_Events.h"
 
 /*
   BeaconService watches the IR beacon signal and decides “beacon found”.

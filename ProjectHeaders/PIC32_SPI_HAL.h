@@ -2,6 +2,7 @@
 #define PIC32_SPI_HAL
 
 #include <stdbool.h> 
+#include "ES_Types.h"     /* gets bool type for returns */
 
 typedef enum { 
     SPI_SPI1 = 0, 

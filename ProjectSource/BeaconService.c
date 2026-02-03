@@ -80,7 +80,7 @@ bool InitBeaconService(uint8_t Priority)
   /* optional debug timer */
   ES_Timer_InitTimer(BEACON_DEBUG_TIMER, BEACON_DEBUG_MS);
 
-  dbprintf("BeaconService: init done\r\n");
+  DB_printf("BeaconService: init done\r\n");
 
   ES_Event_t ThisEvent = { ES_INIT, 0 };
   return ES_PostToService(MyPriority, ThisEvent);
@@ -132,7 +132,7 @@ ES_Event_t RunBeaconService(ES_Event_t ThisEvent)
     if (PeriodTicks != 0)
     {
       uint32_t f = ComputeFreqHz(PeriodTicks);
-      dbprintf("Beacon f=%lu Hz good=%u latched=%u\r\n", f, GoodCount, BeaconLatched);
+      DB_printf("Beacon f=%lu Hz good=%u latched=%u\r\n", f, GoodCount, BeaconLatched);
     }
     ES_Timer_InitTimer(BEACON_DEBUG_TIMER, BEACON_DEBUG_MS);
   }

@@ -15,6 +15,7 @@
 *****************************************************************************/
 #include <stdint.h>
 #include <stdbool.h>
+#include "ES_Types.h"     /* gets bool type for returns */
 
 // typdef to specify which timer is being set
 typedef enum {

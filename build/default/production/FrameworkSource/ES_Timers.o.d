@@ -13,8 +13,12 @@ build/default/production/FrameworkSource/ES_Timers.o: \
  FrameworkSource/../FrameworkHeaders/ES_General.h \
  FrameworkSource/../FrameworkHeaders/ES_Timers.h \
  FrameworkSource/../FrameworkHeaders/ES_ServiceHeaders.h \
- ProjectHeaders/MotorService.h FrameworkHeaders/ES_Types.h \
- FrameworkHeaders/ES_Events.h FrameworkHeaders/ES_Port.h \
+ ProjectHeaders/MotorService.h FrameworkHeaders/ES_Configure.h \
+ FrameworkHeaders/ES_Types.h FrameworkHeaders/ES_Events.h \
+ FrameworkSource/../FrameworkHeaders/SPIService.h \
+ FrameworkSource/../FrameworkHeaders/ES_Framework.h \
+ ProjectHeaders/BeaconService.h ProjectHeaders/ReflectiveSenseService.h \
+ FrameworkHeaders/ES_Framework.h \
  FrameworkSource/../FrameworkHeaders/ES_General.h \
  FrameworkSource/../FrameworkHeaders/ES_Events.h \
  FrameworkSource/../FrameworkHeaders/ES_PostList.h \
@@ -50,11 +54,21 @@ FrameworkSource/../FrameworkHeaders/ES_ServiceHeaders.h:
 
 ProjectHeaders/MotorService.h:
 
+FrameworkHeaders/ES_Configure.h:
+
 FrameworkHeaders/ES_Types.h:
 
 FrameworkHeaders/ES_Events.h:
 
-FrameworkHeaders/ES_Port.h:
+FrameworkSource/../FrameworkHeaders/SPIService.h:
+
+FrameworkSource/../FrameworkHeaders/ES_Framework.h:
+
+ProjectHeaders/BeaconService.h:
+
+ProjectHeaders/ReflectiveSenseService.h:
+
+FrameworkHeaders/ES_Framework.h:
 
 FrameworkSource/../FrameworkHeaders/ES_General.h:
 

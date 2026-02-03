@@ -73,6 +73,7 @@
       <itemPath>ProjectSource/ADService.c</itemPath>
       <itemPath>ProjectSource/BeaconService.c</itemPath>
       <itemPath>ProjectSource/SPIService.c</itemPath>
+      <itemPath>ProjectSource/ReflectiveSenseService.c</itemPath>
     </logicalFolder>
     <logicalFolder name="ExternalFiles"
                    displayName="Important Files"
@@ -267,8 +268,36 @@
         <property key="wpo-lto" value="false"/>
       </C32Global>
       <item path="ProjectHeaders/ADService.h" ex="true" overriding="false">
+        <C32>
+        </C32>
+        <C32-AR>
+        </C32-AR>
+        <C32-AS>
+        </C32-AS>
+        <C32-CO>
+        </C32-CO>
+        <C32-LD>
+        </C32-LD>
+        <C32CPP>
+        </C32CPP>
+        <C32Global>
+        </C32Global>
       </item>
       <item path="ProjectSource/ADService.c" ex="true" overriding="false">
+        <C32>
+        </C32>
+        <C32-AR>
+        </C32-AR>
+        <C32-AS>
+        </C32-AS>
+        <C32-CO>
+        </C32-CO>
+        <C32-LD>
+        </C32-LD>
+        <C32CPP>
+        </C32CPP>
+        <C32Global>
+        </C32Global>
       </item>
       <item path="ProjectSource/TestHarnessService0.c" ex="false" overriding="false">
         <C32>

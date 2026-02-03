@@ -20,6 +20,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "ES_Types.h"     /* gets bool type for returns */
 
 bool ADC_ConfigAutoScan( uint16_t whichPins);
 void ADC_MultiRead(uint32_t *adcResults);

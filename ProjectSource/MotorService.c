@@ -92,8 +92,9 @@ static void StartBeaconAlignSearch(void);
 /*=========================== PUBLIC API =============================*/
 bool InitMotorService(uint8_t Priority)
 {
-  MyPriority = Priority;
-
+  
+    MyPriority = Priority;
+    ES_Event_t ThisEvent;
   InitPinsAndPPS();
   InitTimer2ForPWM();
   InitOCsForPWM();
@@ -101,10 +102,16 @@ bool InitMotorService(uint8_t Priority)
   CurrentState = MOTOR_STOP;
   StopMotors();
 
-  dbprintf("MotorService: init done\r\n");
+  DB_printf("MotorService: init done\r\n");
 
-  ES_Event_t ThisEvent = { ES_INIT, 0 };
-  return ES_PostToService(MyPriority, ThisEvent);
+    if (ES_PostToService(MyPriority, ThisEvent) == true)
+  {
+    return true;
+  }
+  else
+  {
+    return false;
+  }
 }
 
 bool PostMotorService(ES_Event_t ThisEvent)
@@ -215,7 +222,7 @@ static void InitPinsAndPPS(void)
 {
   /* motor pins as digital outputs */
   TRISAbits.TRISA1 = 0;  ANSELAbits.ANSA1 = 0;
-  TRISBbits.TRISB9 = 0;  ANSELBbits.ANSB9 = 0;
+//  TRISBbits.TRISB9 = 0;  ANSELBbits.ANSB9 = 0;
   TRISBbits.TRISB3 = 0;  ANSELBbits.ANSB3 = 0;
   TRISBbits.TRISB2 = 0;  ANSELBbits.ANSB2 = 0;
 
