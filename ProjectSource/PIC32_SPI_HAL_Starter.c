@@ -311,13 +311,15 @@ bool SPISetup_MapSSOutput(SPI_Module_t WhichModule, SPI_PinMap_t WhichPin)
  Description
    Sets the designated pin to be the SD input.
    Legal port pins for the SDI1 input are:
-   SPI_NO_PIN, SPI_RPA1, SPI_RPB1, SPI_RPB5, SPI_RPB8,SPI_RPB11.   
+   SPI_NO_PIN, SPI_RPA1, SPI_RPB1, SPI_RPB5, SPI_RPB8, SPI_RPB11.   
    Legal port pins for the SDI2 input are:
    SPI_NO_PIN, SPI_RPA2, SPI_RPA4, SPI_RPB2, SPI_RPB6,SPI_RPB13.   
 ****************************************************************************/
 bool SPISetup_MapSDInput(SPI_Module_t WhichModule, SPI_PinMap_t WhichPin)
 {
-  // not needed for ME218a Labs
+    SPI1CONbits.DISSDI = 0; //enable SDI
+    TRISBbits.TRISB11 = 1; // set to RB11 pin
+    SDI1R = 0b0011; // map SDi to RB11
 }
 
 /****************************************************************************
@@ -476,7 +478,7 @@ bool SPISetup_EnableSPI(SPI_Module_t WhichModule)
 ****************************************************************************/
 void SPIOperate_SPI1_Send8(uint8_t TheData)
 {
-  // not needed for ME218a Labs
+  SPI1BUF = TheData;  
 }
 
 /****************************************************************************
@@ -523,7 +525,12 @@ void SPIOperate_SPI1_Send32(uint32_t TheData)
 ****************************************************************************/
 void SPIOperate_SPI1_Send8Wait(uint8_t TheData)
 {
-  // not needed for ME218a Labs
+  IFS0CLR = _IFS0_INT4IF_MASK;
+  volatile short clear = SPI1BUF; // clear the buffer
+  SPI1BUF = TheData;
+  while(!SPIOperate_HasSS1_Risen()) {
+      ; // wait
+  }
 }
 
 /****************************************************************************

@@ -3,17 +3,16 @@
     SPIService.c  (Lab 8)
 
   Summary
-    - Configure SPI in leader (master) mode
+    - Configure SPI1 in leader (master) mode using SPI HAL
     - Periodically query the Command Generator
     - Read a command byte back
     - Convert that byte into a motion event for MotorService
 
-  Wiring (from Amanda's notes):
-  @Amanda, if i messed up this please fix :) thanks!
+  Wiring (from lab notes):
     CommandGen SDI  -> PIC32 SDO1  (RB5,  pin 14)
-    CommandGen SDO  -> PIC32 SDI1  (RB4,  pin 11)
+    CommandGen SDO  -> PIC32 SDI1  (RB11, pin 22)
     CommandGen SCK  -> PIC32 SCK1  (RB14, pin 25)
-    CommandGen SS   -> PIC32 CS    (RB15, pin 26)
+    CommandGen SS   -> PIC32 SS1   (RB15, pin 26)
 ****************************************************************************/
 
 #include "SPIService.h"
@@ -30,71 +29,49 @@
 #include "PIC32_SPI_HAL.h"
 
 /*============================== CONFIG ==============================*/
-/* use the symbolic timer name from ES_Configure.h */
 #ifndef SPI_TIMER
-#define SPI_TIMER            0u
+#define SPI_TIMER               0u
 #endif
 
-/* how often to ask for a new command (ms) */
-#define SPI_POLL_MS          50u
+#define SPI_POLL_MS             50u
 
-#define PBCLK_HZ             20000000u
+/* Command Generator protocol bytes */
+#define CMD_QUERY               0xAA
+#define CMD_NOOP                0xFF
 
-/* Chip Select pin (RB13, pin 24) */
-#define CG_CS_LAT            LATBbits.LATB13
-#define CG_CS_TRIS           TRISBbits.TRISB13
-#define CG_CS_ANSEL          ANSELBbits.ANSB13
+#define CMD_STOP                0x00
+#define CMD_ROT_CW_90           0x02
+#define CMD_ROT_CW_45           0x03
+#define CMD_ROT_CCW_90          0x04
+#define CMD_ROT_CCW_45          0x05
 
-/* SPI pins (my wiring) */
-#define SPI_SDO_TRIS         TRISBbits.TRISB5     /* RB5  */
-// no ansel for RB5
+#define CMD_TRANS_FWD_HALF      0x08
+#define CMD_TRANS_FWD_FULL      0x09
+#define CMD_TRANS_REV_HALF      0x10
+#define CMD_TRANS_REV_FULL      0x11
 
-#define SPI_SDI_TRIS         TRISBbits.TRISB11    /* RB11 */
-// no ansel for RB11
+#define CMD_ALIGN               0x20
+#define CMD_TAPE_DETECT         0x40
 
-#define SPI_SCK_TRIS         TRISBbits.TRISB14    /* RB14 */
-#define SPI_SCK_ANSEL        ANSELBbits.ANSB14
+/* SPI mode parameters */
+#define SPI_IDLE_STATE          SPI_CLK_HI
+#define SPI_ACTIVE_EDGE         SPI_SECOND_EDGE
+#define SPI_SAMPLE_PHASE        SPI_SMP_MID
+#define SPI_BITTIME_NS          2000u   /* 500 kHz */
 
-/* ---------------- Command Generator bytes (Appendix A) ----------------
-   I?m keeping these here so SPIService.c is self-contained.
------------------------------------------------------------------------ */
-#define CMD_QUERY                 0xAA
-#define CMD_NOOP                  0xFF   /* also used as ?new cmd ready? marker */
-
-#define CMD_STOP                  0x00
-
-#define CMD_ROT_CW_90             0x02
-#define CMD_ROT_CW_45             0x03
-#define CMD_ROT_CCW_90            0x04
-#define CMD_ROT_CCW_45            0x05
-
-#define CMD_TRANS_FWD_HALF        0x08
-#define CMD_TRANS_FWD_FULL        0x09
-#define CMD_TRANS_REV_HALF        0x10
-#define CMD_TRANS_REV_FULL        0x11
-
-#define CMD_ALIGN                 0x20
-#define CMD_TAPE_DETECT           0x40
-
-/* SPI speed: Fsck = PBCLK / (2*(BRG+1))  */
-#define SPI_BRG_VALUE             19u    /* 20MHz / (2*(19+1)) = 500kHz */
+/* SPI1 pin mapping */
+#define SPI1_SS_PIN             SPI_RPB15
+#define SPI1_SDO_PIN            SPI_RPB5
+#define SPI1_SDI_PIN            SPI_RPB11
 
 /*============================== STATE ==============================*/
 static uint8_t MyPriority;
-
-/* protocol state:
-   - see 0xFF marker -> next query returns actual command
-*/
 static bool WaitingForRealCommand = false;
 
 /*====================== PRIVATE FUNCTION PROTOS =====================*/
 static void InitSPIHardware(void);
-static void CG_Select(void);
-static void CG_Deselect(void);
-static uint8_t SPI_TxRxByte(uint8_t outByte);
-
-static void HandleCommandByte(uint8_t cmd);
 static bool IsKnownCommand(uint8_t cmd);
+static void HandleCommandByte(uint8_t cmd);
 
 /*=========================== PUBLIC API =============================*/
 bool InitSPIService(uint8_t Priority)
@@ -105,10 +82,10 @@ bool InitSPIService(uint8_t Priority)
 
   ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
 
-  DB_printf("SPIService: init done\r\n");
+  DB_printf("SPIService initialized (HAL, SS=RB15)\r\n");
 
-  ES_Event_t ThisEvent = { ES_INIT, 0 };
-  return ES_PostToService(MyPriority, ThisEvent);
+  ES_Event_t InitEvent = { ES_INIT, 0 };
+  return ES_PostToService(MyPriority, InitEvent);
 }
 
 bool PostSPIService(ES_Event_t ThisEvent)
@@ -120,49 +97,36 @@ ES_Event_t RunSPIService(ES_Event_t ThisEvent)
 {
   ES_Event_t ReturnEvent = { ES_NO_EVENT, 0 };
 
-  if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == SPI_TIMER))
+  if ((ThisEvent.EventType == ES_TIMEOUT) &&
+      (ThisEvent.EventParam == SPI_TIMER))
   {
-    /* query follower for next byte */
-    CG_Select();
-    SPI_TxRxByte(CMD_QUERY);      // send query
-    uint8_t rx = SPI_TxRxByte(0xFF); // clock out response
-    // uint8_t rx = SPI_TxRxByte(CMD_QUERY);
-    // DB_printf("PORTB11=%d\r\n", PORTBbits.RB11); // check if it is always 0 or not
+    /* Send query byte and wait for SS cycle to complete */
+    SPIOperate_SPI1_Send8Wait(CMD_QUERY);
 
-    DB_printf("SPIRBF=%d SPIROV=%d\r\n",
-          SPI1STATbits.SPIRBF,
-          SPI1STATbits.SPIROV);
-    DB_printf("rx = %d", (uint8_t) rx); // debugging
-    CG_Deselect();
+    /* Read received byte */
+    uint8_t rx = (uint8_t)SPIOperate_ReadData(SPI_SPI1);
 
-    /* if I get a weird byte, I print it and ignore it (don?t silently convert) */
+    static uint16_t PrintDivider = 0;
+    if ((PrintDivider++ % 10u) == 0u)
+    {
+      DB_printf("SPI rx (dec) = %u\r\n", (unsigned int)rx);
+    }
+
     if (!IsKnownCommand(rx))
     {
+      DB_printf("SPI unknown byte: 0x%02X\r\n", rx);
       ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
       return ReturnEvent;
     }
 
-    /* protocol behavior:
-       - 0xFF by itself is the ?new command ready? marker
-       - the NEXT query returns the actual command value
-    */
     if (rx == CMD_NOOP)
     {
       WaitingForRealCommand = true;
     }
     else
     {
-      /* got a real command byte */
-      if (WaitingForRealCommand)
-      {
-        HandleCommandByte(rx);
-        WaitingForRealCommand = false;
-      }
-      else
-      {
-        /* sometimes generator repeats same command; still OK to handle */
-        HandleCommandByte(rx);
-      }
+      HandleCommandByte(rx);
+      WaitingForRealCommand = false;
     }
 
     ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
@@ -171,113 +135,35 @@ ES_Event_t RunSPIService(ES_Event_t ThisEvent)
   return ReturnEvent;
 }
 
-/*=========================== SPI HELPERS ============================*/
+/*=========================== SPI HAL SETUP ============================*/
 static void InitSPIHardware(void)
 {
-  /* make sure my SPI pins are digital */
-  //SPI_SDO_ANSEL = 0; no ansel for these pins
- // SPI_SDI_ANSEL = 0; no ansel for these pins
-//  /*SPI_SCK_ANSEL = 0;
-//
-//  /* directions (SPI module will drive SDO/SCK, SDI is input) */
-//  SPI_SDO_TRIS = 0;
-//  SPI_SDI_TRIS = 1;
-//  SPI_SCK_TRIS = 0;
-//
-//  /* CS pin: set high first to avoid a glitch */
-//  CG_CS_ANSEL = 0;
-//  CG_CS_LAT = 1;
-//  CG_CS_TRIS = 0;
+  bool Success = true;
 
-  /* ---------------- PPS mapping (SPI1) ----------------
-     This is where SDI/SDO are ?configured?.
-     Once PPS is set, I never read/write SDI/SDO as GPIO again.
+  Success &= SPISetup_BasicConfig(SPI_SPI1);
+  Success &= SPISetup_SetLeader(SPI_SPI1, SPI_SAMPLE_PHASE);
 
-     If your specific PIC32 header uses a different SDI1R form/value,
-     this is the only line you should need to tweak.
-  ------------------------------------------------------*/
+  Success &= SPISetup_MapSSOutput(SPI_SPI1, SPI1_SS_PIN);
+  Success &= SPISetup_MapSDOutput(SPI_SPI1, SPI1_SDO_PIN);
+  Success &= SPISetup_MapSDInput (SPI_SPI1, SPI1_SDI_PIN);
 
-  /* unlock PPS */
-  /*SYSKEY = 0x00000000;
-  SYSKEY = 0xAA996655;
-  SYSKEY = 0x556699AA;
-  CFGCONbits.IOLOCK = 0;*/
+  Success &= SPISetup_SetClockIdleState(SPI_SPI1, SPI_IDLE_STATE);
+  Success &= SPISetup_SetActiveEdge(SPI_SPI1, SPI_ACTIVE_EDGE);
 
+  Success &= SPISetup_SetXferWidth(SPI_SPI1, SPI_8BIT);
+  Success &= SPISetEnhancedBuffer(SPI_SPI1, false);
 
-  /* SCK1 on RB14 is often a fixed-function SPI clock pin on these boards.
-     If your part requires PPS for SCK1, you would map it here similarly.
-  */
-  
-  //RPB14Rbits.RPB14R = 0b0001;  // SCK1 function
+  Success &= SPISetup_SetBitTime(SPI_SPI1, SPI_BITTIME_NS);
+  Success &= SPISetup_EnableSPI(SPI_SPI1);
 
-  /* lock PPS */
-  //CFGCONbits.IOLOCK = 1;
-  //SYSKEY = 0x00000000;
-
-  /* ---------------- SPI1 setup ---------------- */
-  // SPI1CON = 0;
-  //SPI1CONbits.ON = 0;     // disable SPI for setup!!
-  SPISetup_BasicConfig(SPI_SPI1);
-  SPISetup_SetLeader(SPI_SPI1, SPI_SMP_MID);        // sampling in middle
-  SPISetup_MapSSOutput(SPI_SPI1, SPI_RPB15);        // using RB15 for SS
-  SPISetup_MapSDOutput(SPI_SPI1, SPI_RPB5);         // using RB5 for SDO
-  SDI1Rbits.SDI1R = 0b0011;                         // SD1 
-  SPISetup_SetClockIdleState(SPI_SPI1, SPI_CLK_HI);
-  SPISetup_SetActiveEdge(SPI_SPI1, SPI_SECOND_EDGE);
-  SPISetEnhancedBuffer(SPI_SPI1, false);
-  SPISetup_SetXferWidth(SPI_SPI1, SPI_8BIT);
-  SPISetup_SetBitTime(SPI_SPI1, 10000);
-  SPISetup_EnableSPI(SPI_SPI1);
-  
-  
-  /* SDI1 <- RB4
-     many ME218 headers use SDI1Rbits.SDI1R = 0b0011 for RPB4.
-  */
-  
-  //SPI1CONbits.MSTEN = 1;  // master mode
-  
-//  SPI1CONbits.CKP = 1;     /* idle clock low */
-//  //SPI1CONbits.CKE = 0;     /* data changes on falling edge, sample on rising */
-//  SPI1CONbits.ENHBUF = 1; // enhanced buffer mode
-//  //SPI1CONbits.SMP = 0;
-//  
-//  // 8 bit mode
-//  SPI1CONbits.MODE16 = 0;
-//  SPI1CONbits.MODE32 = 0;
-//  
-//  SPI1CONbits.MSSEN = 1;  // Master mode slave select control
-//  SPI1CONbits.FRMPOL = 0; // Active low polarity
-//  SPI1BRG = SPI_BRG_VALUE;
-//  SPI1STATbits.SPIROV = 0; // clearing SPIROV bit
-//  
-//  /* clear any garbage */
-//  (void)SPI1BUF;
-//  SPI1CONbits.ON = 1;
-  DB_printf("SPI Setup Done");
-}
-
-static void CG_Select(void)
-{
-  // LOWERING SS TO BEGIN TRANSFER
-  CG_CS_LAT = 0;
-}
-
-static void CG_Deselect(void)
-{
-  // RAISING SS TO END TRANSFER
-  CG_CS_LAT = 1;
-}
-
-static uint8_t SPI_TxRxByte(uint8_t outByte)
-{
-  /* clear overflow just in case */
-  SPI1STATbits.SPIROV = 0;
-
-  SPI1BUF = outByte;
-
-  while (!SPI1STATbits.SPIRBF) { }
-
-  return (uint8_t)SPI1BUF;
+  if (!Success)
+  {
+    DB_printf("SPI HAL configuration failed\r\n");
+  }
+  else
+  {
+    DB_printf("SPI HAL configuration successful\r\n");
+  }
 }
 
 /*======================= COMMAND -> EVENT MAP =======================*/
@@ -298,7 +184,6 @@ static bool IsKnownCommand(uint8_t cmd)
     case CMD_ALIGN:
     case CMD_TAPE_DETECT:
       return true;
-
     default:
       return false;
   }
@@ -306,74 +191,68 @@ static bool IsKnownCommand(uint8_t cmd)
 
 static void HandleCommandByte(uint8_t cmd)
 {
-  ES_Event_t e;
+  ES_Event_t Event;
 
   switch (cmd)
   {
     case CMD_STOP:
-      e.EventType = ES_STOP; e.EventParam = 0;
-      PostMotorService(e);
+      Event.EventType = ES_STOP;
+      Event.EventParam = 0;
       break;
 
     case CMD_ALIGN:
-      e.EventType = ES_ALIGN; e.EventParam = 0;
-      PostMotorService(e);
+      Event.EventType = ES_ALIGN;
+      Event.EventParam = 0;
       break;
 
     case CMD_TAPE_DETECT:
-      e.EventType = ES_TAPE_DETECT; e.EventParam = 0;
-      PostMotorService(e);
+      Event.EventType = ES_TAPE_DETECT;
+      Event.EventParam = 0;
       break;
 
     case CMD_ROT_CW_45:
-      e.EventType = ES_ROTATE;
-      e.EventParam = PackRotateParam(ROT_45, ROT_CW);
-      PostMotorService(e);
+      Event.EventType = ES_ROTATE;
+      Event.EventParam = PackRotateParam(ROT_45, ROT_CW);
       break;
 
     case CMD_ROT_CW_90:
-      e.EventType = ES_ROTATE;
-      e.EventParam = PackRotateParam(ROT_90, ROT_CW);
-      PostMotorService(e);
+      Event.EventType = ES_ROTATE;
+      Event.EventParam = PackRotateParam(ROT_90, ROT_CW);
       break;
 
     case CMD_ROT_CCW_45:
-      e.EventType = ES_ROTATE;
-      e.EventParam = PackRotateParam(ROT_45, ROT_CCW);
-      PostMotorService(e);
+      Event.EventType = ES_ROTATE;
+      Event.EventParam = PackRotateParam(ROT_45, ROT_CCW);
       break;
 
     case CMD_ROT_CCW_90:
-      e.EventType = ES_ROTATE;
-      e.EventParam = PackRotateParam(ROT_90, ROT_CCW);
-      PostMotorService(e);
+      Event.EventType = ES_ROTATE;
+      Event.EventParam = PackRotateParam(ROT_90, ROT_CCW);
       break;
 
     case CMD_TRANS_FWD_HALF:
-      e.EventType = ES_TRANSLATE;
-      e.EventParam = PackTranslateParam(TRANS_HALF, DIR_FWD);
-      PostMotorService(e);
+      Event.EventType = ES_TRANSLATE;
+      Event.EventParam = PackTranslateParam(TRANS_HALF, DIR_FWD);
       break;
 
     case CMD_TRANS_FWD_FULL:
-      e.EventType = ES_TRANSLATE;
-      e.EventParam = PackTranslateParam(TRANS_FULL, DIR_FWD);
-      PostMotorService(e);
+      Event.EventType = ES_TRANSLATE;
+      Event.EventParam = PackTranslateParam(TRANS_FULL, DIR_FWD);
       break;
 
     case CMD_TRANS_REV_HALF:
-      e.EventType = ES_TRANSLATE;
-      e.EventParam = PackTranslateParam(TRANS_HALF, DIR_REV);
-      PostMotorService(e);
+      Event.EventType = ES_TRANSLATE;
+      Event.EventParam = PackTranslateParam(TRANS_HALF, DIR_REV);
       break;
 
     case CMD_TRANS_REV_FULL:
-      e.EventType = ES_TRANSLATE;
-      e.EventParam = PackTranslateParam(TRANS_FULL, DIR_REV);
-      PostMotorService(e);
+      Event.EventType = ES_TRANSLATE;
+      Event.EventParam = PackTranslateParam(TRANS_FULL, DIR_REV);
       break;
 
     default:
-      break;
+      return;
   }
+
+  PostMotorService(Event);
 }
