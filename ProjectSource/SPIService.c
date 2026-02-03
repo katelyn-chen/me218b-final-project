@@ -11,9 +11,9 @@
   Wiring (from Amanda's notes):
   @Amanda, if i messed up this please fix :) thanks!
     CommandGen SDI  -> PIC32 SDO1  (RB5,  pin 14)
-    CommandGen SDO  -> PIC32 SDI1  (RB11, pin 22)
+    CommandGen SDO  -> PIC32 SDI1  (RB4,  pin 11)
     CommandGen SCK  -> PIC32 SCK1  (RB14, pin 25)
-    CommandGen SS   -> PIC32 CS    (RB13, pin 24)
+    CommandGen SS   -> PIC32 CS    (RB15, pin 26)
 ****************************************************************************/
 
 #include "SPIService.h"
@@ -27,6 +27,7 @@
 #include "dbprintf.h"
 
 #include "MotorService.h"
+#include "PIC32_SPI_HAL.h"
 
 /*============================== CONFIG ==============================*/
 /* use the symbolic timer name from ES_Configure.h */
@@ -123,9 +124,15 @@ ES_Event_t RunSPIService(ES_Event_t ThisEvent)
   {
     /* query follower for next byte */
     CG_Select();
-    uint8_t rx = SPI_TxRxByte(CMD_QUERY);
-    DB_printf("PORTB11=%d\r\n", PORTBbits.RB11); // check if it is always 0 or not
-    DB_printf("rx = %d", (uint32_t) rx); // debugging
+    SPI_TxRxByte(CMD_QUERY);      // send query
+    uint8_t rx = SPI_TxRxByte(0xFF); // clock out response
+    // uint8_t rx = SPI_TxRxByte(CMD_QUERY);
+    // DB_printf("PORTB11=%d\r\n", PORTBbits.RB11); // check if it is always 0 or not
+
+    DB_printf("SPIRBF=%d SPIROV=%d\r\n",
+          SPI1STATbits.SPIRBF,
+          SPI1STATbits.SPIROV);
+    DB_printf("rx = %d", (uint8_t) rx); // debugging
     CG_Deselect();
 
     /* if I get a weird byte, I print it and ignore it (don?t silently convert) */
@@ -170,17 +177,17 @@ static void InitSPIHardware(void)
   /* make sure my SPI pins are digital */
   //SPI_SDO_ANSEL = 0; no ansel for these pins
  // SPI_SDI_ANSEL = 0; no ansel for these pins
-  SPI_SCK_ANSEL = 0;
-
-  /* directions (SPI module will drive SDO/SCK, SDI is input) */
-  SPI_SDO_TRIS = 0;
-  SPI_SDI_TRIS = 1;
-  SPI_SCK_TRIS = 0;
-
-  /* CS pin: set high first to avoid a glitch */
-  CG_CS_ANSEL = 0;
-  CG_CS_LAT = 1;
-  CG_CS_TRIS = 0;
+//  /*SPI_SCK_ANSEL = 0;
+//
+//  /* directions (SPI module will drive SDO/SCK, SDI is input) */
+//  SPI_SDO_TRIS = 0;
+//  SPI_SDI_TRIS = 1;
+//  SPI_SCK_TRIS = 0;
+//
+//  /* CS pin: set high first to avoid a glitch */
+//  CG_CS_ANSEL = 0;
+//  CG_CS_LAT = 1;
+//  CG_CS_TRIS = 0;
 
   /* ---------------- PPS mapping (SPI1) ----------------
      This is where SDI/SDO are ?configured?.
@@ -191,57 +198,73 @@ static void InitSPIHardware(void)
   ------------------------------------------------------*/
 
   /* unlock PPS */
-  SYSKEY = 0x00000000;
+  /*SYSKEY = 0x00000000;
   SYSKEY = 0xAA996655;
   SYSKEY = 0x556699AA;
-  CFGCONbits.IOLOCK = 0;
+  CFGCONbits.IOLOCK = 0;*/
 
-  /* SDO1 -> RB5
-     common PPS output function code for SDO1 is 0b0011 on many ME218 PIC32 setups
-  */
-  RPB5Rbits.RPB5R = 0b0011;
-
-  /* SDI1 <- RB11
-     many ME218 headers use SDI1Rbits.SDI1R = 0b0011 for RPB11.
-     If yours differs, change this constant to the RB11 select value for your part.
-  */
-  SDI1Rbits.SDI1R = 0b0011;
 
   /* SCK1 on RB14 is often a fixed-function SPI clock pin on these boards.
      If your part requires PPS for SCK1, you would map it here similarly.
   */
+  
+  //RPB14Rbits.RPB14R = 0b0001;  // SCK1 function
 
   /* lock PPS */
-  CFGCONbits.IOLOCK = 1;
-  SYSKEY = 0x00000000;
+  //CFGCONbits.IOLOCK = 1;
+  //SYSKEY = 0x00000000;
 
   /* ---------------- SPI1 setup ---------------- */
-  SPI1CON = 0;
-  SPI1STATbits.SPIROV = 0;
-
-  SPI1BRG = SPI_BRG_VALUE;
-
-  SPI1CONbits.MSTEN = 1;   /* master */
-  SPI1CONbits.CKP = 0;     /* idle clock low */
-  SPI1CONbits.CKE = 1;     /* data changes on falling edge, sample on rising */
-  SPI1CONbits.SMP = 0;
-
-  SPI1CONbits.MODE16 = 0;
-  SPI1CONbits.MODE32 = 0;
-
-  /* clear any garbage */
-  (void)SPI1BUF;
-
-  SPI1CONbits.ON = 1;
+  // SPI1CON = 0;
+  //SPI1CONbits.ON = 0;     // disable SPI for setup!!
+  SPISetup_BasicConfig(SPI_SPI1);
+  SPISetup_SetLeader(SPI_SPI1, SPI_SMP_MID);        // sampling in middle
+  SPISetup_MapSSOutput(SPI_SPI1, SPI_RPB15);        // using RB15 for SS
+  SPISetup_MapSDOutput(SPI_SPI1, SPI_RPB5);         // using RB5 for SDO
+  SDI1Rbits.SDI1R = 0b0011;                         // SD1 
+  SPISetup_SetClockIdleState(SPI_SPI1, SPI_CLK_HI);
+  SPISetup_SetActiveEdge(SPI_SPI1, SPI_SECOND_EDGE);
+  SPISetEnhancedBuffer(SPI_SPI1, false);
+  SPISetup_SetXferWidth(SPI_SPI1, SPI_8BIT);
+  SPISetup_SetBitTime(SPI_SPI1, 10000);
+  SPISetup_EnableSPI(SPI_SPI1);
+  
+  
+  /* SDI1 <- RB4
+     many ME218 headers use SDI1Rbits.SDI1R = 0b0011 for RPB4.
+  */
+  
+  //SPI1CONbits.MSTEN = 1;  // master mode
+  
+//  SPI1CONbits.CKP = 1;     /* idle clock low */
+//  //SPI1CONbits.CKE = 0;     /* data changes on falling edge, sample on rising */
+//  SPI1CONbits.ENHBUF = 1; // enhanced buffer mode
+//  //SPI1CONbits.SMP = 0;
+//  
+//  // 8 bit mode
+//  SPI1CONbits.MODE16 = 0;
+//  SPI1CONbits.MODE32 = 0;
+//  
+//  SPI1CONbits.MSSEN = 1;  // Master mode slave select control
+//  SPI1CONbits.FRMPOL = 0; // Active low polarity
+//  SPI1BRG = SPI_BRG_VALUE;
+//  SPI1STATbits.SPIROV = 0; // clearing SPIROV bit
+//  
+//  /* clear any garbage */
+//  (void)SPI1BUF;
+//  SPI1CONbits.ON = 1;
+  DB_printf("SPI Setup Done");
 }
 
 static void CG_Select(void)
 {
+  // LOWERING SS TO BEGIN TRANSFER
   CG_CS_LAT = 0;
 }
 
 static void CG_Deselect(void)
 {
+  // RAISING SS TO END TRANSFER
   CG_CS_LAT = 1;
 }
 
