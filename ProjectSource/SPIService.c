@@ -48,11 +48,12 @@
 #define CG_SPI_MODULE        SPI_SPI1
 
 /* SPI clock period (ns). 500 kHz -> 2000 ns period */
-#define SPI_CLK_PERIOD_NS    2000u
-
+//#define SPI_CLK_PERIOD_NS    2000u
+#define SPI_CLK_PERIOD_NS    50000u
 /* ---------------- Command Generator bytes (Appendix A) ----------------
    keeping these here so SPIService.c is self-contained.
 ----------------------------------------------------------------------- */
+//#define CMD_QUERY                 0xAA
 #define CMD_QUERY                 0xAA
 #define CMD_NOOP                  0xFF   /* also used as ?new cmd ready? marker */
 
@@ -116,7 +117,8 @@ ES_Event_t RunSPIService(ES_Event_t ThisEvent)
   {
     uint8_t rx;
     rx = CG_QueryByte(CMD_QUERY);
-    DB_printf("SPI rx = 0x%d\r\n", rx);
+//    DB_printf("SPI rx = 0x%d\r\n", rx);
+    
 
     /* ignore unknown bytes (do not silently convert) */
     if (!IsKnownCommand(rx))
@@ -133,6 +135,7 @@ ES_Event_t RunSPIService(ES_Event_t ThisEvent)
     if (rx == CMD_NOOP)
     {
       WaitingForRealCommand = true;
+     // DB_printf("NOT HANDLING");
     }
     else
     {
@@ -140,10 +143,12 @@ ES_Event_t RunSPIService(ES_Event_t ThisEvent)
       {
         HandleCommandByte(rx);
         WaitingForRealCommand = false;
+     //   DB_printf("handling2");
       }
       else
       {
         HandleCommandByte(rx);
+       // DB_printf("handling1");
       }
     }
 
@@ -162,12 +167,18 @@ static void InitSPIHardware(void)
   SPISetup_SetLeader(CG_SPI_MODULE, SPI_SMP_MID);
    /* map data pins */
   SPISetup_MapSDOutput(CG_SPI_MODULE, SPI_RPB5);   /* SDO1 -> RB5 */
-  SPISetup_MapSDInput(CG_SPI_MODULE,  SPI_RPB11);  /* SDI1 <- RB11 */
+  // SPISetup_MapSDInput(CG_SPI_MODULE,  SPI_RPB11);  /* SDI1 <- RB11 */ AW - checking if it is the pin
+  SPISetup_MapSDInput(CG_SPI_MODULE,  SPI_RPB8);
   SPISetup_MapSSOutput(CG_SPI_MODULE, SPI_RPB15);
 
   /* clock mode settings (matches common CKP=0, CKE=1 style) */
+//  SPISetup_SetClockIdleState(CG_SPI_MODULE, SPI_CLK_HI);    // CKP = 1
+ // SPISetup_SetActiveEdge(CG_SPI_MODULE, SPI_FIRST_EDGE);   // CKE = 0
+  // AW- changing bc it is not reading AA like it should
   SPISetup_SetClockIdleState(CG_SPI_MODULE, SPI_CLK_HI);    // CKP = 1
-  SPISetup_SetActiveEdge(CG_SPI_MODULE, SPI_FIRST_EDGE);   // CKE = 0
+  SPISetup_SetActiveEdge(CG_SPI_MODULE, SPI_SECOND_EDGE);   // CKE = 0
+  
+  
   SPISetEnhancedBuffer(CG_SPI_MODULE, true);
   SPISetup_SetXferWidth(CG_SPI_MODULE, SPI_8BIT);
 
@@ -225,67 +236,78 @@ static bool IsKnownCommand(uint8_t cmd)
 static void HandleCommandByte(uint8_t cmd)
 {
   ES_Event_t e;
-
+  DB_printf("SPIService posting cmd=%d\r\n", cmd);
   switch (cmd)
   {
     case CMD_STOP:
+    //  DB_printf("match", cmd);
       e.EventType = ES_STOP; e.EventParam = 0;
       PostMotorService(e);
       break;
 
     case CMD_ALIGN:
+    //  DB_printf("match", cmd);
       e.EventType = ES_ALIGN; e.EventParam = 0;
       PostMotorService(e);
       break;
 
     case CMD_TAPE_DETECT:
+     // DB_printf("match", cmd);
       e.EventType = ES_TAPE_DETECT; e.EventParam = 0;
       PostMotorService(e);
       break;
 
     case CMD_ROT_CW_45:
+     // DB_printf("match", cmd);
       e.EventType = ES_ROTATE;
       e.EventParam = PackRotateParam(ROT_45, ROT_CW);
       PostMotorService(e);
       break;
 
     case CMD_ROT_CW_90:
+     // DB_printf("match", cmd);
       e.EventType = ES_ROTATE;
       e.EventParam = PackRotateParam(ROT_90, ROT_CW);
       PostMotorService(e);
       break;
 
     case CMD_ROT_CCW_45:
+     // DB_printf("match", cmd);
       e.EventType = ES_ROTATE;
       e.EventParam = PackRotateParam(ROT_45, ROT_CCW);
       PostMotorService(e);
       break;
 
     case CMD_ROT_CCW_90:
+    //  DB_printf("match", cmd);
       e.EventType = ES_ROTATE;
       e.EventParam = PackRotateParam(ROT_90, ROT_CCW);
       PostMotorService(e);
       break;
 
     case CMD_TRANS_FWD_HALF:
+     // DB_printf("match", cmd);
       e.EventType = ES_TRANSLATE;
       e.EventParam = PackTranslateParam(TRANS_HALF, DIR_FWD);
       PostMotorService(e);
       break;
 
     case CMD_TRANS_FWD_FULL:
+    //  DB_printf("match", cmd);
       e.EventType = ES_TRANSLATE;
       e.EventParam = PackTranslateParam(TRANS_FULL, DIR_FWD);
       PostMotorService(e);
       break;
 
     case CMD_TRANS_REV_HALF:
+     // DB_printf("match", cmd);
       e.EventType = ES_TRANSLATE;
       e.EventParam = PackTranslateParam(TRANS_HALF, DIR_REV);
       PostMotorService(e);
       break;
 
     case CMD_TRANS_REV_FULL:
+     // DB_printf("match", cmd);
       e.EventType = ES_TRANSLATE;
       e.EventParam = PackTranslateParam(TRANS_FULL, DIR_REV);
       PostMotorService(e);

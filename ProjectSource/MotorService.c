@@ -129,28 +129,33 @@ ES_Event_t RunMotorService(ES_Event_t ThisEvent)
       switch (ThisEvent.EventType)
       {
         case ES_ROTATE:
+          DB_printf("rotate run\n");
           DoRotate(ThisEvent.EventParam);
           StartRotateTimer(ThisEvent.EventParam);
           CurrentState = MOTOR_ROTATE;
           break;
 
         case ES_TRANSLATE:
+          DB_printf("translate run\n");
           DoTranslate(ThisEvent.EventParam);
           CurrentState = MOTOR_TRANSLATE;
           break;
 
         case ES_TAPE_DETECT:
+          DB_printf("tape detect\n");
           StartTapeDetect();
           CurrentState = MOTOR_TAPE_DETECT;
           break;
 
         case ES_ALIGN:
+          DB_printf("align\n");
           StartBeaconAlignSearch();
           CurrentState = MOTOR_BEACON_ALIGN;
           break;
 
         case ES_STOP:
         default:
+          DB_printf("stop\n");
           StopMotors();
           CurrentState = MOTOR_STOP;
           break;
@@ -158,6 +163,7 @@ ES_Event_t RunMotorService(ES_Event_t ThisEvent)
       break;
 
     case MOTOR_ROTATE:
+      DB_printf("motor rotating\n");
       if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == ROTATE_TIMER))
       {
         StopMotors();
@@ -171,6 +177,7 @@ ES_Event_t RunMotorService(ES_Event_t ThisEvent)
       break;
 
     case MOTOR_TRANSLATE:
+      DB_printf("motor translating\n");
       if (ThisEvent.EventType == ES_STOP)
       {
         StopMotors();
@@ -183,6 +190,7 @@ ES_Event_t RunMotorService(ES_Event_t ThisEvent)
       break;
 
     case MOTOR_TAPE_DETECT:
+      DB_printf("motor tape detecting\n");
       if (ThisEvent.EventType == ES_TAPE_FOUND)
       {
         StopMotors();
@@ -196,14 +204,18 @@ ES_Event_t RunMotorService(ES_Event_t ThisEvent)
       break;
 
     case MOTOR_BEACON_ALIGN:
+      DB_printf("motor aligning\n");
+      LATBbits.LATB4 = 1;
       if (ThisEvent.EventType == ES_BEACON_FOUND)
       {
         StopMotors();
+        LATBbits.LATB4 = 0;
         CurrentState = MOTOR_STOP;
       }
       if (ThisEvent.EventType == ES_STOP)
       {
         StopMotors();
+        LATBbits.LATB4 = 0;
         CurrentState = MOTOR_STOP;
       }
       break;
@@ -225,6 +237,8 @@ static void InitPinsAndPPS(void)
 //  TRISBbits.TRISB9 = 0;  ANSELBbits.ANSB9 = 0;
   TRISBbits.TRISB3 = 0;  ANSELBbits.ANSB3 = 0;
   TRISBbits.TRISB2 = 0;  ANSELBbits.ANSB2 = 0;
+  
+  TRISBbits.TRISB4 = 0; LATBbits.LATB4 = 0;
 
   /* keep PPS exactly like my working setup */
   #define PPS_FN_PWM 0b0101
@@ -271,20 +285,22 @@ static void StopMotors(void)
 }
 
 /* Motor1 uses RA1(OC2)=IN1 and RB9(OC3)=IN2 */
-static void SetMotor1(int16_t dutySignedPercent)
+static void SetMotor1(int16_t dutySignedPercent) // left
 {
+    DB_printf("Motor1 set\n");
   uint16_t mag = (dutySignedPercent < 0) ? (uint16_t)(-dutySignedPercent) : (uint16_t)dutySignedPercent;
   uint16_t ocrs = DutyPercentToOCrs(mag);
 
+  
   if (dutySignedPercent > 0)
   {
-    OC2RS = ocrs;
+    OC2RS = 2*ocrs*PR2/100;
     OC3RS = 0;
   }
   else if (dutySignedPercent < 0)
   {
     OC2RS = 0;
-    OC3RS = ocrs;
+    OC3RS = 2*ocrs*PR2/100;
   }
   else
   {
@@ -294,20 +310,21 @@ static void SetMotor1(int16_t dutySignedPercent)
 }
 
 /* Motor2 uses RB3(OC1)=IN3 and RB2(OC4)=IN4 */
-static void SetMotor2(int16_t dutySignedPercent)
+static void SetMotor2(int16_t dutySignedPercent) // right
 {
+  DB_printf("Motor2 set\n");
   uint16_t mag = (dutySignedPercent < 0) ? (uint16_t)(-dutySignedPercent) : (uint16_t)dutySignedPercent;
   uint16_t ocrs = DutyPercentToOCrs(mag);
 
   if (dutySignedPercent > 0)
   {
-    OC1RS = ocrs;
+    OC1RS = ocrs*PR2/100;
     OC4RS = 0;
   }
   else if (dutySignedPercent < 0)
   {
     OC1RS = 0;
-    OC4RS = ocrs;
+    OC4RS = ocrs*PR2/100;
   }
   else
   {
@@ -328,6 +345,7 @@ static void DoTranslate(uint16_t translateParam)
 
   SetMotor1(signedDuty);
   SetMotor2(signedDuty);
+  DB_printf(signedDuty);
 }
 
 static void DoRotate(uint16_t rotateParam)

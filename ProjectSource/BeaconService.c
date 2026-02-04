@@ -38,7 +38,7 @@
 #define BEACON_FREQ_HZ        1427u
 
 /* tolerance (Hz) */
-#define BEACON_TOL_HZ         80u
+#define BEACON_TOL_HZ         1000u
 
 /* require this many “good” cycles in a row before declaring found */
 #define BEACON_CONFIRM_COUNT  6u
@@ -53,7 +53,7 @@
    You MUST set this to match your actual pin mapping.
    Example: IC2R=0b0011 might map to RB10 on some configs, but this is board-dependent.
 */
-#define IC2R_VALUE            0b0011
+#define IC2R_VALUE            0b0000 //0b0011
 
 /*============================== STATE ==============================*/
 static uint8_t MyPriority;
@@ -96,6 +96,7 @@ ES_Event_t RunBeaconService(ES_Event_t ThisEvent)
   ES_Event_t ReturnEvent = { ES_NO_EVENT, 0 };
 
   /* main logic: if we got a new period measurement, check frequency */
+  DB_printf("run beacon\n");
   if (NewPeriod)
   {
     NewPeriod = false;
@@ -103,6 +104,7 @@ ES_Event_t RunBeaconService(ES_Event_t ThisEvent)
     if (PeriodTicks != 0)
     {
       uint32_t f = ComputeFreqHz(PeriodTicks);
+      DB_printf("IR frequency%d\n", f);
 
       /* simple tolerance check */
       if ((f > (BEACON_FREQ_HZ - BEACON_TOL_HZ)) && (f < (BEACON_FREQ_HZ + BEACON_TOL_HZ)))
@@ -149,16 +151,19 @@ static void InitBeaconHardware(void)
   T3CONbits.TCKPS = T3_PRESCALE_BITS;
   TMR3 = 0;
   PR3 = 0xFFFF;
-  T3CONbits.ON = 1;
-
+  /* Timer3 overflow interrupt to track rollovers (optional but helps) */
+  IPC3bits.T3IP = 5;
+  IFS0CLR = _IFS0_T3IF_MASK;  
+  IEC0SET = _IEC0_T3IE_MASK;
+  
   /* enable multi-vector interrupts */
   INTCONbits.MVEC = 1;
+ 
+  IC2CON = 0;
 
   /* IC2 mapping */
   IC2R = IC2R_VALUE;
-
   /* IC2 setup: capture rising edges using Timer3 */
-  IC2CON = 0;
   IC2CONbits.C32 = 0;
   IC2CONbits.ICTMR = 0;       /* 0 -> Timer3 */
   IC2CONbits.ICM = 0b011;     /* every rising edge */
@@ -168,11 +173,9 @@ static void InitBeaconHardware(void)
   IEC0SET = _IEC0_IC2IE_MASK;
   IFS0CLR = _IFS0_IC2IF_MASK;
 
-  /* Timer3 overflow interrupt to track rollovers (optional but helps) */
-  IPC3bits.T3IP = 5;
-  IEC0SET = _IEC0_T3IE_MASK;
-  IFS0CLR = _IFS0_T3IF_MASK;
 
+  
+  T3CONbits.ON = 1;
   IC2CONbits.ON = 1;
 
   __builtin_enable_interrupts();
@@ -191,7 +194,10 @@ void __ISR(_INPUT_CAPTURE_2_VECTOR, IPL6SOFT) IC2Handler(void)
 {
   uint32_t cap = IC2BUF; /* reading clears the buffer entry */
   IFS0CLR = _IFS0_IC2IF_MASK;
-
+    if(IFS0bits.T3IF && (cap < 0x8000)) { 
+         RolloverCount++;
+         IFS0CLR = _IFS0_T3IF_MASK;
+     }
   uint32_t current = (RolloverCount << 16) | cap;
   PeriodTicks = current - LastCapture;
   LastCapture = current;
@@ -200,6 +206,11 @@ void __ISR(_INPUT_CAPTURE_2_VECTOR, IPL6SOFT) IC2Handler(void)
 
 void __ISR(_TIMER_3_VECTOR, IPL5SOFT) T3Handler(void)
 {
-  IFS0CLR = _IFS0_T3IF_MASK;
-  RolloverCount++;
+  __builtin_disable_interrupts();
+  if (IFS0bits.T3IF) {
+         RolloverCount++;
+         IFS0CLR = _IFS0_T3IF_MASK;
+   }
+  __builtin_enable_interrupts();
+
 }

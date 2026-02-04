@@ -3,12 +3,17 @@
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
-            <file>file:/U:/_ME218bTeams/TEAM9/Lab8NEW/ProjectSource/SPIService.c</file>
-            <file>file:/U:/_ME218bTeams/TEAM9/Lab8NEW/ProjectSource/EventCheckers.c</file>
-            <file>file:/U:/_ME218bTeams/TEAM9/Lab8NEW/ProjectSource/BeaconService.c</file>
+            <file>file:/U:/_ME218bTeams/TEAM9/Lab8NEW/ProjectSource/ADService.c</file>
+            <file>file:/U:/_ME218bTeams/TEAM9/Lab8NEW/nbproject/Makefile-default.mk</file>
+            <file>file:/U:/_ME218bTeams/TEAM9/Lab8NEW/nbproject/Makefile-impl.mk</file>
             <file>file:/U:/_ME218bTeams/TEAM9/Lab8NEW/ProjectSource/MotorService.c</file>
             <file>file:/U:/_ME218bTeams/TEAM9/Lab8NEW/FrameworkHeaders/ES_Configure.h</file>
+            <file>file:/U:/_ME218bTeams/TEAM9/Lab8NEW/ProjectHeaders/BeaconService.h</file>
+            <file>file:/U:/_ME218bTeams/TEAM9/Lab8NEW/ProjectSource/SPIService.c</file>
+            <file>file:/U:/_ME218bTeams/TEAM9/Lab8NEW/ProjectSource/BeaconService.c</file>
+            <file>file:/U:/_ME218bTeams/TEAM9/Lab8NEW/ProjectSource/EventCheckers.c</file>
             <file>file:/U:/_ME218bTeams/TEAM9/Lab8NEW/ProjectSource/ReflectiveSenseService.c</file>
+            <file>file:/U:/_ME218bTeams/TEAM9/Lab8NEW/ProjectSource/PIC32_SPI_HAL_Starter.c</file>
         </group>
     </open-files>
 </project-private>

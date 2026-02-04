@@ -54,6 +54,8 @@ static bool isSPI_ModuleLegal( SPI_Module_t WhichModule);
 static bool isSS_OutputPinLegal(SPI_Module_t WhichModule, 
                                 SPI_PinMap_t WhichPin);
 static bool isSDOPinLegal( SPI_PinMap_t WhichPin);
+static bool isSDIPinLegal(SPI_Module_t WhichModule, 
+                                SPI_PinMap_t WhichPin);
 
 /*---------------------------- Module Variables ---------------------------*/
   // these will allow us to reference both SPI1 & SPI2 through these pointers
@@ -122,6 +124,13 @@ static SPI_PinMap_t const LegalSDOxPins[] = { SPI_NO_PIN, SPI_RPA1, SPI_RPA2,
                                               SPI_RPB5, SPI_RPB6, SPI_RPB8, 
                                               SPI_RPB11, SPI_RPB13 
 };
+
+//   Legal port pins for the SDI1 input are:
+//   SPI_NO_PIN, SPI_RPA1, SPI_RPB1, SPI_RPB5, SPI_RPB8, SPI_RPB11.   
+//   Legal port pins for the SDI2 input are:
+//   SPI_NO_PIN, SPI_RPA2, SPI_RPA4, SPI_RPB2, SPI_RPB6,SPI_RPB13. 
+static SPI_PinMap_t const LegalSDIxPins[][6] = {{SPI_NO_PIN, SPI_RPA1, SPI_RPB1, SPI_RPB5, SPI_RPB8, SPI_RPB11},
+{SPI_NO_PIN, SPI_RPA2, SPI_RPA4, SPI_RPB2, SPI_RPB6,SPI_RPB13}};
 
 /*------------------------------ Module Code ------------------------------*/
 
@@ -318,11 +327,36 @@ bool SPISetup_MapSSOutput(SPI_Module_t WhichModule, SPI_PinMap_t WhichPin)
 ****************************************************************************/
 bool SPISetup_MapSDInput(SPI_Module_t WhichModule, SPI_PinMap_t WhichPin)
 {
-    SPI1CONbits.DISSDI = 0; //enable SDI
-    
-    TRISBbits.TRISB11 = 1; // make RB11 an input
-    SDI1R = 0b0011; // map SDi to RB11
-  return true;
+//     SPI1CONbits.DISSDI = 0; //enable SDI
+//   //  TRISBbits.TRISB11 = 1; // make RB11 an input
+//     TRISBbits.TRISB8 = 1; // make RB8 an input
+// //    SDI1R = 0b0011; // map SDi to RB11
+//     SDI1R = 0b0100;
+//   return true;
+  
+  bool ReturnVal = true;
+  // Your Code goes here :-)
+  if ( (false == isSPI_ModuleLegal(WhichModule)) || (false == isSDIPinLegal(WhichModule, WhichPin)) )
+  {
+    ReturnVal = false;
+  } else {
+    selectModuleRegisters(WhichModule);
+    *setTRISRegisters[WhichPin] = mapPinMap2BitPosn[WhichPin];
+    *clrANSELRegisters[WhichPin] = mapPinMap2BitPosn[WhichPin];
+    // enable SDI
+    if (SPI_SPI1 == WhichModule) {
+      SPI1CONbits.DISSDI = 0; //enable SDI
+      SDI1R = mapPinMap2INTConst[WhichPin]; // map SDI1 to chosen pin
+      // *outputMapRegisters[WhichPin] = MAP_SDO1; // Map SDO1 to chosen pin
+    } else if (SPI_SPI2 == WhichModule) {
+      SPI2CONbits.DISSDI = 0; //enable SDI
+      SDI2R = mapPinMap2INTConst[WhichPin]; // map SDI2 to chosen pin
+      // *outputMapRegisters[WhichPin] = MAP_SDO2; // Map SDO2 to chosen pin
+    } else {
+      ReturnVal = false;
+    }
+  }
+  return ReturnVal;
 }
 
 /****************************************************************************
@@ -739,6 +773,24 @@ static bool isSDOPinLegal( SPI_PinMap_t WhichPin)
       }
   }
 
+  return ReturnVal;
+}
+
+static bool isSDIPinLegal(SPI_Module_t WhichModule, SPI_PinMap_t WhichPin)
+{
+  bool ReturnVal = false;
+  uint8_t index;
+  
+  for( index = 0; 
+       index <= ((sizeof(LegalSDIxPins[0])/sizeof(LegalSDIxPins[0][0]))-1);
+       index++)
+  {
+    if (LegalSDIxPins[WhichModule][index] == WhichPin)
+    {
+      ReturnVal = true;
+      break;
+    }
+  }
   return ReturnVal;
 }
 
