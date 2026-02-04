@@ -322,6 +322,7 @@ bool SPISetup_MapSDInput(SPI_Module_t WhichModule, SPI_PinMap_t WhichPin)
     
     TRISBbits.TRISB11 = 1; // make RB11 an input
     SDI1R = 0b0011; // map SDi to RB11
+  return true;
 }
 
 /****************************************************************************

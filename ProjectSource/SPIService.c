@@ -115,14 +115,7 @@ ES_Event_t RunSPIService(ES_Event_t ThisEvent)
   if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == SPI_TIMER))
   {
     uint8_t rx;
-
-    /* query follower for next byte */
-    //CG_Select();
-    //for (volatile int i = 0; i <50; i++){}
     rx = CG_QueryByte(CMD_QUERY);
-    //for (volatile int i = 0; i <50; i++){}
-    //CG_Deselect();
-
     DB_printf("SPI rx = 0x%d\r\n", rx);
 
     /* ignore unknown bytes (do not silently convert) */
@@ -163,11 +156,6 @@ ES_Event_t RunSPIService(ES_Event_t ThisEvent)
 /*=========================== SPI HELPERS ============================*/
 static void InitSPIHardware(void)
 {
-  /* CS pin as digital output, start deselected */
-  //CG_CS_ANSEL = 0;
-  //CG_CS_TRIS = 0;
-  //CG_CS_LAT = 1;
-
   /* HAL SPI setup */
   SPISetup_BasicConfig(CG_SPI_MODULE);
 
@@ -205,13 +193,8 @@ static void CG_Deselect(void)
 static uint8_t CG_QueryByte(uint8_t outByte)
 {
   /* send one byte and read back the received byte */
-  //DB_printf("%d", outByte);
   SPIOperate_SPI1_Send8Wait(outByte);
   
-  //SPI1BUF = tx;
-  //while (!SPI1STATbits.SPIRBF);
-  //return SPI1BUF;
-  /* read data register */
   return (uint8_t)SPIOperate_ReadData(CG_SPI_MODULE);
 }
 
