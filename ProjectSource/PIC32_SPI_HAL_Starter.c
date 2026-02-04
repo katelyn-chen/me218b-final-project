@@ -219,9 +219,10 @@ bool SPISetup_SetBitTime(SPI_Module_t WhichModule, uint32_t SPI_ClkPeriodIn_ns)
   // Your Code goes here :-)
   selectModuleRegisters(WhichModule);
   if (SPI_ClkPeriodIn_ns < MAX_SPI_PERIOD) {
-      uint32_t input_freq_hz =1/(SPI_ClkPeriodIn_ns * 1e-9); // Hz
-      uint32_t SPIBRG_Value = 2e+7 / (2 * input_freq_hz) - 1; // Hz
-      *pSPIBRG = SPIBRG_Value;
+      //uint32_t input_freq_hz =1/(SPI_ClkPeriodIn_ns * 1e-9); // Hz
+      //uint32_t SPIBRG_Value = 2e+7 / (2 * input_freq_hz) - 1; // Hz
+      //*pSPIBRG = SPIBRG_Value;
+      *pSPIBRG = 2*(SPI_ClkPeriodIn_ns / 50) - 1;
   }
 
   return ReturnVal;
@@ -318,7 +319,8 @@ bool SPISetup_MapSSOutput(SPI_Module_t WhichModule, SPI_PinMap_t WhichPin)
 bool SPISetup_MapSDInput(SPI_Module_t WhichModule, SPI_PinMap_t WhichPin)
 {
     SPI1CONbits.DISSDI = 0; //enable SDI
-    TRISBbits.TRISB11 = 1; // set to RB11 pin
+    
+    TRISBbits.TRISB11 = 1; // make RB11 an input
     SDI1R = 0b0011; // map SDi to RB11
 }
 
@@ -468,7 +470,7 @@ bool SPISetup_EnableSPI(SPI_Module_t WhichModule)
 }
 /****************************************************************************
  Function
-    SPIOperate_SPI1_Send8
+    SPIOperate_SPI1_8
 
  Description
    Writes the 8-bit data to the selected SPI Module data register
@@ -586,6 +588,15 @@ void SPIOperate_SPI1_Send32Wait(uint32_t TheData)
 uint32_t SPIOperate_ReadData(SPI_Module_t WhichModule)
 {
   // not needed for ME218a Labs
+  uint32_t data = 0;
+  if (SPI_SPI1 == WhichModule)
+  {
+      data = SPI1BUF;
+  }else if (SPI_SPI2 == WhichModule)
+  {
+      data = SPI2BUF;
+  }
+  return data;
 }
 /****************************************************************************
  Function
