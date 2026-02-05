@@ -125,10 +125,18 @@ bool Check4Beacon(void)
 {
   // read from beacon sensor input pin
   // if beacon detected, post ES_BEACON_DETECTED event
-    ES_Event_t ThisEvent;
-    ThisEvent.EventType   = ES_BEACON_FOUND;
-    ThisEvent.EventParam  = 0;
-    ES_PostAll(ThisEvent);
+//    uint32_t ADValue[1];
+//    ADC_MultiRead(ADValue);
+//    uint32_t IRValue = ADValue[0];
+//    if (IRValue < currPeak) {
+//        maxPeak = IRValue;
+//        return false;
+//    } elif (IRValue >= maxPeak - 10) {
+//        ES_Event_t ThisEvent;
+//        ThisEvent.EventType   = ES_BEACON_FOUND;
+//        ThisEvent.EventParam  = 0;
+//        ES_PostMotorService(ThisEvent);
+//    }
     return true;
 }
 
@@ -141,3 +149,14 @@ bool Check4Command(void)
     // set EventParam to command value
     // post ES_COMMAND_RECEIVED event
 }
+
+//bool Check4Switch(void) {
+//    if (LATBbits.LATB12 == 0) {
+//        ES_Event_t NewEvent;
+//        NewEvent.EventType = ES_STOP;
+//        NewEvent.EventParam = 0;
+//        PostMotorService(NewEvent);
+//        return true;
+//    }
+//    return false;
+//}

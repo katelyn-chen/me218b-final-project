@@ -53,7 +53,7 @@
    You MUST set this to match your actual pin mapping.
    Example: IC2R=0b0011 might map to RB10 on some configs, but this is board-dependent.
 */
-#define IC2R_VALUE            0b0000 //0b0011
+#define IC2R_VALUE            0b0011 //changed from 0b0011 to 0b0000
 
 /*============================== STATE ==============================*/
 static uint8_t MyPriority;
@@ -96,34 +96,38 @@ ES_Event_t RunBeaconService(ES_Event_t ThisEvent)
   ES_Event_t ReturnEvent = { ES_NO_EVENT, 0 };
 
   /* main logic: if we got a new period measurement, check frequency */
-  DB_printf("run beacon\n");
-  if (NewPeriod)
-  {
-    NewPeriod = false;
-
-    if (PeriodTicks != 0)
+  if (ThisEvent.EventType == ES_BEACON_SIGNAL) {
+    DB_printf("Beacon case\n");
+    if (NewPeriod)
     {
-      uint32_t f = ComputeFreqHz(PeriodTicks);
-      DB_printf("IR frequency%d\n", f);
-
-      /* simple tolerance check */
-      if ((f > (BEACON_FREQ_HZ - BEACON_TOL_HZ)) && (f < (BEACON_FREQ_HZ + BEACON_TOL_HZ)))
+      NewPeriod = false;
+      DB_printf("run beacon\n");
+      if (PeriodTicks != 0)
       {
-        if (GoodCount < 255) GoodCount++;
-      }
-      else
-      {
-        GoodCount = 0;
-        BeaconLatched = false;
-      }
+        uint32_t f = ComputeFreqHz(PeriodTicks);
+        DB_printf("IR frequency%d\n", f);
 
-      /* only post once per “found” */
-      if (!BeaconLatched && (GoodCount >= BEACON_CONFIRM_COUNT))
-      {
-        BeaconLatched = true;
+        /* simple tolerance check */
+        if ((f > (BEACON_FREQ_HZ - BEACON_TOL_HZ)) && (f < (BEACON_FREQ_HZ + BEACON_TOL_HZ)))
+        {
+          if (GoodCount < 255) GoodCount++;
+        }
+        else
+        {
+          GoodCount = 0;
+          BeaconLatched = false;
+        }
 
-        ES_Event_t e = { ES_BEACON_FOUND, 0 };
-        PostMotorService(e);
+        /* only post once per “found” */
+        if (!BeaconLatched && (GoodCount >= BEACON_CONFIRM_COUNT))
+        {
+          DB_printf("Beacon latched!!!!! Good Count: %d", GoodCount);
+          BeaconLatched = true;
+
+          ES_Event_t e = { ES_BEACON_FOUND, 0 };
+          PostMotorService(e);
+          BeaconLatched=false;
+        }
       }
     }
   }
@@ -134,7 +138,7 @@ ES_Event_t RunBeaconService(ES_Event_t ThisEvent)
     if (PeriodTicks != 0)
     {
       uint32_t f = ComputeFreqHz(PeriodTicks);
-      DB_printf("Beacon f=%lu Hz good=%u latched=%u\r\n", f, GoodCount, BeaconLatched);
+      DB_printf("Beacon f=%du Hz good=%u latched=%u\r\n", f, GoodCount, BeaconLatched);
     }
     ES_Timer_InitTimer(BEACON_DEBUG_TIMER, BEACON_DEBUG_MS);
   }
@@ -145,6 +149,8 @@ ES_Event_t RunBeaconService(ES_Event_t ThisEvent)
 /*=========================== HARDWARE INIT ============================*/
 static void InitBeaconHardware(void)
 {
+  TRISBbits.TRISB10 = 1;   // input
+
   /* Timer3 timebase */
   T3CON = 0;
   T3CONbits.TCS = 0;
@@ -172,8 +178,6 @@ static void InitBeaconHardware(void)
   IPC2bits.IC2IP = 6;
   IEC0SET = _IEC0_IC2IE_MASK;
   IFS0CLR = _IFS0_IC2IF_MASK;
-
-
   
   T3CONbits.ON = 1;
   IC2CONbits.ON = 1;
@@ -192,16 +196,20 @@ static uint32_t ComputeFreqHz(uint32_t periodTicks)
 /*============================== ISRs ==============================*/
 void __ISR(_INPUT_CAPTURE_2_VECTOR, IPL6SOFT) IC2Handler(void)
 {
+//  DB_printf("Input Capture");
   uint32_t cap = IC2BUF; /* reading clears the buffer entry */
   IFS0CLR = _IFS0_IC2IF_MASK;
     if(IFS0bits.T3IF && (cap < 0x8000)) { 
-         RolloverCount++;
+//         RolloverCount++;
          IFS0CLR = _IFS0_T3IF_MASK;
      }
   uint32_t current = (RolloverCount << 16) | cap;
   PeriodTicks = current - LastCapture;
   LastCapture = current;
+  ES_Event_t ISR;
+  ISR.EventType = ES_BEACON_SIGNAL;
   NewPeriod = true;
+  PostBeaconService(ISR);
 }
 
 void __ISR(_TIMER_3_VECTOR, IPL5SOFT) T3Handler(void)

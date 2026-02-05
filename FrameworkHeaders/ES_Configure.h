@@ -279,7 +279,8 @@ typedef enum
   ES_TAPE_FOUND,
   ES_BEACON_FOUND,
   /*Command generator events*/
-  ES_COMMAND_RECEIVED
+  ES_COMMAND_RECEIVED,
+  ES_BEACON_SIGNAL
 }ES_EventType_t; // changed to be event type
 
 /****************************************************************************/

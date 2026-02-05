@@ -154,8 +154,7 @@ ES_Event_t RunMotorService(ES_Event_t ThisEvent)
           break;
 
         case ES_STOP:
-        default:
-          DB_printf("stop\n");
+          DB_printf("stop posted!!!\n");
           StopMotors();
           CurrentState = MOTOR_STOP;
           break;
@@ -210,6 +209,7 @@ ES_Event_t RunMotorService(ES_Event_t ThisEvent)
       {
         StopMotors();
         LATBbits.LATB4 = 0;
+        LATBbits.LATB11 = 1;
         CurrentState = MOTOR_STOP;
       }
       if (ThisEvent.EventType == ES_STOP)
@@ -238,7 +238,10 @@ static void InitPinsAndPPS(void)
   TRISBbits.TRISB3 = 0;  ANSELBbits.ANSB3 = 0;
   TRISBbits.TRISB2 = 0;  ANSELBbits.ANSB2 = 0;
   
-  TRISBbits.TRISB4 = 0; LATBbits.LATB4 = 0;
+  TRISBbits.TRISB4 = 0; LATBbits.LATB4 = 0; // LED align
+  TRISBbits.TRISB11 = 0; LATBbits.LATB11 = 0; // LED align done
+  
+  TRISBbits.TRISB12 = 1; ANSELBbits.ANSB12 = 0; // button
 
   /* keep PPS exactly like my working setup */
   #define PPS_FN_PWM 0b0101
@@ -255,6 +258,7 @@ static void InitTimer2ForPWM(void)
   T2CONbits.TCKPS = T2_PRESCALE_BITS;
   TMR2 = 0;
   PR2 = (uint16_t)PR2_VALUE;
+//  IPC2bits.T2IP = 4;
   T2CONbits.ON = 1;
 }
 
@@ -318,13 +322,13 @@ static void SetMotor2(int16_t dutySignedPercent) // right
 
   if (dutySignedPercent > 0)
   {
-    OC1RS = ocrs*PR2/100;
+    OC1RS = 2*ocrs*PR2/100;
     OC4RS = 0;
   }
   else if (dutySignedPercent < 0)
   {
     OC1RS = 0;
-    OC4RS = ocrs*PR2/100;
+    OC4RS = 2*ocrs*PR2/100;
   }
   else
   {
@@ -396,4 +400,5 @@ static void StartBeaconAlignSearch(void)
   /* slow rotate until BeaconService posts ES_BEACON_FOUND */
   SetMotor1((int16_t)DUTY_SEARCH);
   SetMotor2(-(int16_t)DUTY_SEARCH);
+  //DB_printf("rotating");
 }

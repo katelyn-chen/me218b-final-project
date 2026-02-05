@@ -240,7 +240,7 @@ static void HandleCommandByte(uint8_t cmd)
   switch (cmd)
   {
     case CMD_STOP:
-    //  DB_printf("match", cmd);
+      DB_printf("Posting stop from SPIService \r\n");
       e.EventType = ES_STOP; e.EventParam = 0;
       PostMotorService(e);
       break;

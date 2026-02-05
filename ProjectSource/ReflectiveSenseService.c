@@ -102,6 +102,7 @@ ES_Event_t RunReflectiveSenseService(ES_Event_t ThisEvent)
       {
         TapeLatched = true;
         ES_Event_t e = { ES_TAPE_FOUND, 1 };
+        DB_printf("Tape found!!!!");
         PostMotorService(e);
     }
 
