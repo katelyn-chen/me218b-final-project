@@ -7,9 +7,6 @@
     - Periodically sample sensor voltage
     - Apply threshold + confidence logic
     - Post ES_TAPE_FOUND when black tape is detected
- * 
- * AW - The line sensor is a digital  output not analog so need to change this
-
 ****************************************************************************/
 
 #include "ReflectiveSenseService.h"
@@ -22,11 +19,7 @@
 #include "ES_Framework.h"
 #include "dbprintf.h"
 
-//#include "Lab8_Events.h"
 #include "MotorService.h"
-
-// dont need
-//#include "PIC32_AD_Lib.h"
 
 /*============================== CONFIG ==============================*/
 /* pick an ES timer ID that is free in your ES_Configure.c */
@@ -35,14 +28,6 @@
 #endif
 
 #define REFLECT_SAMPLE_MS  10u
-
-///* Choose which analog pin your Pololu sensor output is wired to */
-////#define REFLECT_AD_PIN     AD_PORTAW  // pin 9 or RA2
-//#define REFLECT_AD_PIN     2  // changing to different syntax - need to enable this pin somewhere still
-///* threshold + confidence */
-//#define TAPE_THRESHOLD     650u   /* adjust after looking at ADC values */
-//#define TAPE_CONFIRM_N     4u     /* must see tape N samples in a row */
-// adding to config line sensor - AW
 #define REFLECT_PORT   PORTAbits.RA2
 #define REFLECT_TRIS   TRISAbits.TRISA2
 #define REFLECT_ACTIVE_HIGH   0
@@ -114,10 +99,7 @@ ES_Event_t RunReflectiveSenseService(ES_Event_t ThisEvent)
 
 static void InitReflectiveHardware(void)
 {
-  /* Typical ME218 ADC init */
- // AD_Init(1);
- // AD_AddPins(REFLECT_AD_PIN);
-    REFLECT_TRIS = 1; // make an input
+  REFLECT_TRIS = 1; // make an input
 }
 
 static uint16_t ReadReflectDigital(void)

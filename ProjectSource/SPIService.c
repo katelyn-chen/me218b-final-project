@@ -8,12 +8,11 @@
     - Read a command byte back
     - Convert that byte into a motion event for MotorService
 
-  Wiring (from Amanda's notes):
-  @Amanda, if i messed up this please fix :) thanks!
+  Wiring
     CommandGen SDI  -> PIC32 SDO1  (RB5,  pin 14)
     CommandGen SDO  -> PIC32 SDI1  (RB11, pin 22)
     CommandGen SCK  -> PIC32 SCK1  (RB14, pin 25)
-    CommandGen SS   -> PIC32 CS    (RB15, pin ??)
+    CommandGen SS   -> PIC32 CS    (RB15, pin 26)
 ****************************************************************************/
 
 #include "SPIService.h"
@@ -83,8 +82,6 @@ uint8_t prevCommand;
 
 /*====================== PRIVATE FUNCTION PROTOS =====================*/
 static void InitSPIHardware(void);
-static void CG_Select(void);
-static void CG_Deselect(void);
 static uint8_t CG_QueryByte(uint8_t outByte);
 
 static void HandleCommandByte(uint8_t cmd);
@@ -119,8 +116,6 @@ ES_Event_t RunSPIService(ES_Event_t ThisEvent)
   {
     uint8_t rx;
     rx = CG_QueryByte(CMD_QUERY);
-//    DB_printf("SPI rx = 0x%d\r\n", rx);
-    
 
     /* ignore unknown bytes (do not silently convert) */
     if (!IsKnownCommand(rx))
@@ -165,21 +160,15 @@ static void InitSPIHardware(void)
 {
   /* HAL SPI setup */
   SPISetup_BasicConfig(CG_SPI_MODULE);
-
   SPISetup_SetLeader(CG_SPI_MODULE, SPI_SMP_MID);
    /* map data pins */
   SPISetup_MapSDOutput(CG_SPI_MODULE, SPI_RPB5);   /* SDO1 -> RB5 */
-  // SPISetup_MapSDInput(CG_SPI_MODULE,  SPI_RPB11);  /* SDI1 <- RB11 */ AW - checking if it is the pin
   SPISetup_MapSDInput(CG_SPI_MODULE,  SPI_RPB8);
   SPISetup_MapSSOutput(CG_SPI_MODULE, SPI_RPB15);
 
-  /* clock mode settings (matches common CKP=0, CKE=1 style) */
-//  SPISetup_SetClockIdleState(CG_SPI_MODULE, SPI_CLK_HI);    // CKP = 1
- // SPISetup_SetActiveEdge(CG_SPI_MODULE, SPI_FIRST_EDGE);   // CKE = 0
-  // AW- changing bc it is not reading AA like it should
+  /* clock mode settings */
   SPISetup_SetClockIdleState(CG_SPI_MODULE, SPI_CLK_HI);    // CKP = 1
   SPISetup_SetActiveEdge(CG_SPI_MODULE, SPI_SECOND_EDGE);   // CKE = 0
-  
   
   SPISetEnhancedBuffer(CG_SPI_MODULE, true);
   SPISetup_SetXferWidth(CG_SPI_MODULE, SPI_8BIT);
@@ -193,21 +182,10 @@ static void InitSPIHardware(void)
   SPIOperate_ReadData(CG_SPI_MODULE);
 }
 
-static void CG_Select(void)
-{
-  CG_CS_LAT = 0;
-}
-
-static void CG_Deselect(void)
-{
-  CG_CS_LAT = 1;
-}
-
 static uint8_t CG_QueryByte(uint8_t outByte)
 {
   /* send one byte and read back the received byte */
   SPIOperate_SPI1_Send8Wait(outByte);
-  
   return (uint8_t)SPIOperate_ReadData(CG_SPI_MODULE);
 }
 
@@ -320,6 +298,6 @@ static void HandleCommandByte(uint8_t cmd)
         break;
         
     }
-     prevCommand = cmd;
+    prevCommand = cmd;
   } 
 }

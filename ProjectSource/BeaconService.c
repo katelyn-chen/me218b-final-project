@@ -9,9 +9,7 @@
     - If frequency is ~1427 Hz consistently -> post ES_BEACON_FOUND
 
   Notes
-    - using Timer3 + IC2 in this version.
-    - MUST set the IC2 input mapping to match the pin we wired
-      the beacon sensor output to.
+    - using Timer3 + IC2
 ****************************************************************************/
 
 #include "BeaconService.h"
@@ -31,7 +29,7 @@
 #define PBCLK_HZ              20000000u
 
 /* Timer3 prescale for capture timing */
-#define T3_PRESCALE_BITS      0b010   /* 1:4 (you can change) */
+#define T3_PRESCALE_BITS      0b010   /* 1:4 */
 #define T3_PRESCALE_VAL       4u
 
 /* expected beacon frequency */
@@ -49,8 +47,7 @@
 #endif
 #define BEACON_DEBUG_MS       200u
 
-/* IC2 input select
-*/
+/* IC2 input select*/
 #define IC2R_VALUE            0b0011 // mapped to RB10 digital input on IC2
 
 /*============================== STATE ==============================*/
@@ -95,11 +92,9 @@ ES_Event_t RunBeaconService(ES_Event_t ThisEvent)
 
   /* main logic: if we got a new period measurement, check frequency */
   if (ThisEvent.EventType == ES_BEACON_SIGNAL) {
-//    DB_printf("Beacon case\n");
     if (NewPeriod)
     {
       NewPeriod = false;
-//      DB_printf("run beacon\n");
       if (PeriodTicks != 0)
       {
         uint32_t f = ComputeFreqHz(PeriodTicks);
@@ -164,7 +159,6 @@ static void InitBeaconHardware(void)
   INTCONbits.MVEC = 1;
  
   IC2CON = 0;
-
   /* IC2 mapping */
   IC2R = IC2R_VALUE;
   /* IC2 setup: capture rising edges using Timer3 */
@@ -194,11 +188,9 @@ static uint32_t ComputeFreqHz(uint32_t periodTicks)
 /*============================== ISRs ==============================*/
 void __ISR(_INPUT_CAPTURE_2_VECTOR, IPL6SOFT) IC2Handler(void)
 {
-//  DB_printf("Input Capture");
   uint32_t cap = IC2BUF; /* reading clears the buffer entry */
   IFS0CLR = _IFS0_IC2IF_MASK;
     if(IFS0bits.T3IF && (cap < 0x8000)) { 
-//         RolloverCount++;
          IFS0CLR = _IFS0_T3IF_MASK;
      }
   uint32_t current = (RolloverCount << 16) | cap;

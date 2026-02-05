@@ -30,9 +30,6 @@
 #include "ES_Framework.h"
 #include "dbprintf.h"
 
-// Commenting out bc moved this out
-//#include "Lab8_Events.h"
-
 /*============================== CONFIG ==============================*/
 #define PBCLK_HZ            20000000u
 #define PWM_FREQ_HZ         10000u
@@ -247,15 +244,11 @@ static void InitPinsAndPPS(void)
 {
   /* motor pins as digital outputs */
   TRISAbits.TRISA1 = 0;  ANSELAbits.ANSA1 = 0;
-//  TRISBbits.TRISB9 = 0;  ANSELBbits.ANSB9 = 0;
   TRISBbits.TRISB3 = 0;  ANSELBbits.ANSB3 = 0;
   TRISBbits.TRISB2 = 0;  ANSELBbits.ANSB2 = 0;
   
   TRISBbits.TRISB4 = 0; LATBbits.LATB4 = 0; // LED align
   
-  TRISBbits.TRISB12 = 1; ANSELBbits.ANSB12 = 0; // button
-
-  /* keep PPS exactly like my working setup */
   #define PPS_FN_PWM 0b0101
   RPA1Rbits.RPA1R = PPS_FN_PWM;
   RPB9Rbits.RPB9R = PPS_FN_PWM;
@@ -270,7 +263,6 @@ static void InitTimer2ForPWM(void)
   T2CONbits.TCKPS = T2_PRESCALE_BITS;
   TMR2 = 0;
   PR2 = (uint16_t)PR2_VALUE;
-//  IPC2bits.T2IP = 4;
   T2CONbits.ON = 1;
 }
 
@@ -305,7 +297,6 @@ static void SetMotor1(int16_t dutySignedPercent) // left
   uint16_t mag = (dutySignedPercent < 0) ? (uint16_t)(-dutySignedPercent) : (uint16_t)dutySignedPercent;
   uint16_t ocrs = DutyPercentToOCrs(mag);
 
-  
   if (dutySignedPercent > 0)
   {
     OC2RS = ocrs*PR2/100;
@@ -353,14 +344,8 @@ static void DoTranslate(uint16_t translateParam)
   TransSpeed_t spd;
   TransDir_t dir;
   UnpackTranslateParam(translateParam, &spd, &dir);
-
   uint16_t duty = (spd == TRANS_FULL) ? DUTY_TRANS_FULL : DUTY_TRANS_HALF;
   int16_t signedDuty = (dir == DIR_FWD) ? (int16_t)duty : -(int16_t)duty;
-//  if (dir == DIR_FWD) {
-//    SetMotor1((int16_t)DUTY_TRANS_HALF);
-//    SetMotor2((int16_t)DUTY_TRANS_HALF);
-//  }
-
   SetMotor1(signedDuty);
   SetMotor2(signedDuty);
 }
