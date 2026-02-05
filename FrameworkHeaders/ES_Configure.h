@@ -327,7 +327,7 @@ typedef enum
 #define TIMER0_RESP_FUNC PostSPIService
 #define TIMER1_RESP_FUNC PostReflectiveSenseService
 #define TIMER2_RESP_FUNC PostBeaconService
-#define TIMER3_RESP_FUNC TIMER_UNUSED
+#define TIMER3_RESP_FUNC PostMotorService
 #define TIMER4_RESP_FUNC TIMER_UNUSED
 #define TIMER5_RESP_FUNC TIMER_UNUSED
 #define TIMER6_RESP_FUNC TIMER_UNUSED
@@ -353,5 +353,6 @@ typedef enum
 #define REFLECT_TIMER 1
 #define BEACON_TIMER 2
 #define MOTOR_TIMER 14
+#define DEBUG_BEACON_TIMER 3
 
 #endif /* ES_CONFIGURE_H */

@@ -93,8 +93,9 @@ static void StartBeaconAlignSearch(void);
 bool InitMotorService(uint8_t Priority)
 {
   
-    MyPriority = Priority;
-    ES_Event_t ThisEvent;
+  MyPriority = Priority;
+  ES_Event_t ThisEvent;
+  ThisEvent.EventType = ES_INIT;
   InitPinsAndPPS();
   InitTimer2ForPWM();
   InitOCsForPWM();
@@ -128,8 +129,12 @@ ES_Event_t RunMotorService(ES_Event_t ThisEvent)
     case MOTOR_STOP:
       switch (ThisEvent.EventType)
       {
+        case ES_INIT:
+            DB_printf("Init motor service event posted\n");
+            break;
+          
         case ES_ROTATE:
-          DB_printf("rotate run\n");
+          DB_printf("rotate run, starting timer\n");
           DoRotate(ThisEvent.EventParam);
           StartRotateTimer(ThisEvent.EventParam);
           CurrentState = MOTOR_ROTATE;
@@ -150,6 +155,7 @@ ES_Event_t RunMotorService(ES_Event_t ThisEvent)
         case ES_ALIGN:
           DB_printf("align\n");
           StartBeaconAlignSearch();
+          ES_Timer_InitTimer(DEBUG_BEACON_TIMER, 5000);
           CurrentState = MOTOR_BEACON_ALIGN;
           break;
 
@@ -205,6 +211,7 @@ ES_Event_t RunMotorService(ES_Event_t ThisEvent)
     case MOTOR_BEACON_ALIGN:
       DB_printf("motor aligning\n");
       LATBbits.LATB4 = 1;
+      LATBbits.LATB11 = 0;
       if (ThisEvent.EventType == ES_BEACON_FOUND)
       {
         StopMotors();
@@ -217,6 +224,12 @@ ES_Event_t RunMotorService(ES_Event_t ThisEvent)
         StopMotors();
         LATBbits.LATB4 = 0;
         CurrentState = MOTOR_STOP;
+      }
+      if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == DEBUG_BEACON_TIMER) {
+          DB_printf("Failed to find beacon in time\n");
+          StopMotors();
+          LATBbits.LATB4=0;
+          CurrentState = MOTOR_STOP;
       }
       break;
 
@@ -269,8 +282,6 @@ static void InitOCsForPWM(void)
   OC2CON = 0; OC2R = 0; OC2RS = 0; OC2CONbits.OCTSEL = 0; OC2CONbits.OCM = 0b110; OC2CONbits.ON = 1;
   OC3CON = 0; OC3R = 0; OC3RS = 0; OC3CONbits.OCTSEL = 0; OC3CONbits.OCM = 0b110; OC3CONbits.ON = 1;
   OC4CON = 0; OC4R = 0; OC4RS = 0; OC4CONbits.OCTSEL = 0; OC4CONbits.OCM = 0b110; OC4CONbits.ON = 1;
-
-  StopMotors();
 }
 
 /*=========================== MOTOR OUTPUT ============================*/

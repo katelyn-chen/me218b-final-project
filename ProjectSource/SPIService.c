@@ -246,68 +246,68 @@ static void HandleCommandByte(uint8_t cmd)
       break;
 
     case CMD_ALIGN:
-    //  DB_printf("match", cmd);
+      DB_printf("SPI align %d\n", cmd);
       e.EventType = ES_ALIGN; e.EventParam = 0;
       PostMotorService(e);
       break;
 
     case CMD_TAPE_DETECT:
-     // DB_printf("match", cmd);
+      DB_printf("SPI tape %d\n", cmd);
       e.EventType = ES_TAPE_DETECT; e.EventParam = 0;
       PostMotorService(e);
       break;
 
     case CMD_ROT_CW_45:
-     // DB_printf("match", cmd);
+      DB_printf("SPI CW 45 %d/n", cmd);
       e.EventType = ES_ROTATE;
       e.EventParam = PackRotateParam(ROT_45, ROT_CW);
       PostMotorService(e);
       break;
 
     case CMD_ROT_CW_90:
-     // DB_printf("match", cmd);
+      DB_printf("SPI CW 90 %d\n", cmd);
       e.EventType = ES_ROTATE;
       e.EventParam = PackRotateParam(ROT_90, ROT_CW);
       PostMotorService(e);
       break;
 
     case CMD_ROT_CCW_45:
-     // DB_printf("match", cmd);
+      DB_printf("SPI CCW 45 %d\n", cmd);
       e.EventType = ES_ROTATE;
       e.EventParam = PackRotateParam(ROT_45, ROT_CCW);
       PostMotorService(e);
       break;
 
     case CMD_ROT_CCW_90:
-    //  DB_printf("match", cmd);
+      DB_printf("SPI CCW 90 %d\n", cmd);
       e.EventType = ES_ROTATE;
       e.EventParam = PackRotateParam(ROT_90, ROT_CCW);
       PostMotorService(e);
       break;
 
     case CMD_TRANS_FWD_HALF:
-     // DB_printf("match", cmd);
+      DB_printf("SPI fwd half %d\n", cmd);
       e.EventType = ES_TRANSLATE;
       e.EventParam = PackTranslateParam(TRANS_HALF, DIR_FWD);
       PostMotorService(e);
       break;
 
     case CMD_TRANS_FWD_FULL:
-    //  DB_printf("match", cmd);
+      DB_printf("SPI fwd full %d\n", cmd);
       e.EventType = ES_TRANSLATE;
       e.EventParam = PackTranslateParam(TRANS_FULL, DIR_FWD);
       PostMotorService(e);
       break;
 
     case CMD_TRANS_REV_HALF:
-     // DB_printf("match", cmd);
+      DB_printf("SPI rev half %d\n", cmd);
       e.EventType = ES_TRANSLATE;
       e.EventParam = PackTranslateParam(TRANS_HALF, DIR_REV);
       PostMotorService(e);
       break;
 
     case CMD_TRANS_REV_FULL:
-     // DB_printf("match", cmd);
+      DB_printf("SPI rev half %d\n", cmd);
       e.EventType = ES_TRANSLATE;
       e.EventParam = PackTranslateParam(TRANS_FULL, DIR_REV);
       PostMotorService(e);

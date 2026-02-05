@@ -40,7 +40,7 @@
 /* tolerance (Hz) */
 #define BEACON_TOL_HZ         1000u
 
-/* require this many “good” cycles in a row before declaring found */
+/* require this many good cycles in a row before declaring found */
 #define BEACON_CONFIRM_COUNT  6u
 
 /* which ES timer to use if you want periodic debug (optional) */
@@ -49,11 +49,9 @@
 #endif
 #define BEACON_DEBUG_MS       200u
 
-/* IC2 input select:
-   You MUST set this to match your actual pin mapping.
-   Example: IC2R=0b0011 might map to RB10 on some configs, but this is board-dependent.
+/* IC2 input select
 */
-#define IC2R_VALUE            0b0011 //changed from 0b0011 to 0b0000
+#define IC2R_VALUE            0b0011 // mapped to RB10 digital input on IC2
 
 /*============================== STATE ==============================*/
 static uint8_t MyPriority;
@@ -121,7 +119,7 @@ ES_Event_t RunBeaconService(ES_Event_t ThisEvent)
         /* only post once per “found” */
         if (!BeaconLatched && (GoodCount >= BEACON_CONFIRM_COUNT))
         {
-          DB_printf("Beacon latched!!!!! Good Count: %d", GoodCount);
+          DB_printf("Beacon latched!!!!\n");
           BeaconLatched = true;
 
           ES_Event_t e = { ES_BEACON_FOUND, 0 };
