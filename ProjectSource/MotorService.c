@@ -226,6 +226,7 @@ ES_Event_t RunMotorService(ES_Event_t ThisEvent)
         CurrentState = MOTOR_STOP;
       }
       if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == DEBUG_BEACON_TIMER) {
+          ES_Timer_StopTimer(DEBUG_BEACON_TIMER);
           DB_printf("Failed to find beacon in time\n");
           StopMotors();
           LATBbits.LATB4=0;
@@ -360,7 +361,6 @@ static void DoTranslate(uint16_t translateParam)
 
   SetMotor1(signedDuty);
   SetMotor2(signedDuty);
-  DB_printf(signedDuty);
 }
 
 static void DoRotate(uint16_t rotateParam)

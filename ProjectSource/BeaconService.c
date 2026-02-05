@@ -95,11 +95,11 @@ ES_Event_t RunBeaconService(ES_Event_t ThisEvent)
 
   /* main logic: if we got a new period measurement, check frequency */
   if (ThisEvent.EventType == ES_BEACON_SIGNAL) {
-    DB_printf("Beacon case\n");
+//    DB_printf("Beacon case\n");
     if (NewPeriod)
     {
       NewPeriod = false;
-      DB_printf("run beacon\n");
+//      DB_printf("run beacon\n");
       if (PeriodTicks != 0)
       {
         uint32_t f = ComputeFreqHz(PeriodTicks);
@@ -136,7 +136,7 @@ ES_Event_t RunBeaconService(ES_Event_t ThisEvent)
     if (PeriodTicks != 0)
     {
       uint32_t f = ComputeFreqHz(PeriodTicks);
-      DB_printf("Beacon f=%du Hz good=%u latched=%u\r\n", f, GoodCount, BeaconLatched);
+//      DB_printf("Beacon f=%du Hz good=%u latched=%u\r\n", f, GoodCount, BeaconLatched);
     }
     ES_Timer_InitTimer(BEACON_DEBUG_TIMER, BEACON_DEBUG_MS);
   }
