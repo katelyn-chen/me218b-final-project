@@ -46,7 +46,7 @@
 #define REFLECT_PORT   PORTAbits.RA2
 #define REFLECT_TRIS   TRISAbits.TRISA2
 #define REFLECT_ACTIVE_HIGH   0
-#define TAPE_CONFIRM_N        4u
+#define TAPE_CONFIRM_N        2u
 
 /*============================== STATE ==============================*/
 static uint8_t MyPriority;

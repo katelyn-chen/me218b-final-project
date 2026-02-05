@@ -44,15 +44,15 @@
 
 /* duty presets (percent 0..100) */
 #define DUTY_STOP           0u
-#define DUTY_TRANS_HALF     35u
-#define DUTY_TRANS_FULL     60u
+#define DUTY_TRANS_HALF     50u
+#define DUTY_TRANS_FULL     100u
 #define DUTY_ROTATE         45u
 #define DUTY_SEARCH         30u
 
 /* rotate timing (ms) — will calibrate these on the floor */
 // placeholders for now
-#define ROTATE_45_TIME_MS   250u
-#define ROTATE_90_TIME_MS   500u
+#define ROTATE_45_TIME_MS   550u
+#define ROTATE_90_TIME_MS   1100u
 
 /* match with ES timer ID in ES_Configure.h */
 #ifndef ROTATE_TIMER
@@ -134,10 +134,10 @@ ES_Event_t RunMotorService(ES_Event_t ThisEvent)
             break;
           
         case ES_ROTATE:
-          DB_printf("rotate run, starting timer\n");
-          DoRotate(ThisEvent.EventParam);
-          StartRotateTimer(ThisEvent.EventParam);
-          CurrentState = MOTOR_ROTATE;
+            DB_printf("rotate run, starting timer\n");
+            DoRotate(ThisEvent.EventParam);
+            StartRotateTimer(ThisEvent.EventParam);
+            CurrentState = MOTOR_ROTATE;
           break;
 
         case ES_TRANSLATE:
@@ -147,9 +147,9 @@ ES_Event_t RunMotorService(ES_Event_t ThisEvent)
           break;
 
         case ES_TAPE_DETECT:
-          DB_printf("tape detect\n");
-          StartTapeDetect();
-          CurrentState = MOTOR_TAPE_DETECT;
+            DB_printf("tape detect\n");
+            StartTapeDetect();
+            CurrentState = MOTOR_TAPE_DETECT;
           break;
 
         case ES_ALIGN:
@@ -171,6 +171,7 @@ ES_Event_t RunMotorService(ES_Event_t ThisEvent)
       DB_printf("motor rotating\n");
       if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == ROTATE_TIMER))
       {
+        DB_printf("motor timer expired\n");
         StopMotors();
         CurrentState = MOTOR_STOP;
       }
@@ -210,13 +211,11 @@ ES_Event_t RunMotorService(ES_Event_t ThisEvent)
 
     case MOTOR_BEACON_ALIGN:
       DB_printf("motor aligning\n");
-      LATBbits.LATB4 = 1;
-      LATBbits.LATB11 = 0;
+      LATBbits.LATB4 = 0;
       if (ThisEvent.EventType == ES_BEACON_FOUND)
       {
         StopMotors();
-        LATBbits.LATB4 = 0;
-        LATBbits.LATB11 = 1;
+        LATBbits.LATB4 = 1;
         CurrentState = MOTOR_STOP;
       }
       if (ThisEvent.EventType == ES_STOP)
@@ -239,7 +238,7 @@ ES_Event_t RunMotorService(ES_Event_t ThisEvent)
       CurrentState = MOTOR_STOP;
       break;
   }
-
+  
   return ReturnEvent;
 }
 
@@ -253,7 +252,6 @@ static void InitPinsAndPPS(void)
   TRISBbits.TRISB2 = 0;  ANSELBbits.ANSB2 = 0;
   
   TRISBbits.TRISB4 = 0; LATBbits.LATB4 = 0; // LED align
-  TRISBbits.TRISB11 = 0; LATBbits.LATB11 = 0; // LED align done
   
   TRISBbits.TRISB12 = 1; ANSELBbits.ANSB12 = 0; // button
 
@@ -310,13 +308,13 @@ static void SetMotor1(int16_t dutySignedPercent) // left
   
   if (dutySignedPercent > 0)
   {
-    OC2RS = 2*ocrs*PR2/100;
+    OC2RS = ocrs*PR2/100;
     OC3RS = 0;
   }
   else if (dutySignedPercent < 0)
   {
     OC2RS = 0;
-    OC3RS = 2*ocrs*PR2/100;
+    OC3RS = ocrs*PR2/100;
   }
   else
   {
@@ -334,13 +332,13 @@ static void SetMotor2(int16_t dutySignedPercent) // right
 
   if (dutySignedPercent > 0)
   {
-    OC1RS = 2*ocrs*PR2/100;
+    OC1RS = ocrs*PR2/100;
     OC4RS = 0;
   }
   else if (dutySignedPercent < 0)
   {
     OC1RS = 0;
-    OC4RS = 2*ocrs*PR2/100;
+    OC4RS = ocrs*PR2/100;
   }
   else
   {
@@ -358,6 +356,10 @@ static void DoTranslate(uint16_t translateParam)
 
   uint16_t duty = (spd == TRANS_FULL) ? DUTY_TRANS_FULL : DUTY_TRANS_HALF;
   int16_t signedDuty = (dir == DIR_FWD) ? (int16_t)duty : -(int16_t)duty;
+//  if (dir == DIR_FWD) {
+//    SetMotor1((int16_t)DUTY_TRANS_HALF);
+//    SetMotor2((int16_t)DUTY_TRANS_HALF);
+//  }
 
   SetMotor1(signedDuty);
   SetMotor2(signedDuty);
@@ -372,13 +374,13 @@ static void DoRotate(uint16_t rotateParam)
 
   if (dir == ROT_CW)
   {
-    SetMotor1((int16_t)DUTY_ROTATE);
-    SetMotor2(-(int16_t)DUTY_ROTATE);
+    SetMotor2((int16_t)DUTY_ROTATE);
+    SetMotor1(-(int16_t)DUTY_ROTATE);
   }
   else
   {
-    SetMotor1(-(int16_t)DUTY_ROTATE);
-    SetMotor2((int16_t)DUTY_ROTATE);
+    SetMotor2(-(int16_t)DUTY_ROTATE);
+    SetMotor1((int16_t)DUTY_ROTATE);
   }
 }
 
