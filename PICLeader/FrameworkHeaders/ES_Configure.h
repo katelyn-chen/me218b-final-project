@@ -33,7 +33,7 @@
 /****************************************************************************/
 // This macro determines that nuber of services that are *actually* used in
 // a particular application. It will vary in value from 1 to MAX_NUM_SERVICES
-#define NUM_SERVICES 4
+#define NUM_SERVICES 1
 
 /****************************************************************************/
 /* I include my service headers here so the Post*Service() prototypes exist
@@ -49,11 +49,11 @@
 // services are added in numeric sequence (1,2,3,...) with increasing
 // priorities
 // the header file with the public function prototypes
-#define SERV_0_HEADER "MotorService.h"
+#define SERV_0_HEADER "SPILeaderService.h"
 // the name of the Init function
-#define SERV_0_INIT InitMotorService
+#define SERV_0_INIT InitSPILeaderService
 // the name of the run function
-#define SERV_0_RUN RunMotorService
+#define SERV_0_RUN RunSPILeaderService
 // How big should this services Queue be?
 #define SERV_0_QUEUE_SIZE 8
 
@@ -65,11 +65,11 @@
 // These are the definitions for Service 1
 #if NUM_SERVICES > 1
 // the header file with the public function prototypes
-#define SERV_1_HEADER "SPIService.h"
+#define SERV_1_HEADER "SPILeaderService.h"
 // the name of the Init function
-#define SERV_1_INIT InitSPIService
+#define SERV_1_INIT InitSPILeaderService
 // the name of the run function
-#define SERV_1_RUN RunSPIService
+#define SERV_1_RUN RunSPILeaderService
 // How big should this services Queue be?
 #define SERV_1_QUEUE_SIZE 6
 #endif
@@ -78,11 +78,11 @@
 // These are the definitions for Service 2
 #if NUM_SERVICES > 2
 // the header file with the public function prototypes
-#define SERV_2_HEADER "BeaconService.h"
+#define SERV_2_HEADER "CollectService.h"
 // the name of the Init function
-#define SERV_2_INIT InitBeaconService
+#define SERV_2_INIT InitCollectService
 // the name of the run function
-#define SERV_2_RUN RunBeaconService
+#define SERV_2_RUN RunCollectService
 // How big should this services Queue be?
 #define SERV_2_QUEUE_SIZE 4
 #endif
@@ -91,11 +91,11 @@
 // These are the definitions for Service 3
 #if NUM_SERVICES > 3
 // the header file with the public function prototypes
-#define SERV_3_HEADER "ReflectiveSenseService.h"
+#define SERV_3_HEADER "DispenseService.h"
 // the name of the Init function
-#define SERV_3_INIT InitReflectiveSenseService
+#define SERV_3_INIT InitDispenseSenseService
 // the name of the run function
-#define SERV_3_RUN RunReflectiveSenseService
+#define SERV_3_RUN RunDispenseSenseService
 // How big should this services Queue be?
 #define SERV_3_QUEUE_SIZE 4
 #endif
@@ -104,11 +104,11 @@
 // These are the definitions for Service 4
 #if NUM_SERVICES > 4
 // the header file with the public function prototypes
-#define SERV_4_HEADER "TestHarnessService4.h"
+#define SERV_4_HEADER "NavigateService.h"
 // the name of the Init function
-#define SERV_4_INIT InitTestHarnessService4
+#define SERV_4_INIT InitNavigateService
 // the name of the run function
-#define SERV_4_RUN RunTestHarnessService4
+#define SERV_4_RUN RunNavigateService
 // How big should this services Queue be?
 #define SERV_4_QUEUE_SIZE 3
 #endif
@@ -117,11 +117,11 @@
 // These are the definitions for Service 5
 #if NUM_SERVICES > 5
 // the header file with the public function prototypes
-#define SERV_5_HEADER "TestHarnessService5.h"
+#define SERV_5_HEADER "InitService.h"
 // the name of the Init function
-#define SERV_5_INIT InitTestHarnessService5
+#define SERV_5_INIT InitInitService
 // the name of the run function
-#define SERV_5_RUN RunTestHarnessService5
+#define SERV_5_RUN RunInitService
 // How big should this services Queue be?
 #define SERV_5_QUEUE_SIZE 3
 #endif
@@ -259,6 +259,7 @@
 /****************************************************************************/
 // Name/define the events of interest
 // Universal events occupy the lowest entries, followed by user-defined events
+
 typedef enum
 {
   ES_NO_EVENT = 0,
@@ -280,8 +281,14 @@ typedef enum
   ES_BEACON_FOUND,
   /*Command generator events*/
   ES_COMMAND_RECEIVED,
-  ES_BEACON_SIGNAL
-}ES_EventType_t; // changed to be event type
+  ES_BEACON_SIGNAL,
+          
+  /*Dispense and collect events*/
+  ES_SIDE_INDICATED, // param: LEFT-RIGHT
+  ES_ALIGN_COLLECT, // param: FIRST-SECOND-OTHER
+  ES_FIND_BUCKET,   // param: FIRST-MIDDLE-END
+  ES_DISPENSE       // param: FULL-SPLIT1-SPLIT2
+} ES_EventType_t; // changed to be event type
 
 /****************************************************************************/
 // These are the definitions for the Distribution lists. Each definition
@@ -324,10 +331,12 @@ typedef enum
 // Unlike services, any combination of timers may be used and there is no
 // priority in servicing them
 #define TIMER_UNUSED 0
-#define TIMER0_RESP_FUNC PostSPIService
-#define TIMER1_RESP_FUNC PostReflectiveSenseService
-#define TIMER2_RESP_FUNC PostBeaconService
-#define TIMER3_RESP_FUNC PostMotorService
+#define TIMER0_RESP_FUNC PostSPILeaderService
+#define TIMER1_RESP_FUNC TIMER_UNUSED
+#define TIMER2_RESP_FUNC TIMER_UNUSED
+//#define TIMER1_RESP_FUNC PostCollectService
+//#define TIMER2_RESP_FUNC PostDispenseService
+#define TIMER3_RESP_FUNC TIMER_UNUSED
 #define TIMER4_RESP_FUNC TIMER_UNUSED
 #define TIMER5_RESP_FUNC TIMER_UNUSED
 #define TIMER6_RESP_FUNC TIMER_UNUSED
@@ -338,7 +347,7 @@ typedef enum
 #define TIMER11_RESP_FUNC TIMER_UNUSED
 #define TIMER12_RESP_FUNC TIMER_UNUSED
 #define TIMER13_RESP_FUNC TIMER_UNUSED
-#define TIMER14_RESP_FUNC PostMotorService
+#define TIMER14_RESP_FUNC TIMER_UNUSED
 #define TIMER15_RESP_FUNC TIMER_UNUSED
 
 /****************************************************************************/
@@ -348,11 +357,14 @@ typedef enum
 // the timer number matches where the timer event will be routed
 // These symbolic names should be changed to be relevant to your application
 
-#define SERVICE0_TIMER 15
 #define SPI_TIMER 0
+#define COLLECT_TIMER 1
+#define DISPENSE_TIMER 2
+
+/*#define SERVICE0_TIMER 15
 #define REFLECT_TIMER 1
 #define BEACON_TIMER 2
 #define MOTOR_TIMER 14
-#define DEBUG_BEACON_TIMER 3
+#define DEBUG_BEACON_TIMER 3*/
 
 #endif /* ES_CONFIGURE_H */

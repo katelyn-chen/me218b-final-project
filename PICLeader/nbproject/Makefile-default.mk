@@ -51,17 +51,17 @@ OBJECTDIR=build/${CND_CONF}/${IMAGE_TYPE}
 DISTDIR=dist/${CND_CONF}/${IMAGE_TYPE}
 
 # Source Files Quoted if spaced
-SOURCEFILES_QUOTED_IF_SPACED=FrameworkSource/ES_CheckEvents.c FrameworkSource/ES_DeferRecall.c FrameworkSource/ES_Framework.c FrameworkSource/ES_LookupTables.c FrameworkSource/ES_Port.c FrameworkSource/ES_PostList.c FrameworkSource/ES_Queue.c FrameworkSource/ES_Timers.c FrameworkSource/terminal.c FrameworkSource/circular_buffer_no_modulo_threadsafe.c FrameworkSource/dbprintf.c ProjectSource/EventCheckers.c ProjectSource/TestHarnessService0.c ProjectSource/main.c ProjectSource/PIC32_SPI_HAL_Starter.c ProjectSource/TemplateFSM.c ProjectSource/TemplateService.c ProjectSource/PIC32_AD_Lib.c ProjectSource/PWM_PIC32.c ProjectSource/MotorService.c ProjectSource/BeaconService.c ProjectSource/SPIService.c ProjectSource/ReflectiveSenseService.c
+SOURCEFILES_QUOTED_IF_SPACED=FrameworkSource/ES_CheckEvents.c FrameworkSource/ES_DeferRecall.c FrameworkSource/ES_Framework.c FrameworkSource/ES_LookupTables.c FrameworkSource/ES_Port.c FrameworkSource/ES_PostList.c FrameworkSource/ES_Queue.c FrameworkSource/ES_Timers.c FrameworkSource/terminal.c FrameworkSource/circular_buffer_no_modulo_threadsafe.c FrameworkSource/dbprintf.c ProjectSource/EventCheckers.c ProjectSource/main.c ProjectSource/PIC32_SPI_HAL_Starter.c ProjectSource/TemplateFSM.c ProjectSource/TemplateService.c ProjectSource/PIC32_AD_Lib.c ProjectSource/PWM_PIC32.c ProjectSource/SPILeaderService.c
 
 # Object Files Quoted if spaced
-OBJECTFILES_QUOTED_IF_SPACED=${OBJECTDIR}/FrameworkSource/ES_CheckEvents.o ${OBJECTDIR}/FrameworkSource/ES_DeferRecall.o ${OBJECTDIR}/FrameworkSource/ES_Framework.o ${OBJECTDIR}/FrameworkSource/ES_LookupTables.o ${OBJECTDIR}/FrameworkSource/ES_Port.o ${OBJECTDIR}/FrameworkSource/ES_PostList.o ${OBJECTDIR}/FrameworkSource/ES_Queue.o ${OBJECTDIR}/FrameworkSource/ES_Timers.o ${OBJECTDIR}/FrameworkSource/terminal.o ${OBJECTDIR}/FrameworkSource/circular_buffer_no_modulo_threadsafe.o ${OBJECTDIR}/FrameworkSource/dbprintf.o ${OBJECTDIR}/ProjectSource/EventCheckers.o ${OBJECTDIR}/ProjectSource/TestHarnessService0.o ${OBJECTDIR}/ProjectSource/main.o ${OBJECTDIR}/ProjectSource/PIC32_SPI_HAL_Starter.o ${OBJECTDIR}/ProjectSource/TemplateFSM.o ${OBJECTDIR}/ProjectSource/TemplateService.o ${OBJECTDIR}/ProjectSource/PIC32_AD_Lib.o ${OBJECTDIR}/ProjectSource/PWM_PIC32.o ${OBJECTDIR}/ProjectSource/MotorService.o ${OBJECTDIR}/ProjectSource/BeaconService.o ${OBJECTDIR}/ProjectSource/SPIService.o ${OBJECTDIR}/ProjectSource/ReflectiveSenseService.o
-POSSIBLE_DEPFILES=${OBJECTDIR}/FrameworkSource/ES_CheckEvents.o.d ${OBJECTDIR}/FrameworkSource/ES_DeferRecall.o.d ${OBJECTDIR}/FrameworkSource/ES_Framework.o.d ${OBJECTDIR}/FrameworkSource/ES_LookupTables.o.d ${OBJECTDIR}/FrameworkSource/ES_Port.o.d ${OBJECTDIR}/FrameworkSource/ES_PostList.o.d ${OBJECTDIR}/FrameworkSource/ES_Queue.o.d ${OBJECTDIR}/FrameworkSource/ES_Timers.o.d ${OBJECTDIR}/FrameworkSource/terminal.o.d ${OBJECTDIR}/FrameworkSource/circular_buffer_no_modulo_threadsafe.o.d ${OBJECTDIR}/FrameworkSource/dbprintf.o.d ${OBJECTDIR}/ProjectSource/EventCheckers.o.d ${OBJECTDIR}/ProjectSource/TestHarnessService0.o.d ${OBJECTDIR}/ProjectSource/main.o.d ${OBJECTDIR}/ProjectSource/PIC32_SPI_HAL_Starter.o.d ${OBJECTDIR}/ProjectSource/TemplateFSM.o.d ${OBJECTDIR}/ProjectSource/TemplateService.o.d ${OBJECTDIR}/ProjectSource/PIC32_AD_Lib.o.d ${OBJECTDIR}/ProjectSource/PWM_PIC32.o.d ${OBJECTDIR}/ProjectSource/MotorService.o.d ${OBJECTDIR}/ProjectSource/BeaconService.o.d ${OBJECTDIR}/ProjectSource/SPIService.o.d ${OBJECTDIR}/ProjectSource/ReflectiveSenseService.o.d
+OBJECTFILES_QUOTED_IF_SPACED=${OBJECTDIR}/FrameworkSource/ES_CheckEvents.o ${OBJECTDIR}/FrameworkSource/ES_DeferRecall.o ${OBJECTDIR}/FrameworkSource/ES_Framework.o ${OBJECTDIR}/FrameworkSource/ES_LookupTables.o ${OBJECTDIR}/FrameworkSource/ES_Port.o ${OBJECTDIR}/FrameworkSource/ES_PostList.o ${OBJECTDIR}/FrameworkSource/ES_Queue.o ${OBJECTDIR}/FrameworkSource/ES_Timers.o ${OBJECTDIR}/FrameworkSource/terminal.o ${OBJECTDIR}/FrameworkSource/circular_buffer_no_modulo_threadsafe.o ${OBJECTDIR}/FrameworkSource/dbprintf.o ${OBJECTDIR}/ProjectSource/EventCheckers.o ${OBJECTDIR}/ProjectSource/main.o ${OBJECTDIR}/ProjectSource/PIC32_SPI_HAL_Starter.o ${OBJECTDIR}/ProjectSource/TemplateFSM.o ${OBJECTDIR}/ProjectSource/TemplateService.o ${OBJECTDIR}/ProjectSource/PIC32_AD_Lib.o ${OBJECTDIR}/ProjectSource/PWM_PIC32.o ${OBJECTDIR}/ProjectSource/SPILeaderService.o
+POSSIBLE_DEPFILES=${OBJECTDIR}/FrameworkSource/ES_CheckEvents.o.d ${OBJECTDIR}/FrameworkSource/ES_DeferRecall.o.d ${OBJECTDIR}/FrameworkSource/ES_Framework.o.d ${OBJECTDIR}/FrameworkSource/ES_LookupTables.o.d ${OBJECTDIR}/FrameworkSource/ES_Port.o.d ${OBJECTDIR}/FrameworkSource/ES_PostList.o.d ${OBJECTDIR}/FrameworkSource/ES_Queue.o.d ${OBJECTDIR}/FrameworkSource/ES_Timers.o.d ${OBJECTDIR}/FrameworkSource/terminal.o.d ${OBJECTDIR}/FrameworkSource/circular_buffer_no_modulo_threadsafe.o.d ${OBJECTDIR}/FrameworkSource/dbprintf.o.d ${OBJECTDIR}/ProjectSource/EventCheckers.o.d ${OBJECTDIR}/ProjectSource/main.o.d ${OBJECTDIR}/ProjectSource/PIC32_SPI_HAL_Starter.o.d ${OBJECTDIR}/ProjectSource/TemplateFSM.o.d ${OBJECTDIR}/ProjectSource/TemplateService.o.d ${OBJECTDIR}/ProjectSource/PIC32_AD_Lib.o.d ${OBJECTDIR}/ProjectSource/PWM_PIC32.o.d ${OBJECTDIR}/ProjectSource/SPILeaderService.o.d
 
 # Object Files
-OBJECTFILES=${OBJECTDIR}/FrameworkSource/ES_CheckEvents.o ${OBJECTDIR}/FrameworkSource/ES_DeferRecall.o ${OBJECTDIR}/FrameworkSource/ES_Framework.o ${OBJECTDIR}/FrameworkSource/ES_LookupTables.o ${OBJECTDIR}/FrameworkSource/ES_Port.o ${OBJECTDIR}/FrameworkSource/ES_PostList.o ${OBJECTDIR}/FrameworkSource/ES_Queue.o ${OBJECTDIR}/FrameworkSource/ES_Timers.o ${OBJECTDIR}/FrameworkSource/terminal.o ${OBJECTDIR}/FrameworkSource/circular_buffer_no_modulo_threadsafe.o ${OBJECTDIR}/FrameworkSource/dbprintf.o ${OBJECTDIR}/ProjectSource/EventCheckers.o ${OBJECTDIR}/ProjectSource/TestHarnessService0.o ${OBJECTDIR}/ProjectSource/main.o ${OBJECTDIR}/ProjectSource/PIC32_SPI_HAL_Starter.o ${OBJECTDIR}/ProjectSource/TemplateFSM.o ${OBJECTDIR}/ProjectSource/TemplateService.o ${OBJECTDIR}/ProjectSource/PIC32_AD_Lib.o ${OBJECTDIR}/ProjectSource/PWM_PIC32.o ${OBJECTDIR}/ProjectSource/MotorService.o ${OBJECTDIR}/ProjectSource/BeaconService.o ${OBJECTDIR}/ProjectSource/SPIService.o ${OBJECTDIR}/ProjectSource/ReflectiveSenseService.o
+OBJECTFILES=${OBJECTDIR}/FrameworkSource/ES_CheckEvents.o ${OBJECTDIR}/FrameworkSource/ES_DeferRecall.o ${OBJECTDIR}/FrameworkSource/ES_Framework.o ${OBJECTDIR}/FrameworkSource/ES_LookupTables.o ${OBJECTDIR}/FrameworkSource/ES_Port.o ${OBJECTDIR}/FrameworkSource/ES_PostList.o ${OBJECTDIR}/FrameworkSource/ES_Queue.o ${OBJECTDIR}/FrameworkSource/ES_Timers.o ${OBJECTDIR}/FrameworkSource/terminal.o ${OBJECTDIR}/FrameworkSource/circular_buffer_no_modulo_threadsafe.o ${OBJECTDIR}/FrameworkSource/dbprintf.o ${OBJECTDIR}/ProjectSource/EventCheckers.o ${OBJECTDIR}/ProjectSource/main.o ${OBJECTDIR}/ProjectSource/PIC32_SPI_HAL_Starter.o ${OBJECTDIR}/ProjectSource/TemplateFSM.o ${OBJECTDIR}/ProjectSource/TemplateService.o ${OBJECTDIR}/ProjectSource/PIC32_AD_Lib.o ${OBJECTDIR}/ProjectSource/PWM_PIC32.o ${OBJECTDIR}/ProjectSource/SPILeaderService.o
 
 # Source Files
-SOURCEFILES=FrameworkSource/ES_CheckEvents.c FrameworkSource/ES_DeferRecall.c FrameworkSource/ES_Framework.c FrameworkSource/ES_LookupTables.c FrameworkSource/ES_Port.c FrameworkSource/ES_PostList.c FrameworkSource/ES_Queue.c FrameworkSource/ES_Timers.c FrameworkSource/terminal.c FrameworkSource/circular_buffer_no_modulo_threadsafe.c FrameworkSource/dbprintf.c ProjectSource/EventCheckers.c ProjectSource/TestHarnessService0.c ProjectSource/main.c ProjectSource/PIC32_SPI_HAL_Starter.c ProjectSource/TemplateFSM.c ProjectSource/TemplateService.c ProjectSource/PIC32_AD_Lib.c ProjectSource/PWM_PIC32.c ProjectSource/MotorService.c ProjectSource/BeaconService.c ProjectSource/SPIService.c ProjectSource/ReflectiveSenseService.c
+SOURCEFILES=FrameworkSource/ES_CheckEvents.c FrameworkSource/ES_DeferRecall.c FrameworkSource/ES_Framework.c FrameworkSource/ES_LookupTables.c FrameworkSource/ES_Port.c FrameworkSource/ES_PostList.c FrameworkSource/ES_Queue.c FrameworkSource/ES_Timers.c FrameworkSource/terminal.c FrameworkSource/circular_buffer_no_modulo_threadsafe.c FrameworkSource/dbprintf.c ProjectSource/EventCheckers.c ProjectSource/main.c ProjectSource/PIC32_SPI_HAL_Starter.c ProjectSource/TemplateFSM.c ProjectSource/TemplateService.c ProjectSource/PIC32_AD_Lib.c ProjectSource/PWM_PIC32.c ProjectSource/SPILeaderService.c
 
 
 
@@ -173,12 +173,6 @@ ${OBJECTDIR}/ProjectSource/EventCheckers.o: ProjectSource/EventCheckers.c  .gene
 	@${RM} ${OBJECTDIR}/ProjectSource/EventCheckers.o 
 	${MP_CC}  $(MP_EXTRA_CC_PRE) -g -D__DEBUG   -fframe-base-loclist  -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -I"FrameworkHeaders" -I"ProjectHeaders" -fno-common -MP -MMD -MF "${OBJECTDIR}/ProjectSource/EventCheckers.o.d" -o ${OBJECTDIR}/ProjectSource/EventCheckers.o ProjectSource/EventCheckers.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)    
 	
-${OBJECTDIR}/ProjectSource/TestHarnessService0.o: ProjectSource/TestHarnessService0.c  .generated_files/flags/default/b3dac01a691152cd42b070f59ad8873accb3ee72 .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
-	@${MKDIR} "${OBJECTDIR}/ProjectSource" 
-	@${RM} ${OBJECTDIR}/ProjectSource/TestHarnessService0.o.d 
-	@${RM} ${OBJECTDIR}/ProjectSource/TestHarnessService0.o 
-	${MP_CC}  $(MP_EXTRA_CC_PRE) -g -D__DEBUG   -fframe-base-loclist  -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -I"FrameworkHeaders" -I"ProjectHeaders" -fno-common -MP -MMD -MF "${OBJECTDIR}/ProjectSource/TestHarnessService0.o.d" -o ${OBJECTDIR}/ProjectSource/TestHarnessService0.o ProjectSource/TestHarnessService0.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)    
-	
 ${OBJECTDIR}/ProjectSource/main.o: ProjectSource/main.c  .generated_files/flags/default/adebf7f6aa3b018fcafd6358519597fd162f81d8 .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
 	@${MKDIR} "${OBJECTDIR}/ProjectSource" 
 	@${RM} ${OBJECTDIR}/ProjectSource/main.o.d 
@@ -215,29 +209,11 @@ ${OBJECTDIR}/ProjectSource/PWM_PIC32.o: ProjectSource/PWM_PIC32.c  .generated_fi
 	@${RM} ${OBJECTDIR}/ProjectSource/PWM_PIC32.o 
 	${MP_CC}  $(MP_EXTRA_CC_PRE) -g -D__DEBUG   -fframe-base-loclist  -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -I"FrameworkHeaders" -I"ProjectHeaders" -fno-common -MP -MMD -MF "${OBJECTDIR}/ProjectSource/PWM_PIC32.o.d" -o ${OBJECTDIR}/ProjectSource/PWM_PIC32.o ProjectSource/PWM_PIC32.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)    
 	
-${OBJECTDIR}/ProjectSource/MotorService.o: ProjectSource/MotorService.c  .generated_files/flags/default/53452fe09a6412e4db054e982881b3f625300542 .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
+${OBJECTDIR}/ProjectSource/SPILeaderService.o: ProjectSource/SPILeaderService.c  .generated_files/flags/default/dd0d9a18d6736e450acc16ca95101758604bc2d8 .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
 	@${MKDIR} "${OBJECTDIR}/ProjectSource" 
-	@${RM} ${OBJECTDIR}/ProjectSource/MotorService.o.d 
-	@${RM} ${OBJECTDIR}/ProjectSource/MotorService.o 
-	${MP_CC}  $(MP_EXTRA_CC_PRE) -g -D__DEBUG   -fframe-base-loclist  -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -I"FrameworkHeaders" -I"ProjectHeaders" -fno-common -MP -MMD -MF "${OBJECTDIR}/ProjectSource/MotorService.o.d" -o ${OBJECTDIR}/ProjectSource/MotorService.o ProjectSource/MotorService.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)    
-	
-${OBJECTDIR}/ProjectSource/BeaconService.o: ProjectSource/BeaconService.c  .generated_files/flags/default/88a6d1fe8b1c53f478194a56ed0387ae9896e644 .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
-	@${MKDIR} "${OBJECTDIR}/ProjectSource" 
-	@${RM} ${OBJECTDIR}/ProjectSource/BeaconService.o.d 
-	@${RM} ${OBJECTDIR}/ProjectSource/BeaconService.o 
-	${MP_CC}  $(MP_EXTRA_CC_PRE) -g -D__DEBUG   -fframe-base-loclist  -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -I"FrameworkHeaders" -I"ProjectHeaders" -fno-common -MP -MMD -MF "${OBJECTDIR}/ProjectSource/BeaconService.o.d" -o ${OBJECTDIR}/ProjectSource/BeaconService.o ProjectSource/BeaconService.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)    
-	
-${OBJECTDIR}/ProjectSource/SPIService.o: ProjectSource/SPIService.c  .generated_files/flags/default/a496325bacae7e24ae7d0696914447dd8c46741a .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
-	@${MKDIR} "${OBJECTDIR}/ProjectSource" 
-	@${RM} ${OBJECTDIR}/ProjectSource/SPIService.o.d 
-	@${RM} ${OBJECTDIR}/ProjectSource/SPIService.o 
-	${MP_CC}  $(MP_EXTRA_CC_PRE) -g -D__DEBUG   -fframe-base-loclist  -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -I"FrameworkHeaders" -I"ProjectHeaders" -fno-common -MP -MMD -MF "${OBJECTDIR}/ProjectSource/SPIService.o.d" -o ${OBJECTDIR}/ProjectSource/SPIService.o ProjectSource/SPIService.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)    
-	
-${OBJECTDIR}/ProjectSource/ReflectiveSenseService.o: ProjectSource/ReflectiveSenseService.c  .generated_files/flags/default/18296c357a30fe72c1d5e649bfbd3c2b6ea2a06d .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
-	@${MKDIR} "${OBJECTDIR}/ProjectSource" 
-	@${RM} ${OBJECTDIR}/ProjectSource/ReflectiveSenseService.o.d 
-	@${RM} ${OBJECTDIR}/ProjectSource/ReflectiveSenseService.o 
-	${MP_CC}  $(MP_EXTRA_CC_PRE) -g -D__DEBUG   -fframe-base-loclist  -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -I"FrameworkHeaders" -I"ProjectHeaders" -fno-common -MP -MMD -MF "${OBJECTDIR}/ProjectSource/ReflectiveSenseService.o.d" -o ${OBJECTDIR}/ProjectSource/ReflectiveSenseService.o ProjectSource/ReflectiveSenseService.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)    
+	@${RM} ${OBJECTDIR}/ProjectSource/SPILeaderService.o.d 
+	@${RM} ${OBJECTDIR}/ProjectSource/SPILeaderService.o 
+	${MP_CC}  $(MP_EXTRA_CC_PRE) -g -D__DEBUG   -fframe-base-loclist  -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -I"FrameworkHeaders" -I"ProjectHeaders" -fno-common -MP -MMD -MF "${OBJECTDIR}/ProjectSource/SPILeaderService.o.d" -o ${OBJECTDIR}/ProjectSource/SPILeaderService.o ProjectSource/SPILeaderService.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)    
 	
 else
 ${OBJECTDIR}/FrameworkSource/ES_CheckEvents.o: FrameworkSource/ES_CheckEvents.c  .generated_files/flags/default/3aa866ddde475ea2f6e82424a6de288dfda7fc71 .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
@@ -312,12 +288,6 @@ ${OBJECTDIR}/ProjectSource/EventCheckers.o: ProjectSource/EventCheckers.c  .gene
 	@${RM} ${OBJECTDIR}/ProjectSource/EventCheckers.o 
 	${MP_CC}  $(MP_EXTRA_CC_PRE)  -g -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -I"FrameworkHeaders" -I"ProjectHeaders" -fno-common -MP -MMD -MF "${OBJECTDIR}/ProjectSource/EventCheckers.o.d" -o ${OBJECTDIR}/ProjectSource/EventCheckers.o ProjectSource/EventCheckers.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)    
 	
-${OBJECTDIR}/ProjectSource/TestHarnessService0.o: ProjectSource/TestHarnessService0.c  .generated_files/flags/default/1671f852c78060f719a284b237db2172c016ccbe .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
-	@${MKDIR} "${OBJECTDIR}/ProjectSource" 
-	@${RM} ${OBJECTDIR}/ProjectSource/TestHarnessService0.o.d 
-	@${RM} ${OBJECTDIR}/ProjectSource/TestHarnessService0.o 
-	${MP_CC}  $(MP_EXTRA_CC_PRE)  -g -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -I"FrameworkHeaders" -I"ProjectHeaders" -fno-common -MP -MMD -MF "${OBJECTDIR}/ProjectSource/TestHarnessService0.o.d" -o ${OBJECTDIR}/ProjectSource/TestHarnessService0.o ProjectSource/TestHarnessService0.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)    
-	
 ${OBJECTDIR}/ProjectSource/main.o: ProjectSource/main.c  .generated_files/flags/default/d05e8f31a6c3ed376db519f6e3001ba4fc2532a2 .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
 	@${MKDIR} "${OBJECTDIR}/ProjectSource" 
 	@${RM} ${OBJECTDIR}/ProjectSource/main.o.d 
@@ -354,29 +324,11 @@ ${OBJECTDIR}/ProjectSource/PWM_PIC32.o: ProjectSource/PWM_PIC32.c  .generated_fi
 	@${RM} ${OBJECTDIR}/ProjectSource/PWM_PIC32.o 
 	${MP_CC}  $(MP_EXTRA_CC_PRE)  -g -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -I"FrameworkHeaders" -I"ProjectHeaders" -fno-common -MP -MMD -MF "${OBJECTDIR}/ProjectSource/PWM_PIC32.o.d" -o ${OBJECTDIR}/ProjectSource/PWM_PIC32.o ProjectSource/PWM_PIC32.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)    
 	
-${OBJECTDIR}/ProjectSource/MotorService.o: ProjectSource/MotorService.c  .generated_files/flags/default/3005003e80818debf1788f21815afaf24172b9fa .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
+${OBJECTDIR}/ProjectSource/SPILeaderService.o: ProjectSource/SPILeaderService.c  .generated_files/flags/default/f9b1c8e3a12d290def29b043e667efc13678fa57 .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
 	@${MKDIR} "${OBJECTDIR}/ProjectSource" 
-	@${RM} ${OBJECTDIR}/ProjectSource/MotorService.o.d 
-	@${RM} ${OBJECTDIR}/ProjectSource/MotorService.o 
-	${MP_CC}  $(MP_EXTRA_CC_PRE)  -g -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -I"FrameworkHeaders" -I"ProjectHeaders" -fno-common -MP -MMD -MF "${OBJECTDIR}/ProjectSource/MotorService.o.d" -o ${OBJECTDIR}/ProjectSource/MotorService.o ProjectSource/MotorService.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)    
-	
-${OBJECTDIR}/ProjectSource/BeaconService.o: ProjectSource/BeaconService.c  .generated_files/flags/default/d78154c24df3f849e8ffeac4ee58716c16adb96d .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
-	@${MKDIR} "${OBJECTDIR}/ProjectSource" 
-	@${RM} ${OBJECTDIR}/ProjectSource/BeaconService.o.d 
-	@${RM} ${OBJECTDIR}/ProjectSource/BeaconService.o 
-	${MP_CC}  $(MP_EXTRA_CC_PRE)  -g -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -I"FrameworkHeaders" -I"ProjectHeaders" -fno-common -MP -MMD -MF "${OBJECTDIR}/ProjectSource/BeaconService.o.d" -o ${OBJECTDIR}/ProjectSource/BeaconService.o ProjectSource/BeaconService.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)    
-	
-${OBJECTDIR}/ProjectSource/SPIService.o: ProjectSource/SPIService.c  .generated_files/flags/default/71d0accc7f55c9a3873e91f5817e44fa5717e2e0 .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
-	@${MKDIR} "${OBJECTDIR}/ProjectSource" 
-	@${RM} ${OBJECTDIR}/ProjectSource/SPIService.o.d 
-	@${RM} ${OBJECTDIR}/ProjectSource/SPIService.o 
-	${MP_CC}  $(MP_EXTRA_CC_PRE)  -g -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -I"FrameworkHeaders" -I"ProjectHeaders" -fno-common -MP -MMD -MF "${OBJECTDIR}/ProjectSource/SPIService.o.d" -o ${OBJECTDIR}/ProjectSource/SPIService.o ProjectSource/SPIService.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)    
-	
-${OBJECTDIR}/ProjectSource/ReflectiveSenseService.o: ProjectSource/ReflectiveSenseService.c  .generated_files/flags/default/80254348d2518e2e5cf51b8ca542972a889f5c50 .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
-	@${MKDIR} "${OBJECTDIR}/ProjectSource" 
-	@${RM} ${OBJECTDIR}/ProjectSource/ReflectiveSenseService.o.d 
-	@${RM} ${OBJECTDIR}/ProjectSource/ReflectiveSenseService.o 
-	${MP_CC}  $(MP_EXTRA_CC_PRE)  -g -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -I"FrameworkHeaders" -I"ProjectHeaders" -fno-common -MP -MMD -MF "${OBJECTDIR}/ProjectSource/ReflectiveSenseService.o.d" -o ${OBJECTDIR}/ProjectSource/ReflectiveSenseService.o ProjectSource/ReflectiveSenseService.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)    
+	@${RM} ${OBJECTDIR}/ProjectSource/SPILeaderService.o.d 
+	@${RM} ${OBJECTDIR}/ProjectSource/SPILeaderService.o 
+	${MP_CC}  $(MP_EXTRA_CC_PRE)  -g -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -I"FrameworkHeaders" -I"ProjectHeaders" -fno-common -MP -MMD -MF "${OBJECTDIR}/ProjectSource/SPILeaderService.o.d" -o ${OBJECTDIR}/ProjectSource/SPILeaderService.o ProjectSource/SPILeaderService.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)    
 	
 endif
 

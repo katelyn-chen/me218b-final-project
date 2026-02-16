@@ -27,7 +27,6 @@
 
 #include "PIC32_SPI_HAL.h"
 
-#include "MotorService.h"
 
 /*----------------------------- Module Defines ----------------------------*/
 /* use the symbolic timer name from ES_Configure.h */
@@ -49,6 +48,10 @@
    keeping these here so SPIService.c is self-contained.
 ----------------------------------------------------------------------- */
 //#define CMD_QUERY                 0xAA
+// NEEDS TO BE UPDATS WITH APPROPRIATE COMMANDS!!
+#define CMD_GET_BEACON_FREQ       0xAA
+#define CMD_GET_LINE_SENSORS      0xAA
+
 #define CMD_QUERY                 0xAA
 #define CMD_NOOP                  0xFF   /* also used as ?new cmd ready? marker */
 
@@ -77,7 +80,7 @@ typedef enum {
 /*---------------------------- Module Variables --------------------------*/
 static uint8_t MyPriority;
 LeaderState_t curState;
-static uint8_t curCmd
+static uint8_t curCmd;
 uint8_t prevCmd;
 
 /*====================== PRIVATE FUNCTION PROTOS =====================*/
@@ -95,7 +98,8 @@ bool InitSPILeaderService(uint8_t Priority)
   ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
   DB_printf("SPILeaderService initialized\r\n");
 
-  ES_Event_t ThisEvent = ES_INIT;
+  ES_Event_t ThisEvent;
+  ThisEvent.EventType = ES_INIT;
   return ES_PostToService(MyPriority, ThisEvent);
 }
 
@@ -112,19 +116,23 @@ ES_Event_t RunSPILeaderService(ES_Event_t ThisEvent)
   {
     switch (curState) {
         case SEND:
+        {
             curCmd = 0xAA;
             DB_printf("Leader Sending command! %d\n", curCmd);
             SPIOperate_SPI1_Send8Wait(curCmd);
             ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
             break;
+        }
         
         case RECEIVE:
-            uint8_t followerData = Follower_QueryByte(CMD_QUERY);
+        {
+            uint8_t followerData;
+            followerData = Follower_QueryByte(CMD_QUERY);
 
             /* ignore unknown bytes (do not silently convert) */
             if (!IsKnownCommand(followerData))
             {
-                DB_printf("SPIService: unknown rx 0x%02X\r\n", rx);
+                DB_printf("SPIService: unknown cmd 0x%02X\r\n", followerData);
                 ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
                 return ReturnEvent;
             }
@@ -132,6 +140,8 @@ ES_Event_t RunSPILeaderService(ES_Event_t ThisEvent)
             //HandleCommandByte(followerData);
 
             DB_printf("Leader received byte: %d\n", followerData);
+            break;
+        }
     }
     ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
   }
@@ -197,11 +207,11 @@ static bool IsKnownCommand(uint8_t cmd)
   }
 }
 
-static void HandleCommandByte(uint8_t cmd)
+/*static void HandleCommandByte(uint8_t cmd)
 {
   ES_Event_t e;
   //DB_printf("SPIService posting cmd=%d\r\n", cmd);
-  if (cmd != prevCommand) {
+  if (cmd != prevCmd) {
     switch (cmd)
     {
       case CMD_STOP:
@@ -282,6 +292,7 @@ static void HandleCommandByte(uint8_t cmd)
         break;
         
     }
-    prevCommand = cmd;
+    prevCmd = cmd;
   } 
-}
+ 
+}*/
