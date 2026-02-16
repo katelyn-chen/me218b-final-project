@@ -251,6 +251,11 @@ bool SPISetup_SetBitTime(SPI_Module_t WhichModule, uint32_t SPI_ClkPeriodIn_ns)
 bool SPISetup_MapSSInput(SPI_Module_t WhichModule, SPI_PinMap_t WhichPin)
 {
   // not needed for ME218a Labs
+  bool ReturnVal = true;
+  selectModuleRegisters(WhichModule);
+  *setTRISRegisters[WhichPin] = mapPinMap2BitPosn[WhichPin];  // set as input
+  SS1R = mapPinMap2INTConst[WhichPin];
+  return ReturnVal;
 }
 
 /****************************************************************************
