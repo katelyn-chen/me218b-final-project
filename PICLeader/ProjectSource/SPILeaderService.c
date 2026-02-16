@@ -29,7 +29,7 @@
 
 #include "MotorService.h"
 
-/*============================== CONFIG ==============================*/
+/*----------------------------- Module Defines ----------------------------*/
 /* use the symbolic timer name from ES_Configure.h */
 #ifndef SPI_TIMER
 #define SPI_TIMER            0u
@@ -44,6 +44,7 @@
 /* SPI clock period (ns). 500 kHz -> 2000 ns period */
 //#define SPI_CLK_PERIOD_NS    2000u
 #define SPI_CLK_PERIOD_NS    50000u
+
 /* ---------------- Command Generator bytes (Appendix A) ----------------
    keeping these here so SPIService.c is self-contained.
 ----------------------------------------------------------------------- */
@@ -66,35 +67,35 @@
 #define CMD_ALIGN                 0x20
 #define CMD_TAPE_DETECT           0x40
 
-/*============================== STATE ==============================*/
-static uint8_t MyPriority;
+/*---------------------------- Module Types -------------------------------*/
+typedef enum {
+  SEND,
+  RECEIVE,
+  DEBUG
+} LeaderState_t;
 
-/* protocol state:
-   - see 0xFF marker -> next query returns actual command
-*/
-static bool WaitingForRealCommand = false;
-uint8_t prevCommand;
+/*---------------------------- Module Variables --------------------------*/
+static uint8_t MyPriority;
+LeaderState_t curState;
+static uint8_t curCmd
+uint8_t prevCmd;
 
 /*====================== PRIVATE FUNCTION PROTOS =====================*/
 static void InitSPIHardware(void);
-static uint8_t CG_QueryByte(uint8_t outByte);
-
+static uint8_t Follower_QueryByte(uint8_t outByte);
 static void HandleCommandByte(uint8_t cmd);
 static bool IsKnownCommand(uint8_t cmd);
 
-/*=========================== PUBLIC API =============================*/
+/*------------------------------ Module Code ------------------------------*/
 bool InitSPILeaderService(uint8_t Priority)
 {
   MyPriority = Priority;
-  prevCommand = CMD_NOOP;
-
+  curState = SEND;
   InitSPIHardware();
-
   ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
+  DB_printf("SPILeaderService initialized\r\n");
 
-  DB_printf("SPIService: init done\r\n");
-
-  ES_Event_t ThisEvent = { ES_INIT, 0 };
+  ES_Event_t ThisEvent = ES_INIT;
   return ES_PostToService(MyPriority, ThisEvent);
 }
 
@@ -109,41 +110,29 @@ ES_Event_t RunSPILeaderService(ES_Event_t ThisEvent)
 
   if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == SPI_TIMER))
   {
-    uint8_t rx;
-    rx = CG_QueryByte(CMD_QUERY);
+    switch (curState) {
+        case SEND:
+            curCmd = 0xAA;
+            DB_printf("Leader Sending command! %d\n", curCmd);
+            SPIOperate_SPI1_Send8Wait(curCmd);
+            ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
+            break;
+        
+        case RECEIVE:
+            uint8_t followerData = Follower_QueryByte(CMD_QUERY);
 
-    /* ignore unknown bytes (do not silently convert) */
-    if (!IsKnownCommand(rx))
-    {
-      DB_printf("SPIService: unknown rx 0x%02X\r\n", rx);
-      ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
-      return ReturnEvent;
-    }
+            /* ignore unknown bytes (do not silently convert) */
+            if (!IsKnownCommand(followerData))
+            {
+                DB_printf("SPIService: unknown rx 0x%02X\r\n", rx);
+                ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
+                return ReturnEvent;
+            }
 
-    /* protocol behavior:
-       - 0xFF by itself is the ?new command ready? marker
-       - the NEXT query returns the actual command value
-    */
-    if (rx == CMD_NOOP)
-    {
-      WaitingForRealCommand = true;
-     // DB_printf("NOT HANDLING");
-    }
-    else
-    {
-      if (WaitingForRealCommand)
-      {
-        HandleCommandByte(rx);
-        WaitingForRealCommand = false;
-     //   DB_printf("handling2");
-      }
-      else
-      {
-        HandleCommandByte(rx);
-       // DB_printf("handling1");
-      }
-    }
+            //HandleCommandByte(followerData);
 
+            DB_printf("Leader received byte: %d\n", followerData);
+    }
     ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
   }
 
@@ -179,10 +168,8 @@ static void InitSPIHardware(void)
   SPIOperate_ReadData(CG_SPI_MODULE);
 }
 
-static uint8_t CG_QueryByte(uint8_t outByte)
+static uint8_t Follower_QueryByte(uint8_t outByte)
 {
-  /* send one byte and read back the received byte */
-  SPIOperate_SPI1_Send8Wait(outByte);
   return (uint8_t)SPIOperate_ReadData(CG_SPI_MODULE);
 }
 
