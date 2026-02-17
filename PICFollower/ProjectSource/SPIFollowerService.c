@@ -124,9 +124,11 @@ ES_Event_t RunSPIFollowerService(ES_Event_t ThisEvent)
         
         case RECEIVE:
         {
+            DB_printf("Receiving\r\n");
             if (ThisEvent.EventType == ES_TIMEOUT) {
                 if (ThisEvent.EventParam == CMD_WAIT_TIMER)
                 {
+                    DB_printf("CMDWAIT Timer expired\r\n");
                     ES_Event_t NewEvent;
                     NewEvent.EventType = ES_SPI_RECEIVED;
                     __builtin_disable_interrupts();
@@ -253,7 +255,7 @@ static void HandleCommandByte(uint8_t cmd)
   } 
 }
 
-void __ISR(_TIMER_3_VECTOR, IPL7SOFT) SPI1_Handler(void) {
+void __ISR(_SPI1_VECTOR, IPL7SOFT) SPI1_Handler(void) {
     if (IFS1bits.SPI1RXIF) {
         incomingCmd = SPI1BUF;     // what leader sent
         IFS1CLR = _IFS1_SPI1RXIF_MASK;
