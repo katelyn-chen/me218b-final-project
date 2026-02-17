@@ -195,6 +195,7 @@ static void InitSPIHardware(void)
   SPISetup_EnableSPI(CG_SPI_MODULE);
   
   SPISetup_ConfigureInterrupts(CG_SPI_MODULE);
+  //SPI1BUF = 0xAA;
 
   /* clear any stale data */
   SPIOperate_ReadData(CG_SPI_MODULE);
@@ -256,7 +257,11 @@ static void HandleCommandByte(uint8_t cmd)
 }
 
 void __ISR(_SPI1_VECTOR, IPL7SOFT) SPI1_Handler(void) {
+    if (SPI1STATbits.SPIROV) {
+        SPI1STATCLR = _SPI1STAT_SPIROV_MASK;
+    }
     if (IFS1bits.SPI1RXIF) {
+        //DB_printf("IN INTERRUPT\r\n");
         incomingCmd = SPI1BUF;     // what leader sent
         IFS1CLR = _IFS1_SPI1RXIF_MASK;
         // Preload response for next transaction
