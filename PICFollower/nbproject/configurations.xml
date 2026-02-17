@@ -72,8 +72,8 @@
       <itemPath>ProjectSource/MotorService.c</itemPath>
       <itemPath>ProjectSource/ADService.c</itemPath>
       <itemPath>ProjectSource/BeaconService.c</itemPath>
-      <itemPath>ProjectSource/SPIService.c</itemPath>
       <itemPath>ProjectSource/ReflectiveSenseService.c</itemPath>
+      <itemPath>ProjectSource/SPIFollowerService.c</itemPath>
     </logicalFolder>
     <logicalFolder name="ExternalFiles"
                    displayName="Important Files"

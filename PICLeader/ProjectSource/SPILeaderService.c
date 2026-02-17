@@ -50,7 +50,8 @@
 //#define CMD_QUERY                 0xAA
 // NEEDS TO BE UPDATS WITH APPROPRIATE COMMANDS!!
 #define CMD_GET_BEACON_FREQ       0xAA
-#define CMD_GET_LINE_SENSORS      0xAA
+#define CMD_GET_LINE_SENSORS      0x0A
+#define CMD_MOTOR_FWD             0x01
 
 #define CMD_QUERY                 0xAA
 #define CMD_NOOP                  0xFF   /* also used as ?new cmd ready? marker */
@@ -117,7 +118,7 @@ ES_Event_t RunSPILeaderService(ES_Event_t ThisEvent)
     switch (curState) {
         case SEND:
         {
-            curCmd = 0xAA;
+            curCmd = CMD_MOTOR_FWD;
             DB_printf("Leader Sending command! %d\n", curCmd);
             SPIOperate_SPI1_Send8Wait(curCmd);
             ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
