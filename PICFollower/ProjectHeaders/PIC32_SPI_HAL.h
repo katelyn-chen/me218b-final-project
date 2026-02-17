@@ -582,5 +582,6 @@ Example
 ****************************************************************************/
 bool SPIOperate_HasSS2_Risen(void);
 
+bool SPISetup_ConfigureInterrupts(SPI_Module_t WhichModule);
 
 #endif //PIC32_SPI_HAL defined

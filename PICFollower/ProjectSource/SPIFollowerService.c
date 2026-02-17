@@ -16,7 +16,7 @@
 ****************************************************************************/
 
 #include "SPIFollowerService.h"
-
+#include <sys/attribs.h>
 #include <xc.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -81,6 +81,7 @@ static uint8_t MyPriority;
 FollowerState_t curState;
 static uint8_t curCmd;
 uint8_t prevCmd;
+static volatile uint8_t incomingCmd;
 
 /*====================== PRIVATE FUNCTION PROTOS =====================*/
 static void InitSPIHardware(void);
@@ -110,9 +111,6 @@ bool PostSPIFollowerService(ES_Event_t ThisEvent)
 ES_Event_t RunSPIFollowerService(ES_Event_t ThisEvent)
 {
   ES_Event_t ReturnEvent = { ES_NO_EVENT, 0 };
-
-  if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == SPI_TIMER))
-  {
     switch (curState) {
         case SEND:
         {
@@ -125,7 +123,16 @@ ES_Event_t RunSPIFollowerService(ES_Event_t ThisEvent)
         
         case RECEIVE:
         {
-            uint8_t leaderCmd = Leader_QueryByte(CMD_QUERY);
+            if (ThisEvent.EventType == ES_TIMEOUT) {
+                if (ThisEvent.EventParam == CMD_WAIT_TIMER)
+                {
+                    ES_Event_t NewEvent;
+                    NewEvent.EventType = ES_SPI_RECEIVED;
+                    NewEvent.EventParam = NewCommand;
+                    PostPic2PicFollowerFSM(NewEvent);
+                }
+            }
+            //uint8_t leaderCmd = Leader_QueryByte(CMD_QUERY);
 
             /* ignore unknown bytes (do not silently convert) */
             if (!IsKnownCommand(leaderCmd))
@@ -139,8 +146,7 @@ ES_Event_t RunSPIFollowerService(ES_Event_t ThisEvent)
 
             DB_printf("Follower received byte: %d\n", leaderCmd);
         }
-    }
-    ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
+    //ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
   }
 
   return ReturnEvent;
@@ -177,8 +183,10 @@ static void InitSPIHardware(void)
   SPISetup_SetXferWidth(CG_SPI_MODULE, SPI_8BIT);
 
   /* set SPI bit time (ns) */
-  SPISetup_SetBitTime(CG_SPI_MODULE, SPI_CLK_PERIOD_NS);
+  //SPISetup_SetBitTime(CG_SPI_MODULE, SPI_CLK_PERIOD_NS);
   SPISetup_EnableSPI(CG_SPI_MODULE);
+  
+  SPISetup_ConfigureInterrupts(CG_SPI_MODULE);
 
   /* clear any stale data */
   SPIOperate_ReadData(CG_SPI_MODULE);
@@ -237,4 +245,13 @@ static void HandleCommandByte(uint8_t cmd)
     }
     prevCmd = cmd;
   } 
+}
+
+void __ISR(_TIMER_3_VECTOR, IPL7SOFT) SPI1_Handler(void) {
+    if (IFS1bits.SPI1RXIF) {
+        incomingCmd = SPI1BUF;     // what leader sent
+        IFS1CLR = _IFS1_SPI1RXIF_MASK;
+        // Preload response for next transaction
+        SPI1BUF = CMD_NOOP;
+    }
 }

@@ -56,6 +56,7 @@ static bool isSS_OutputPinLegal(SPI_Module_t WhichModule,
 static bool isSDOPinLegal( SPI_PinMap_t WhichPin);
 static bool isSDIPinLegal(SPI_Module_t WhichModule, 
                                 SPI_PinMap_t WhichPin);
+//static bool SPISetup_ConfigureInterrupts(SPI_Module_t WhichModule);
 
 /*---------------------------- Module Variables ---------------------------*/
   // these will allow us to reference both SPI1 & SPI2 through these pointers
@@ -797,6 +798,42 @@ static bool isSDIPinLegal(SPI_Module_t WhichModule, SPI_PinMap_t WhichPin)
     }
   }
   return ReturnVal;
+}
+
+bool SPISetup_ConfigureInterrupts(SPI_Module_t WhichModule)
+{
+    __builtin_disable_interrupts();
+    if (SPI_SPI1 == WhichModule)
+    {
+        // Clear SPI Fault, SPI Receive Done, SPI Transfer Done
+        IFS1CLR = _IFS1_SPI1EIF_MASK | _IFS1_SPI1RXIF_MASK | _IFS1_SPI1TXIF_MASK;
+
+        // Set Interrupt Priority
+        IPC7bits.SPI1IP = 7; // SPI1 Interrupt priority set to 3
+        IPC7bits.SPI1IS = 1; // SPI1 Interrupt sub priority set to 1
+
+        // Enable SPI1 Interrupts
+        IEC1SET = _IEC1_SPI1RXIE_MASK; // Receive Interrupt
+        //IEC1SET = _IEC1_SPI1TXIE_MASK; // Transmit Interrupt
+        // IEC1SET = _IEC1_SPI1EIE_MASK; // Error Interrupt
+
+        SPI1CONbits.SRXISEL = 0b01; // interrupt mode
+    }
+    else if (SPI_SPI2 == WhichModule)
+    {
+        // Clear SPI Fault, SPI Receive Done, SPI Transfer Done
+        IFS1CLR = _IFS1_SPI2EIF_MASK | _IFS1_SPI2RXIF_MASK | _IFS1_SPI2TXIF_MASK;
+
+        // Set Interrupt Priority
+        IPC9bits.SPI2IP = 7; // SPI1 Interrupt priority set to 3
+        IPC9bits.SPI2IS = 1; // SPI1 Interrupt sub priority set to 1
+
+        // Enable SPI1 Interrupts
+        IEC1SET = _IEC1_SPI2RXIE_MASK; // Receive Interrupt
+        // IEC1SET = _IEC1_SPI2TXIE_MASK; // Transmit Interrupt
+        //  IEC1SET = _IEC1_SPI1EIE_MASK; // Error Interrupt
+    }
+    __builtin_enable_interrupts();
 }
 
 //int main(void)
