@@ -267,6 +267,6 @@ void __ISR(_SPI1_VECTOR, IPL7SOFT) SPI1_Handler(void) {
         IFS1CLR = _IFS1_SPI1RXIF_MASK;
         // Preload response for next transaction
         SPI1BUF = CMD_NOOP;
-        ES_Timer_InitTimer(CMD_WAIT_TIMER, CMD_DELAY);
+        ES_Timer_InitTimer(CMD_WAIT_TIMER, CMD_DELAY); // might need to change to a flag
     }
 }
