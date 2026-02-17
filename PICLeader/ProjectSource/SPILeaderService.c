@@ -47,29 +47,20 @@
 /* ---------------- Command Generator bytes (Appendix A) ----------------
    keeping these here so SPIService.c is self-contained.
 ----------------------------------------------------------------------- */
-//#define CMD_QUERY                 0xAA
-// NEEDS TO BE UPDATS WITH APPROPRIATE COMMANDS!!
-#define CMD_GET_BEACON_FREQ       0xAA
-#define CMD_GET_LINE_SENSORS      0x0A
-#define CMD_MOTOR_FWD             0x01
-
-#define CMD_QUERY                 0xAA
-#define CMD_NOOP                  0xFF   /* also used as ?new cmd ready? marker */
-
+// Still need to add a few more commands
 #define CMD_STOP                  0x00
-
-#define CMD_ROT_CW_90             0x02
-#define CMD_ROT_CW_45             0x03
+#define CMD_TRANS_FWD             0x01
+#define CMD_TRANS_BWD             0x02
+#define CMD_ROT_CW_90             0x03
 #define CMD_ROT_CCW_90            0x04
 #define CMD_ROT_CCW_45            0x05
-
-#define CMD_TRANS_FWD_HALF        0x08
-#define CMD_TRANS_FWD_FULL        0x09
-#define CMD_TRANS_REV_HALF        0x10
-#define CMD_TRANS_REV_FULL        0x11
-
-#define CMD_ALIGN                 0x20
-#define CMD_TAPE_DETECT           0x40
+#define CMD_ROT_CW_45             0x06
+#define CMD_TAPE_T_DETECT         0x07
+#define CMD_LINE_FOLLOW           0x08
+#define CMD_GET_BEACON_FREQ       0x09
+#define CMD_QUERY                 0xAA
+#define CMD_NOOP                  0xFF
+#define CMD_TESTING               0x10  // checkpoint 2 cmd
 
 /*---------------------------- Module Types -------------------------------*/
 typedef enum {
@@ -118,10 +109,11 @@ ES_Event_t RunSPILeaderService(ES_Event_t ThisEvent)
     switch (curState) {
         case SEND:
         {
-            curCmd = CMD_MOTOR_FWD;
+            curCmd = CMD_TRANS_FWD;
             DB_printf("Leader Sending command! %d\n", curCmd);
             SPIOperate_SPI1_Send8Wait(curCmd);
             ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
+            curState = RECEIVE;
             break;
         }
         
@@ -138,7 +130,7 @@ ES_Event_t RunSPILeaderService(ES_Event_t ThisEvent)
                 return ReturnEvent;
             }
 
-            //HandleCommandByte(followerData);
+            HandleCommandByte(followerData);
 
             DB_printf("Leader received byte: %d\n", followerData);
             break;
@@ -189,114 +181,29 @@ static uint8_t Follower_QueryByte(uint8_t outByte)
 /*======================= COMMAND -> EVENT MAP =======================*/
 static bool IsKnownCommand(uint8_t cmd)
 {
-  switch (cmd)
-  {
-    case CMD_NOOP:
-    case CMD_STOP:
-    case CMD_ROT_CW_90:
-    case CMD_ROT_CW_45:
-    case CMD_ROT_CCW_90:
-    case CMD_ROT_CCW_45:
-    case CMD_TRANS_FWD_HALF:
-    case CMD_TRANS_FWD_FULL:
-    case CMD_TRANS_REV_HALF:
-    case CMD_TRANS_REV_FULL:
-    case CMD_ALIGN:
-    case CMD_TAPE_DETECT:
-    case CMD_MOTOR_FWD:
-    return true;
-
-    default:
-      return false;
-  }
-}
-
-/*static void HandleCommandByte(uint8_t cmd)
-{
-  ES_Event_t e;
-  //DB_printf("SPIService posting cmd=%d\r\n", cmd);
-  if (cmd != prevCmd) {
     switch (cmd)
     {
-      case CMD_STOP:
-        DB_printf("Posting stop from SPIService \r\n");
-        e.EventType = ES_STOP; e.EventParam = 0;
-        PostMotorService(e);
-        break;
+        case CMD_STOP:
+        case CMD_TRANS_FWD:
+        case CMD_TRANS_BWD:
+        case CMD_ROT_CW_90:
+        case CMD_ROT_CCW_90:
+        case CMD_ROT_CCW_45:
+        case CMD_ROT_CW_45:
+        case CMD_TAPE_T_DETECT:
+        case CMD_LINE_FOLLOW:
+        case CMD_GET_BEACON_FREQ:
+        case CMD_QUERY:
+        case CMD_NOOP:
+        case CMD_TESTING:
+            return true;
 
-      case CMD_ALIGN:
-        DB_printf("SPI align %d\n", cmd);
-        e.EventType = ES_ALIGN; e.EventParam = 0;
-        PostMotorService(e);
-        break;
-
-      case CMD_TAPE_DETECT:
-        DB_printf("SPI tape %d\n", cmd);
-        e.EventType = ES_TAPE_DETECT; e.EventParam = 0;
-        PostMotorService(e);
-        break;
-
-      case CMD_ROT_CW_45:
-        DB_printf("SPI CW 45 %d/n", cmd);
-        e.EventType = ES_ROTATE;
-        e.EventParam = PackRotateParam(ROT_45, ROT_CW);
-        PostMotorService(e);
-        break;
-
-      case CMD_ROT_CW_90:
-        DB_printf("SPI CW 90 %d\n", cmd);
-        e.EventType = ES_ROTATE;
-        e.EventParam = PackRotateParam(ROT_90, ROT_CW);
-        PostMotorService(e);
-        break;
-
-      case CMD_ROT_CCW_45:
-        DB_printf("SPI CCW 45 %d\n", cmd);
-        e.EventType = ES_ROTATE;
-        e.EventParam = PackRotateParam(ROT_45, ROT_CCW);
-        PostMotorService(e);
-        break;
-
-      case CMD_ROT_CCW_90:
-        DB_printf("SPI CCW 90 %d\n", cmd);
-        e.EventType = ES_ROTATE;
-        e.EventParam = PackRotateParam(ROT_90, ROT_CCW);
-        PostMotorService(e);
-        break;
-
-      case CMD_TRANS_FWD_HALF:
-        DB_printf("SPI fwd half %d\n", cmd);
-        e.EventType = ES_TRANSLATE;
-        e.EventParam = PackTranslateParam(TRANS_HALF, DIR_FWD);
-        PostMotorService(e);
-        break;
-
-      case CMD_TRANS_FWD_FULL:
-        DB_printf("SPI fwd full %d\n", cmd);
-        e.EventType = ES_TRANSLATE;
-        e.EventParam = PackTranslateParam(TRANS_FULL, DIR_FWD);
-        PostMotorService(e);
-        break;
-
-      case CMD_TRANS_REV_HALF:
-        DB_printf("SPI rev half %d\n", cmd);
-        e.EventType = ES_TRANSLATE;
-        e.EventParam = PackTranslateParam(TRANS_HALF, DIR_REV);
-        PostMotorService(e);
-        break;
-
-      case CMD_TRANS_REV_FULL:
-        DB_printf("SPI rev half %d\n", cmd);
-        e.EventType = ES_TRANSLATE;
-        e.EventParam = PackTranslateParam(TRANS_FULL, DIR_REV);
-        PostMotorService(e);
-        break;
-
-      default:
-        break;
-        
+        default:
+            return false;
     }
-    prevCmd = cmd;
-  } 
- 
-}*/
+}
+
+static void HandleCommandByte(uint8_t cmd)
+{
+  DB_printf("Leader received byte from follower: %d\r\n", cmd);
+}

@@ -44,31 +44,26 @@
 /* SPI clock period (ns). 500 kHz -> 2000 ns period */
 //#define SPI_CLK_PERIOD_NS    2000u
 #define SPI_CLK_PERIOD_NS    50000u
-#define CMD_DELAY            100
+#define CMD_DELAY            100        // arbitrary delay amt, can change
 
 /* ---------------- Command Generator bytes (Appendix A) ----------------
    keeping these here so SPIService.c is self-contained.
 ----------------------------------------------------------------------- */
-//#define CMD_QUERY                 0xAA
-
-#define CMD_MOTOR_FWD             0x01
-#define CMD_QUERY                 0xAA
-#define CMD_NOOP                  0xFF   /* also used as ?new cmd ready? marker */
-
+// Still need to add a few more commands
 #define CMD_STOP                  0x00
-
-#define CMD_ROT_CW_90             0x02
-#define CMD_ROT_CW_45             0x03
+#define CMD_TRANS_FWD             0x01
+#define CMD_TRANS_BWD             0x02
+#define CMD_ROT_CW_90             0x03
 #define CMD_ROT_CCW_90            0x04
 #define CMD_ROT_CCW_45            0x05
+#define CMD_ROT_CW_45             0x06
+#define CMD_TAPE_T_DETECT         0x07
+#define CMD_LINE_FOLLOW           0x08
+#define CMD_GET_BEACON_FREQ       0x09
+#define CMD_QUERY                 0xAA
+#define CMD_NOOP                  0xFF
+#define CMD_TESTING               0x10  // checkpoint 2 cmd
 
-#define CMD_TRANS_FWD_HALF        0x08
-#define CMD_TRANS_FWD_FULL        0x09
-#define CMD_TRANS_REV_HALF        0x10
-#define CMD_TRANS_REV_FULL        0x11
-
-#define CMD_ALIGN                 0x20
-#define CMD_TAPE_DETECT           0x40
 
 /*---------------------------- Module Types -------------------------------*/
 typedef enum {
@@ -81,8 +76,9 @@ typedef enum {
 static uint8_t MyPriority;
 FollowerState_t curState;
 static uint8_t curCmd;
-uint8_t prevCmd;
+static uint8_t prevCmd;
 static volatile uint8_t incomingCmd;
+static uint8_t outgoingCmd;
 
 /*====================== PRIVATE FUNCTION PROTOS =====================*/
 static void InitSPIHardware(void);
@@ -210,48 +206,132 @@ static uint8_t Leader_QueryByte(uint8_t outByte)
 /*======================= COMMAND -> EVENT MAP =======================*/
 static bool IsKnownCommand(uint8_t cmd)
 {
-  switch (cmd)
-  {
-    case CMD_NOOP:
-    case CMD_STOP:
-    case CMD_ROT_CW_90:
-    case CMD_ROT_CW_45:
-    case CMD_ROT_CCW_90:
-    case CMD_ROT_CCW_45:
-    case CMD_TRANS_FWD_HALF:
-    case CMD_TRANS_FWD_FULL:
-    case CMD_TRANS_REV_HALF:
-    case CMD_TRANS_REV_FULL:
-    case CMD_ALIGN:
-    case CMD_TAPE_DETECT:
-    case CMD_MOTOR_FWD:
-      return true;
+    switch (cmd)
+    {
+        case CMD_STOP:
+        case CMD_TRANS_FWD:
+        case CMD_TRANS_BWD:
+        case CMD_ROT_CW_90:
+        case CMD_ROT_CCW_90:
+        case CMD_ROT_CCW_45:
+        case CMD_ROT_CW_45:
+        case CMD_TAPE_T_DETECT:
+        case CMD_LINE_FOLLOW:
+        case CMD_GET_BEACON_FREQ:
+        case CMD_QUERY:
+        case CMD_NOOP:
+        case CMD_TESTING:
+            return true;
 
-    default:
-      return false;
-  }
+        default:
+            return false;
+    }
 }
 
 static void HandleCommandByte(uint8_t cmd)
 {
   ES_Event_t cmdEvent;
-  //DB_printf("SPIService posting cmd=%d\r\n", cmd);
   if (cmd != prevCmd) {
     switch (cmd)
     {
-      case CMD_MOTOR_FWD: {
-        DB_printf("Received fwd command from SPILeaderService \r\n");
+      case CMD_TRANS_FWD: {
+        DB_printf("Received forward command \r\n");
+        outgoingCmd = CMD_TRANS_FWD;
+        DB_printf("Follower sending testing command \r\n"); // for chkpoint 2
         cmdEvent.EventType = ES_TRANSLATE;
-        cmdEvent.EventParam = PackTranslateParam(TRANS_HALF, DIR_FWD);
-        PostNavigateService(cmdEvent);
+        cmdEvent.EventParam = PackTranslateParam(TRANS_FULL, DIR_FWD);
         break;
-      }
+    }
 
-      
+      case CMD_STOP: {
+        DB_printf("Received STOP command\r\n");
+        //outgoingCmd = CMD_STOP;
+        cmdEvent.EventType = ES_STOP;
+        break;
+    }
+
+    case CMD_TRANS_BWD: {
+        DB_printf("Received backwards command\r\n");
+        //outgoingCmd = CMD_TESTING;
+        cmdEvent.EventType = ES_TRANSLATE;
+        cmdEvent.EventParam = PackTranslateParam(TRANS_FULL, DIR_REV);
+        break;
+    }
+
+    case CMD_ROT_CW_90: {
+        DB_printf("Received CW 90 rotation command\r\n");
+        //outgoingCmd = CMD_TESTING;
+        cmdEvent.EventType = ES_ROTATE;
+        cmdEvent.EventParam = PackRotateParam(ROT_90, ROT_CW);
+        break;
+    }
+
+    case CMD_ROT_CCW_90: {
+        DB_printf("Received CCW 90° rotation command\r\n");
+        outgoingCmd = CMD_TESTING;
+        cmdEvent.EventType = ES_ROTATE;
+        cmdEvent.EventParam = PackRotateParam(ROT_90, ROT_CCW);
+        break;
+    }
+
+
+    case CMD_ROT_CW_45: {
+        DB_printf("Received CW 45° rotation command\r\n");
+        outgoingCmd = CMD_TESTING;
+        cmdEvent.EventType = ES_ROTATE;
+        cmdEvent.EventParam = PackRotateParam(ROT_45, ROT_CW);
+        break;
+    }
+
+    case CMD_ROT_CCW_45: {
+        DB_printf("Received CCW 45° rotation command\r\n");
+        outgoingCmd = CMD_TESTING;
+        cmdEvent.EventType = ES_ROTATE;
+        cmdEvent.EventParam = PackRotateParam(ROT_45, ROT_CCW);
+        break;
+    }
+
+    case CMD_TAPE_T_DETECT: {
+        DB_printf("Received TAPE detect command\r\n");
+        outgoingCmd = CMD_TESTING;
+        cmdEvent.EventType = ES_TAPE_DETECT;
+        cmdEvent.EventParam = 0; // no param needed
+        break;
+    }
+
+    case CMD_LINE_FOLLOW: {
+        DB_printf("Received LINE FOLLOW command\r\n");
+        outgoingCmd = CMD_TESTING;
+        cmdEvent.EventType = ES_LINE_FOLLOW;
+        cmdEvent.EventParam = 0;
+        break;
+    }
+
+    case CMD_GET_BEACON_FREQ: {
+        DB_printf("Received GET BEACON FREQ command\r\n");
+        outgoingCmd = CMD_TESTING;
+        cmdEvent.EventType = ES_BEACON_SIGNAL;
+        cmdEvent.EventParam = 0;
+        break;
+    }
+
+    case CMD_TESTING: {
+        DB_printf("Received TESTING command\r\n");
+        outgoingCmd = CMD_TESTING;
+        break;
+    }
+
+    case CMD_QUERY: {
+        DB_printf("Received QUERY command from SPILeaderService!\r\n");
+        outgoingCmd = CMD_TESTING;
+        break;
+
+    }
       default:
         break;
         
     }
+    PostNavigateService(cmdEvent);
     prevCmd = cmd;
   } 
 }
@@ -261,12 +341,10 @@ void __ISR(_SPI1_VECTOR, IPL7SOFT) SPI1_Handler(void) {
         SPI1STATCLR = _SPI1STAT_SPIROV_MASK;
     }
     if (IFS1bits.SPI1RXIF) {
-        //DB_printf("IN INTERRUPT\r\n");
         incomingCmd = SPI1BUF;     // what leader sent
         //DB_printf("%d\r\n", incomingCmd);
         IFS1CLR = _IFS1_SPI1RXIF_MASK;
-        // Preload response for next transaction
-        SPI1BUF = CMD_NOOP;
+        SPI1BUF = outgoingCmd;
         if (incomingCmd != curCmd) {
            ES_Timer_InitTimer(CMD_WAIT_TIMER, CMD_DELAY); // might need to change to a flag
            DB_printf("%d\r\n", curCmd);

@@ -9,6 +9,7 @@
    Navigate State Machine
 ****************************************************************************/
 #include "NavigateService.h"
+#include "SPIFollowerService.h"
 
 #include <xc.h>
 #include <stdint.h>
