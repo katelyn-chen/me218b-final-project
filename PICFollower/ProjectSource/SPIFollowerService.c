@@ -44,6 +44,7 @@
 /* SPI clock period (ns). 500 kHz -> 2000 ns period */
 //#define SPI_CLK_PERIOD_NS    2000u
 #define SPI_CLK_PERIOD_NS    50000u
+#define CMD_DELAY            100
 
 /* ---------------- Command Generator bytes (Appendix A) ----------------
    keeping these here so SPIService.c is self-contained.
@@ -128,23 +129,28 @@ ES_Event_t RunSPIFollowerService(ES_Event_t ThisEvent)
                 {
                     ES_Event_t NewEvent;
                     NewEvent.EventType = ES_SPI_RECEIVED;
-                    NewEvent.EventParam = NewCommand;
-                    PostPic2PicFollowerFSM(NewEvent);
+                    __builtin_disable_interrupts();
+                    curCmd = incomingCmd;
+                    __builtin_enable_interrupts();
+                    NewEvent.EventParam = curCmd;
+                    PostSPIFollowerService(NewEvent);
                 }
             }
-            //uint8_t leaderCmd = Leader_QueryByte(CMD_QUERY);
+            if (ThisEvent.EventType == ES_SPI_RECEIVED) {
+                //uint8_t leaderCmd = Leader_QueryByte(CMD_QUERY);
 
-            /* ignore unknown bytes (do not silently convert) */
-            if (!IsKnownCommand(leaderCmd))
-            {
-                DB_printf("SPIService: unknown leaderCmd 0x%02X\r\n", leaderCmd);
-                ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
-                return ReturnEvent;
+                /* ignore unknown bytes (do not silently convert) */
+                if (!IsKnownCommand(curCmd))
+                {
+                    DB_printf("SPIService: unknown leaderCmd 0x%02X\r\n", curCmd);
+                    //ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
+                    return ReturnEvent;
+                }
+
+                HandleCommandByte(curCmd);
+
+                DB_printf("Follower received byte: %d\n", curCmd);
             }
-
-            HandleCommandByte(leaderCmd);
-
-            DB_printf("Follower received byte: %d\n", leaderCmd);
         }
     //ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
   }
@@ -253,5 +259,6 @@ void __ISR(_TIMER_3_VECTOR, IPL7SOFT) SPI1_Handler(void) {
         IFS1CLR = _IFS1_SPI1RXIF_MASK;
         // Preload response for next transaction
         SPI1BUF = CMD_NOOP;
+        ES_Timer_InitTimer(CMD_WAIT_TIMER, CMD_DELAY);
     }
 }
