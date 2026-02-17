@@ -37,7 +37,6 @@
       <itemPath>FrameworkSource/terminal.c</itemPath>
       <itemPath>FrameworkSource/circular_buffer_no_modulo_threadsafe.c</itemPath>
       <itemPath>FrameworkSource/dbprintf.c</itemPath>
-      <itemPath>ProjectHeaders/SPILeaderService.h</itemPath>
     </logicalFolder>
     <logicalFolder name="HeaderFiles"
                    displayName="Header Files"
@@ -52,6 +51,7 @@
       <itemPath>ProjectHeaders/PWM_PIC32.h</itemPath>
       <itemPath>ProjectHeaders/MotorService.h</itemPath>
       <itemPath>ProjectHeaders/BeaconService.h</itemPath>
+      <itemPath>ProjectHeaders/SPILeaderService.h</itemPath>
     </logicalFolder>
     <logicalFolder name="LinkerScript"
                    displayName="Linker Files"
@@ -297,10 +297,38 @@
         </C32Global>
       </item>
       <item path="ProjectSource/BeaconService.c" ex="true" overriding="false">
+        <C32>
+        </C32>
+        <C32-AR>
+        </C32-AR>
+        <C32-AS>
+        </C32-AS>
+        <C32-CO>
+        </C32-CO>
+        <C32-LD>
+        </C32-LD>
+        <C32CPP>
+        </C32CPP>
+        <C32Global>
+        </C32Global>
       </item>
       <item path="ProjectSource/ReflectiveSenseService.c"
             ex="true"
             overriding="false">
+        <C32>
+        </C32>
+        <C32-AR>
+        </C32-AR>
+        <C32-AS>
+        </C32-AS>
+        <C32-CO>
+        </C32-CO>
+        <C32-LD>
+        </C32-LD>
+        <C32CPP>
+        </C32CPP>
+        <C32Global>
+        </C32Global>
       </item>
       <item path="ProjectSource/main.c" ex="false" overriding="false">
         <C32>
@@ -931,8 +959,6 @@
                   value="${memories.instruction.ram.ranges}"/>
         <property key="memories.programmemory" value="true"/>
         <property key="memories.programmemory.ranges" value="1d000000-1d03ffff"/>
-        <property key="programmerToGoFilePath"
-                  value="U:/katelync/Lab5/debug/default/default_ptg"/>
         <property key="programoptions.donoteraseauxmem" value="false"/>
         <property key="programoptions.eraseb4program" value="true"/>
         <property key="programoptions.pgmentry.voltage" value="low"/>

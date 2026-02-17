@@ -42,7 +42,7 @@
 
 /* SPI clock period (ns). 500 kHz -> 2000 ns period */
 //#define SPI_CLK_PERIOD_NS    2000u
-#define SPI_CLK_PERIOD_NS    50000u
+#define SPI_CLK_PERIOD_NS      50000u
 
 /* ---------------- Command Generator bytes (Appendix A) ----------------
    keeping these here so SPIService.c is self-contained.
@@ -181,7 +181,8 @@ static void InitSPIHardware(void)
 
 static uint8_t Follower_QueryByte(uint8_t outByte)
 {
-  return (uint8_t)SPIOperate_ReadData(CG_SPI_MODULE);
+  SPIOperate_SPI1_Send8Wait(outByte);
+  return SPIOperate_ReadData(CG_SPI_MODULE);
 }
 
 /*======================= COMMAND -> EVENT MAP =======================*/

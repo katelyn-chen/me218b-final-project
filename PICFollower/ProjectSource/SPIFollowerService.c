@@ -44,6 +44,7 @@
 /* SPI clock period (ns). 500 kHz -> 2000 ns period */
 //#define SPI_CLK_PERIOD_NS    2000u
 #define SPI_CLK_PERIOD_NS    50000u
+
 /* ---------------- Command Generator bytes (Appendix A) ----------------
    keeping these here so SPIService.c is self-contained.
 ----------------------------------------------------------------------- */
@@ -136,7 +137,7 @@ ES_Event_t RunSPIFollowerService(ES_Event_t ThisEvent)
 
             HandleCommandByte(leaderCmd);
 
-            DB_printf("Leader received byte: %d\n", leaderCmd);
+            DB_printf("Follower received byte: %d\n", leaderCmd);
         }
     }
     ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
