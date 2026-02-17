@@ -96,7 +96,7 @@ bool InitSPIFollowerService(uint8_t Priority)
   MyPriority = Priority;
   curState = RECEIVE;
   InitSPIHardware();
-  ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
+  //ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
   DB_printf("SPIFollowerService initialized\r\n");
 
   ES_Event_t ThisEvent;
@@ -179,15 +179,15 @@ static void InitSPIHardware(void)
   //TRISAbits.TRISRA3 = 0;  // SDO to output
 
    /* map data pins */
-  SPISetup_MapSDOutput(CG_SPI_MODULE, SPI_RPA3);
-  SPISetup_MapSDInput(CG_SPI_MODULE,  SPI_RPA0);
+  SPISetup_MapSDOutput(CG_SPI_MODULE, SPI_RPA4);
+  SPISetup_MapSDInput(CG_SPI_MODULE,  SPI_RPB8); // was RPA0, needs to be RPB8
   SPISetup_MapSSInput(CG_SPI_MODULE, SPI_RPB15);
 
   /* clock mode settings */
   SPISetup_SetClockIdleState(CG_SPI_MODULE, SPI_CLK_HI);    // CKP = 1
   SPISetup_SetActiveEdge(CG_SPI_MODULE, SPI_SECOND_EDGE);   // CKE = 0
   
-  SPISetEnhancedBuffer(CG_SPI_MODULE, true);
+  SPISetEnhancedBuffer(CG_SPI_MODULE, false);
   SPISetup_SetXferWidth(CG_SPI_MODULE, SPI_8BIT);
 
   /* set SPI bit time (ns) */
@@ -263,6 +263,7 @@ void __ISR(_SPI1_VECTOR, IPL7SOFT) SPI1_Handler(void) {
     if (IFS1bits.SPI1RXIF) {
         //DB_printf("IN INTERRUPT\r\n");
         incomingCmd = SPI1BUF;     // what leader sent
+        //DB_printf("%d\r\n", incomingCmd);
         IFS1CLR = _IFS1_SPI1RXIF_MASK;
         // Preload response for next transaction
         SPI1BUF = CMD_NOOP;

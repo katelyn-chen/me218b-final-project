@@ -160,6 +160,7 @@ static void InitSPIHardware(void)
 
    /* map data pins */
   SPISetup_MapSDOutput(CG_SPI_MODULE, SPI_RPB5);
+  
   SPISetup_MapSDInput(CG_SPI_MODULE,  SPI_RPB8);
   SPISetup_MapSSOutput(CG_SPI_MODULE, SPI_RPB15);
 
