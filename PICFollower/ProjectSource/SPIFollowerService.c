@@ -27,7 +27,7 @@
 
 #include "PIC32_SPI_HAL.h"
 
-#include "MotorService.h"
+#include "NavigateService.h"
 
 /*----------------------------- Module Defines ----------------------------*/
 /* use the symbolic timer name from ES_Configure.h */
@@ -206,6 +206,7 @@ static bool IsKnownCommand(uint8_t cmd)
     case CMD_TRANS_REV_FULL:
     case CMD_ALIGN:
     case CMD_TAPE_DETECT:
+    case CMD_MOTOR_FWD:
       return true;
 
     default:
@@ -215,15 +216,16 @@ static bool IsKnownCommand(uint8_t cmd)
 
 static void HandleCommandByte(uint8_t cmd)
 {
-  ES_Event_t e;
+  ES_Event_t cmdEvent;
   //DB_printf("SPIService posting cmd=%d\r\n", cmd);
   if (cmd != prevCmd) {
     switch (cmd)
     {
       case CMD_MOTOR_FWD: {
-        DB_printf("Posting stop from SPIService \r\n");
-        e.EventType = ES_TRANSLATE; e.EventParam = 0;
-        PostNavigateService(e);
+        DB_printf("Received fwd command from SPILeaderService \r\n");
+        cmdEvent.EventType = ES_TRANSLATE;
+        cmdEvent.EventParam = PackTranslateParam(TRANS_HALF, DIR_FWD);
+        PostNavigateService(cmdEvent);
         break;
       }
 

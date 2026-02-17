@@ -1,5 +1,5 @@
-build/default/debug/ProjectSource/SPIFollowerService.o: \
- ProjectSource/SPIFollowerService.c ProjectHeaders/SPIFollowerService.h \
+build/default/debug/ProjectSource/NavigateService.o: \
+ ProjectSource/NavigateService.c ProjectHeaders/NavigateService.h \
  FrameworkHeaders/ES_Configure.h FrameworkHeaders/ES_Framework.h \
  FrameworkHeaders/ES_Types.h FrameworkHeaders/ES_Port.h \
  FrameworkHeaders/bitdefs.h FrameworkHeaders/Bin_Const.h \
@@ -7,10 +7,9 @@ build/default/debug/ProjectSource/SPIFollowerService.o: \
  FrameworkHeaders/ES_Configure.h FrameworkHeaders/ES_PostList.h \
  FrameworkHeaders/ES_General.h FrameworkHeaders/ES_Timers.h \
  FrameworkHeaders/ES_Events.h FrameworkHeaders/ES_Types.h \
- FrameworkHeaders/dbprintf.h ProjectHeaders/PIC32_SPI_HAL.h \
- ProjectHeaders/NavigateService.h
+ FrameworkHeaders/dbprintf.h
 
-ProjectHeaders/SPIFollowerService.h:
+ProjectHeaders/NavigateService.h:
 
 FrameworkHeaders/ES_Configure.h:
 
@@ -41,7 +40,3 @@ FrameworkHeaders/ES_Events.h:
 FrameworkHeaders/ES_Types.h:
 
 FrameworkHeaders/dbprintf.h:
-
-ProjectHeaders/PIC32_SPI_HAL.h:
-
-ProjectHeaders/NavigateService.h:

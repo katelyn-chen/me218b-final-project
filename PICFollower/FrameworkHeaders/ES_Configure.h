@@ -280,7 +280,13 @@ typedef enum
   ES_BEACON_FOUND,
   /*Command generator events*/
   ES_COMMAND_RECEIVED,
-  ES_BEACON_SIGNAL
+  ES_BEACON_SIGNAL,
+  ES_SIDE_INDICATED,
+  ES_T_DETECTED,
+  ES_ALIGN_COLLECT,
+  ES_FIND_BUCKET,
+  ES_DISPENSE,
+  ES_DISPENSE_COMPLETE,
 }ES_EventType_t; // changed to be event type
 
 /****************************************************************************/
@@ -327,9 +333,6 @@ typedef enum
 #define TIMER0_RESP_FUNC PostSPIFollowerService
 #define TIMER1_RESP_FUNC TIMER_UNUSED
 #define TIMER2_RESP_FUNC TIMER_UNUSED
-#define TIMER0_RESP_FUNC TIMER_UNUSED
-#define TIMER1_RESP_FUNC TIMER_UNUSED
-#define TIMER2_RESP_FUNC TIMER_UNUSED
 #define TIMER3_RESP_FUNC TIMER_UNUSED
 #define TIMER4_RESP_FUNC TIMER_UNUSED
 #define TIMER5_RESP_FUNC TIMER_UNUSED
@@ -341,7 +344,7 @@ typedef enum
 #define TIMER11_RESP_FUNC TIMER_UNUSED
 #define TIMER12_RESP_FUNC TIMER_UNUSED
 #define TIMER13_RESP_FUNC TIMER_UNUSED
-#define TIMER14_RESP_FUNC TIMER_UNUSED
+#define TIMER14_RESP_FUNC PostNavigateService
 #define TIMER15_RESP_FUNC TIMER_UNUSED
 
 /****************************************************************************/
@@ -352,9 +355,10 @@ typedef enum
 // These symbolic names should be changed to be relevant to your application
 
 #define SPI_TIMER 0
-#define SERVICE0_TIMER 15
-#define REFLECT_TIMER 1
-#define BEACON_TIMER 2
 #define MOTOR_TIMER 14
+/*#define SERVICE0_TIMER 15
+#define REFLECT_TIMER 1
+#define BEACON_TIMER 2*/
+
 
 #endif /* ES_CONFIGURE_H */

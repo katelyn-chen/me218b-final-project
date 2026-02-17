@@ -1,18 +1,11 @@
-build/default/debug/ProjectSource/SPIFollowerService.o: \
- ProjectSource/SPIFollowerService.c ProjectHeaders/SPIFollowerService.h \
- FrameworkHeaders/ES_Configure.h FrameworkHeaders/ES_Framework.h \
+build/default/debug/ProjectSource/InitService.o: \
+ ProjectSource/InitService.c FrameworkHeaders/ES_Framework.h \
  FrameworkHeaders/ES_Types.h FrameworkHeaders/ES_Port.h \
  FrameworkHeaders/bitdefs.h FrameworkHeaders/Bin_Const.h \
  FrameworkHeaders/terminal.h FrameworkHeaders/ES_Events.h \
  FrameworkHeaders/ES_Configure.h FrameworkHeaders/ES_PostList.h \
  FrameworkHeaders/ES_General.h FrameworkHeaders/ES_Timers.h \
- FrameworkHeaders/ES_Events.h FrameworkHeaders/ES_Types.h \
- FrameworkHeaders/dbprintf.h ProjectHeaders/PIC32_SPI_HAL.h \
- ProjectHeaders/NavigateService.h
-
-ProjectHeaders/SPIFollowerService.h:
-
-FrameworkHeaders/ES_Configure.h:
+ ProjectHeaders/InitService.h FrameworkHeaders/ES_Types.h
 
 FrameworkHeaders/ES_Framework.h:
 
@@ -36,12 +29,6 @@ FrameworkHeaders/ES_General.h:
 
 FrameworkHeaders/ES_Timers.h:
 
-FrameworkHeaders/ES_Events.h:
+ProjectHeaders/InitService.h:
 
 FrameworkHeaders/ES_Types.h:
-
-FrameworkHeaders/dbprintf.h:
-
-ProjectHeaders/PIC32_SPI_HAL.h:
-
-ProjectHeaders/NavigateService.h:

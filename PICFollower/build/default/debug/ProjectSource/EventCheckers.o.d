@@ -8,7 +8,8 @@ build/default/debug/ProjectSource/EventCheckers.o: \
  FrameworkHeaders/ES_Timers.h FrameworkHeaders/ES_Events.h \
  FrameworkHeaders/ES_PostList.h FrameworkHeaders/ES_ServiceHeaders.h \
  ProjectHeaders/SPIFollowerService.h FrameworkHeaders/ES_Types.h \
- FrameworkHeaders/ES_Port.h ProjectHeaders/EventCheckers.h
+ ProjectHeaders/NavigateService.h FrameworkHeaders/ES_Port.h \
+ ProjectHeaders/EventCheckers.h
 
 FrameworkHeaders/ES_Configure.h:
 
@@ -43,6 +44,8 @@ FrameworkHeaders/ES_ServiceHeaders.h:
 ProjectHeaders/SPIFollowerService.h:
 
 FrameworkHeaders/ES_Types.h:
+
+ProjectHeaders/NavigateService.h:
 
 FrameworkHeaders/ES_Port.h:
 

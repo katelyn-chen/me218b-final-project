@@ -201,7 +201,8 @@ static bool IsKnownCommand(uint8_t cmd)
     case CMD_TRANS_REV_FULL:
     case CMD_ALIGN:
     case CMD_TAPE_DETECT:
-      return true;
+    case CMD_MOTOR_FWD:
+    return true;
 
     default:
       return false;
