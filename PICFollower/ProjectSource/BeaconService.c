@@ -9,7 +9,7 @@
     - If frequency is ~1427 Hz consistently -> post ES_BEACON_FOUND
 
   Notes
-    - using Timer3 + IC2
+    - using Timer3 + IC1 + RA2
 ****************************************************************************/
 
 #include "BeaconService.h"
@@ -47,8 +47,8 @@
 #endif
 #define BEACON_DEBUG_MS       200u
 
-/* IC2 input select*/
-#define IC2R_VALUE            0b0011 // mapped to RB10 digital input on IC2
+/* IC1 input select*/
+#define IC1R_VALUE            0b0011 // mapped to RB10 digital input on IC1
 
 /*============================== STATE ==============================*/
 static uint8_t MyPriority;
@@ -118,7 +118,7 @@ ES_Event_t RunBeaconService(ES_Event_t ThisEvent)
           BeaconLatched = true;
 
           ES_Event_t e = { ES_BEACON_FOUND, 0 };
-          PostMotorService(e);
+          PostNavigateService(e);
           BeaconLatched=false;
         }
       }
@@ -142,7 +142,7 @@ ES_Event_t RunBeaconService(ES_Event_t ThisEvent)
 /*=========================== HARDWARE INIT ============================*/
 static void InitBeaconHardware(void)
 {
-  TRISBbits.TRISB10 = 1;   // input
+  TRISAbits.TRISA2 = 1;   // input RA2
 
   /* Timer3 timebase */
   T3CON = 0;
@@ -158,21 +158,21 @@ static void InitBeaconHardware(void)
   /* enable multi-vector interrupts */
   INTCONbits.MVEC = 1;
  
-  IC2CON = 0;
-  /* IC2 mapping */
-  IC2R = IC2R_VALUE;
-  /* IC2 setup: capture rising edges using Timer3 */
-  IC2CONbits.C32 = 0;
-  IC2CONbits.ICTMR = 0;       /* 0 -> Timer3 */
-  IC2CONbits.ICM = 0b011;     /* every rising edge */
-  IC2CONbits.ICI = 0b000;
+  IC1CON = 0;
+  /* IC1 mapping */
+  IC1R = IC1R_VALUE;
+  /* IC1 setup: capture rising edges using Timer3 */
+  IC1CONbits.C32 = 0;
+  IC1CONbits.ICTMR = 0;       /* 0 -> Timer3 */
+  IC1CONbits.ICM = 0b011;     /* every rising edge */
+  IC1CONbits.ICI = 0b000;
 
-  IPC2bits.IC2IP = 6;
-  IEC0SET = _IEC0_IC2IE_MASK;
-  IFS0CLR = _IFS0_IC2IF_MASK;
+  IPC1bits.IC1IP = 6;
+  IEC0SET = _IEC0_IC1IE_MASK;
+  IFS0CLR = _IFS0_IC1IF_MASK;
   
   T3CONbits.ON = 1;
-  IC2CONbits.ON = 1;
+  IC1CONbits.ON = 1;
 
   __builtin_enable_interrupts();
 }
@@ -186,10 +186,10 @@ static uint32_t ComputeFreqHz(uint32_t periodTicks)
 }
 
 /*============================== ISRs ==============================*/
-void __ISR(_INPUT_CAPTURE_2_VECTOR, IPL6SOFT) IC2Handler(void)
+void __ISR(_INPUT_CAPTURE_2_VECTOR, IPL6SOFT) IC1Handler(void)
 {
-  uint32_t cap = IC2BUF; /* reading clears the buffer entry */
-  IFS0CLR = _IFS0_IC2IF_MASK;
+  uint32_t cap = IC1BUF; /* reading clears the buffer entry */
+  IFS0CLR = _IFS0_IC1IF_MASK;
     if(IFS0bits.T3IF && (cap < 0x8000)) { 
          IFS0CLR = _IFS0_T3IF_MASK;
      }

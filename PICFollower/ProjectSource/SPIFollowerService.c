@@ -147,7 +147,7 @@ ES_Event_t RunSPIFollowerService(ES_Event_t ThisEvent)
 
                 HandleCommandByte(curCmd);
 
-                DB_printf("Follower received byte: %d\n", curCmd);
+                //DB_printf("Follower received byte: %d\n", curCmd);
             }
         }
     //ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
@@ -267,7 +267,7 @@ static void HandleCommandByte(uint8_t cmd)
     }
 
     case CMD_ROT_CCW_90: {
-        DB_printf("Received CCW 90° rotation command\r\n");
+        DB_printf("Received CCW 90 rotation command\r\n");
         outgoingCmd = CMD_TESTING;
         cmdEvent.EventType = ES_ROTATE;
         cmdEvent.EventParam = PackRotateParam(ROT_90, ROT_CCW);
@@ -276,7 +276,7 @@ static void HandleCommandByte(uint8_t cmd)
 
 
     case CMD_ROT_CW_45: {
-        DB_printf("Received CW 45° rotation command\r\n");
+        DB_printf("Received CW 45 rotation command\r\n");
         outgoingCmd = CMD_TESTING;
         cmdEvent.EventType = ES_ROTATE;
         cmdEvent.EventParam = PackRotateParam(ROT_45, ROT_CW);
@@ -284,7 +284,7 @@ static void HandleCommandByte(uint8_t cmd)
     }
 
     case CMD_ROT_CCW_45: {
-        DB_printf("Received CCW 45° rotation command\r\n");
+        DB_printf("Received CCW 45 rotation command\r\n");
         outgoingCmd = CMD_TESTING;
         cmdEvent.EventType = ES_ROTATE;
         cmdEvent.EventParam = PackRotateParam(ROT_45, ROT_CCW);
@@ -324,6 +324,7 @@ static void HandleCommandByte(uint8_t cmd)
     case CMD_QUERY: {
         DB_printf("Received QUERY command from SPILeaderService!\r\n");
         outgoingCmd = CMD_TESTING;
+        DB_printf("Sending Testing Cmd to Leader!\r\n");
         break;
 
     }

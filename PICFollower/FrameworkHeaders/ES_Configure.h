@@ -33,7 +33,7 @@
 /****************************************************************************/
 // This macro determines that nuber of services that are *actually* used in
 // a particular application. It will vary in value from 1 to MAX_NUM_SERVICES
-#define NUM_SERVICES 2
+#define NUM_SERVICES 3
 
 /****************************************************************************/
 /* I include my service headers here so the Post*Service() prototypes exist
@@ -287,7 +287,8 @@ typedef enum
   ES_FIND_BUCKET,
   ES_DISPENSE,
   ES_DISPENSE_COMPLETE,
-  ES_SPI_RECEIVED
+  ES_SPI_RECEIVED,
+  ES_LINE_FOLLOW
 }ES_EventType_t; // changed to be event type
 
 /****************************************************************************/

@@ -227,49 +227,6 @@
         <property key="trace-symbols" value=""/>
         <property key="warn-section-align" value="false"/>
       </C32-LD>
-      <C32CPP>
-        <property key="additional-warnings" value="false"/>
-        <property key="addresss-attribute-use" value="false"/>
-        <property key="check-new" value="false"/>
-        <property key="eh-specs" value="true"/>
-        <property key="enable-app-io" value="false"/>
-        <property key="enable-omit-frame-pointer" value="false"/>
-        <property key="enable-symbols" value="true"/>
-        <property key="enable-unroll-loops" value="false"/>
-        <property key="exceptions" value="true"/>
-        <property key="exclude-floating-point" value="false"/>
-        <property key="extra-include-directories" value=""/>
-        <property key="generate-16-bit-code" value="false"/>
-        <property key="generate-micro-compressed-code" value="false"/>
-        <property key="isolate-each-function" value="false"/>
-        <property key="make-warnings-into-errors" value="false"/>
-        <property key="optimization-level" value=""/>
-        <property key="place-data-into-section" value="false"/>
-        <property key="post-instruction-scheduling" value="default"/>
-        <property key="pre-instruction-scheduling" value="default"/>
-        <property key="preprocessor-macros" value=""/>
-        <property key="rtti" value="true"/>
-        <property key="strict-ansi" value="false"/>
-        <property key="toplevel-reordering" value=""/>
-        <property key="unaligned-access" value=""/>
-        <property key="use-cci" value="false"/>
-        <property key="use-iar" value="false"/>
-        <property key="use-indirect-calls" value="false"/>
-      </C32CPP>
-      <C32Global>
-        <property key="common-include-directories"
-                  value="FrameworkHeaders;ProjectHeaders"/>
-        <property key="gp-relative-option" value=""/>
-        <property key="legacy-libc" value="true"/>
-        <property key="mdtcm" value=""/>
-        <property key="mitcm" value=""/>
-        <property key="mstacktcm" value="false"/>
-        <property key="omit-pack-options" value="1"/>
-        <property key="relaxed-math" value="true"/>
-        <property key="save-temps" value="false"/>
-        <property key="stack-smashing" value=""/>
-        <property key="wpo-lto" value="false"/>
-      </C32Global>
       <item path="ProjectHeaders/ADService.h" ex="true" overriding="false">
         <C32>
         </C32>
@@ -281,10 +238,6 @@
         </C32-CO>
         <C32-LD>
         </C32-LD>
-        <C32CPP>
-        </C32CPP>
-        <C32Global>
-        </C32Global>
       </item>
       <item path="ProjectHeaders/MotorService.h" ex="true" overriding="false">
         <C32>
@@ -297,10 +250,6 @@
         </C32-CO>
         <C32-LD>
         </C32-LD>
-        <C32CPP>
-        </C32CPP>
-        <C32Global>
-        </C32Global>
       </item>
       <item path="ProjectHeaders/SPIService.h" ex="true" overriding="false">
         <C32>
@@ -313,10 +262,6 @@
         </C32-CO>
         <C32-LD>
         </C32-LD>
-        <C32CPP>
-        </C32CPP>
-        <C32Global>
-        </C32Global>
       </item>
       <item path="ProjectSource/ADService.c" ex="true" overriding="false">
         <C32>
@@ -329,12 +274,8 @@
         </C32-CO>
         <C32-LD>
         </C32-LD>
-        <C32CPP>
-        </C32CPP>
-        <C32Global>
-        </C32Global>
       </item>
-      <item path="ProjectSource/BeaconService.c" ex="true" overriding="false">
+      <item path="ProjectSource/BeaconService.c" ex="false" overriding="false">
         <C32>
         </C32>
         <C32-AR>
@@ -345,10 +286,6 @@
         </C32-CO>
         <C32-LD>
         </C32-LD>
-        <C32CPP>
-        </C32CPP>
-        <C32Global>
-        </C32Global>
       </item>
       <item path="ProjectSource/InitService.c" ex="true" overriding="false">
         <C32>
@@ -361,10 +298,6 @@
         </C32-CO>
         <C32-LD>
         </C32-LD>
-        <C32CPP>
-        </C32CPP>
-        <C32Global>
-        </C32Global>
       </item>
       <item path="ProjectSource/MotorService.c" ex="true" overriding="false">
         <C32>
@@ -377,10 +310,6 @@
         </C32-CO>
         <C32-LD>
         </C32-LD>
-        <C32CPP>
-        </C32CPP>
-        <C32Global>
-        </C32Global>
       </item>
       <item path="ProjectSource/ReflectiveSenseService.c"
             ex="true"
@@ -395,10 +324,6 @@
         </C32-CO>
         <C32-LD>
         </C32-LD>
-        <C32CPP>
-        </C32CPP>
-        <C32Global>
-        </C32Global>
       </item>
       <item path="ProjectSource/main.c" ex="false" overriding="false">
         <C32>
@@ -411,10 +336,6 @@
         </C32-CO>
         <C32-LD>
         </C32-LD>
-        <C32CPP>
-        </C32CPP>
-        <C32Global>
-        </C32Global>
       </item>
       <Simulator>
         <property key="codecoverage.enabled" value="Disable"/>

@@ -118,6 +118,7 @@ bool InitNavigateService(uint8_t Priority)
   InitPinsAndPPS();
   InitTimer2ForPWM();
   InitOCsForPWM();
+  curState = DEBUG;
   
   DB_printf("Navigate Service: init done\r\n");
 
@@ -162,11 +163,19 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
   switch (curState) {
 
       case DEBUG:
-          DB_printf("Debug Case for nav service\r\n");
+          //DB_printf("Debug Case for nav service\r\n");
           if (ThisEvent.EventType == ES_TRANSLATE) {
             DB_printf("Do Translate!\r\n");
             DoTranslate(ThisEvent.EventParam);
           }
+          if (ThisEvent.EventType == ES_BEACON_SIGNAL) {
+            PostNavigateService(ThisEvent);
+            DB_printf("Posting to beacon service!\r\n");
+          }
+          if (ThisEvent.EventType == ES_BEACON_FOUND) {
+              DB_printf("Nav service received beacon signal from beacon service!\r\n");
+          }
+        break;
 
       case WAITING_FOR_SIDE:
 
@@ -340,16 +349,16 @@ static uint16_t DutyPercentToOCrs(uint16_t dutyPercent)
 
 static void StopMotors(void)
 {
-  OC2RS = 0; /* Motor1 IN1 */
-  OC3RS = 0; /* Motor1 IN2 */
-  OC1RS = 0; /* Motor2 IN3 */
-  OC4RS = 0; /* Motor2 IN4 */
+  OC2RS = 0; /* Motor1 IN1, RA1 */
+  OC3RS = 0; /* Motor1 IN2, RB9 */
+  OC1RS = 0; /* Motor2 IN3, RB3 */
+  OC4RS = 0; /* Motor2 IN4, RB2 */
 }
 
 /* Motor1 uses RA1(OC2)=IN1 and RB9(OC3)=IN2 */
 static void SetMotor1(int16_t dutySignedPercent) // left
 {
-    DB_printf("Motor1 set\n");
+    DB_printf("Motor1 set %d\n", dutySignedPercent);
   uint16_t mag = (dutySignedPercent < 0) ? (uint16_t)(-dutySignedPercent) : (uint16_t)dutySignedPercent;
   uint16_t ocrs = DutyPercentToOCrs(mag);
 
@@ -373,7 +382,7 @@ static void SetMotor1(int16_t dutySignedPercent) // left
 /* Motor2 uses RB3(OC1)=IN3 and RB2(OC4)=IN4 */
 static void SetMotor2(int16_t dutySignedPercent) // right
 {
-  DB_printf("Motor2 set\n");
+  DB_printf("Motor2 set, %d\n", dutySignedPercent);
   uint16_t mag = (dutySignedPercent < 0) ? (uint16_t)(-dutySignedPercent) : (uint16_t)dutySignedPercent;
   uint16_t ocrs = DutyPercentToOCrs(mag);
 

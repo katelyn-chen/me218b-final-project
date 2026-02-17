@@ -66,7 +66,8 @@
 typedef enum {
   SEND,
   RECEIVE,
-  DEBUG
+  DEBUG,
+  IDLE
 } LeaderState_t;
 
 /*---------------------------- Module Variables --------------------------*/
@@ -74,6 +75,7 @@ static uint8_t MyPriority;
 LeaderState_t curState;
 static uint8_t curCmd;
 uint8_t prevCmd;
+static uint8_t outCmd;
 
 /*====================== PRIVATE FUNCTION PROTOS =====================*/
 static void InitSPIHardware(void);
@@ -110,7 +112,7 @@ ES_Event_t RunSPILeaderService(ES_Event_t ThisEvent)
         case SEND:
         {
             curCmd = CMD_TRANS_FWD;
-            DB_printf("Leader Sending command! %d\n", curCmd);
+            DB_printf("Leader sending forward command! %d\n", curCmd);
             SPIOperate_SPI1_Send8Wait(curCmd);
             ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
             curState = RECEIVE;
@@ -120,21 +122,23 @@ ES_Event_t RunSPILeaderService(ES_Event_t ThisEvent)
         case RECEIVE:
         {
             uint8_t followerData;
+            //DB_printf("Leader sending query command! %d\n", curCmd);
             followerData = Follower_QueryByte(CMD_QUERY);
 
             /* ignore unknown bytes (do not silently convert) */
             if (!IsKnownCommand(followerData))
             {
-                DB_printf("SPIService: unknown cmd 0x%02X\r\n", followerData);
+                DB_printf("SPIService: unknown cmd 0x0%d\r\n", followerData);
                 ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
                 return ReturnEvent;
             }
 
             HandleCommandByte(followerData);
-
-            DB_printf("Leader received byte: %d\n", followerData);
+            //curState = IDLE;
             break;
         }
+        case IDLE:
+            break;
     }
     ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
   }
@@ -205,5 +209,82 @@ static bool IsKnownCommand(uint8_t cmd)
 
 static void HandleCommandByte(uint8_t cmd)
 {
-  DB_printf("Leader received byte from follower: %d\r\n", cmd);
+  if (cmd != prevCmd) {
+    outCmd = CMD_NOOP;
+    DB_printf("Leader received byte from follower: %d.\r\n", cmd);
+    switch (cmd)
+    {
+      case CMD_TRANS_FWD: {
+        DB_printf("Received forward command \r\n");
+        break;
+    }
+
+      case CMD_STOP: {
+        DB_printf("Received STOP command\r\n");
+        break;
+    }
+
+    case CMD_TRANS_BWD: {
+        DB_printf("Received backwards command\r\n");
+        break;
+    }
+
+    case CMD_ROT_CW_90: {
+        DB_printf("Received CW 90 rotation command\r\n");
+        break;
+    }
+
+    case CMD_ROT_CCW_90: {
+        DB_printf("Received CCW 90 rotation command\r\n");
+        break;
+    }
+
+
+    case CMD_ROT_CW_45: {
+        DB_printf("Received CW 45 rotation command\r\n");
+        break;
+    }
+
+    case CMD_ROT_CCW_45: {
+        DB_printf("Received CCW 45 rotation command\r\n");
+        break;
+    }
+
+    case CMD_TAPE_T_DETECT: {
+        DB_printf("Received TAPE detect command\r\n");
+        break;
+    }
+
+    case CMD_LINE_FOLLOW: {
+        DB_printf("Received LINE FOLLOW command\r\n");
+        break;
+    }
+
+    case CMD_GET_BEACON_FREQ: {
+        DB_printf("Received GET BEACON FREQ command\r\n");
+        break;
+    }
+
+    case CMD_TESTING: {
+        DB_printf("Received TESTING command and sending BEACON\r\n");
+        outCmd = CMD_GET_BEACON_FREQ;
+        break;
+    }
+
+    case CMD_QUERY: {
+        DB_printf("Received QUERY command\r\n");
+        break;
+
+    }
+      default:
+        break;
+        
+    }
+    
+    if (outCmd != CMD_NOOP) {
+       SPIOperate_SPI1_Send8Wait(outCmd);
+    }
+    
+    prevCmd = cmd;
+  } 
 }

@@ -3,14 +3,10 @@
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
-            <file>file:/U:/_ME218bTeams/TEAM9/FinalProjectNEW/PICFollower/ProjectSource/SPIFollowerService.c</file>
             <file>file:/U:/_ME218bTeams/TEAM9/FinalProjectNEW/PICFollower/FrameworkHeaders/ES_Configure.h</file>
             <file>file:/U:/_ME218bTeams/TEAM9/FinalProjectNEW/PICFollower/ProjectSource/NavigateService.c</file>
-            <file>file:/U:/_ME218bTeams/TEAM9/FinalProjectNEW/PICFollower/ProjectSource/MotorService.c</file>
-            <file>file:/U:/_ME218bTeams/TEAM9/FinalProjectNEW/PICFollower/ProjectHeaders/MotorService.h</file>
-            <file>file:/U:/_ME218bTeams/TEAM9/FinalProjectNEW/PICFollower/ProjectHeaders/NavigateService.h</file>
-            <file>file:/U:/_ME218bTeams/TEAM9/FinalProjectNEW/PICFollower/ProjectHeaders/SPIFollowerService.h</file>
-            <file>file:/U:/_ME218bTeams/TEAM9/FinalProjectNEW/PICFollower/ProjectSource/InitService.c</file>
+            <file>file:/U:/_ME218bTeams/TEAM9/FinalProjectNEW/PICFollower/ProjectSource/SPIFollowerService.c</file>
+            <file>file:/U:/_ME218bTeams/TEAM9/FinalProjectNEW/PICFollower/ProjectSource/PIC32_SPI_HAL_Starter.c</file>
             <file>file:/U:/_ME218bTeams/TEAM9/FinalProjectNEW/PICFollower/ProjectSource/BeaconService.c</file>
         </group>
     </open-files>
