@@ -33,7 +33,11 @@
 /****************************************************************************/
 // This macro determines that nuber of services that are *actually* used in
 // a particular application. It will vary in value from 1 to MAX_NUM_SERVICES
+<<<<<<< HEAD
 #define NUM_SERVICES 1
+=======
+#define NUM_SERVICES 3
+>>>>>>> 27042d0e1b45216bd2d4c3cfcc5aa1d76c5e5698
 
 /****************************************************************************/
 /* I include my service headers here so the Post*Service() prototypes exist
@@ -49,11 +53,19 @@
 // services are added in numeric sequence (1,2,3,...) with increasing
 // priorities
 // the header file with the public function prototypes
+<<<<<<< HEAD
 #define SERV_0_HEADER "SPIFollowerService.h"
 // the name of the Init function
 #define SERV_0_INIT InitSPIFollowerService
 // the name of the run function
 #define SERV_0_RUN RunSPIFollowerService
+=======
+#define SERV_0_HEADER "SPIService.h"
+// the name of the Init function
+#define SERV_0_INIT InitSPIService
+// the name of the run function
+#define SERV_0_RUN RunSPIService
+>>>>>>> 27042d0e1b45216bd2d4c3cfcc5aa1d76c5e5698
 // How big should this services Queue be?
 #define SERV_0_QUEUE_SIZE 8
 
@@ -65,13 +77,13 @@
 // These are the definitions for Service 1
 #if NUM_SERVICES > 1
 // the header file with the public function prototypes
-#define SERV_1_HEADER "SPIService.h"
+#define SERV_1_HEADER "MotorService.h"
 // the name of the Init function
-#define SERV_1_INIT InitSPIService
+#define SERV_1_INIT InitMotorService
 // the name of the run function
-#define SERV_1_RUN RunSPIService
+#define SERV_1_RUN RunMotorService
 // How big should this services Queue be?
-#define SERV_1_QUEUE_SIZE 6
+#define SERV_1_QUEUE_SIZE 8
 #endif
 
 /****************************************************************************/
@@ -324,9 +336,15 @@ typedef enum
 // Unlike services, any combination of timers may be used and there is no
 // priority in servicing them
 #define TIMER_UNUSED 0
+<<<<<<< HEAD
 #define TIMER0_RESP_FUNC PostSPIFollowerService
 #define TIMER1_RESP_FUNC TIMER_UNUSED
 #define TIMER2_RESP_FUNC TIMER_UNUSED
+=======
+#define TIMER0_RESP_FUNC PostSPIService
+#define TIMER1_RESP_FUNC TIMER_UNUSED
+#define TIMER2_RESP_FUNC PostBeaconService
+>>>>>>> 27042d0e1b45216bd2d4c3cfcc5aa1d76c5e5698
 #define TIMER3_RESP_FUNC TIMER_UNUSED
 #define TIMER4_RESP_FUNC TIMER_UNUSED
 #define TIMER5_RESP_FUNC TIMER_UNUSED
@@ -349,10 +367,12 @@ typedef enum
 // These symbolic names should be changed to be relevant to your application
 
 #define SPI_TIMER 0
+<<<<<<< HEAD
 #define SERVICE0_TIMER 15
 #define REFLECT_TIMER 1
+=======
+>>>>>>> 27042d0e1b45216bd2d4c3cfcc5aa1d76c5e5698
 #define BEACON_TIMER 2
 #define MOTOR_TIMER 14
-#define DEBUG_BEACON_TIMER 3
 
 #endif /* ES_CONFIGURE_H */
