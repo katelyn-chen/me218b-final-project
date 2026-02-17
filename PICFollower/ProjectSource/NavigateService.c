@@ -161,8 +161,9 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
   switch (curState) {
 
       case DEBUG:
-          DB_printf("Debug Case for nav service");
+          DB_printf("Debug Case for nav service\r\n");
           if (ThisEvent.EventType == ES_TRANSLATE) {
+            DB_printf("Do Translate!\r\n");
             DoTranslate(ThisEvent.EventParam);
           }
 

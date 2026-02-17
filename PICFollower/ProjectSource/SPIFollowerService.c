@@ -115,7 +115,7 @@ ES_Event_t RunSPIFollowerService(ES_Event_t ThisEvent)
     switch (curState) {
         case SEND:
         {
-            curCmd = 0xAA;
+            //curCmd = 0xAA;
             DB_printf("Follower Sending command! %d\n", curCmd);
             SPIOperate_SPI1_Send8Wait(curCmd);
             ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
@@ -132,7 +132,7 @@ ES_Event_t RunSPIFollowerService(ES_Event_t ThisEvent)
                     ES_Event_t NewEvent;
                     NewEvent.EventType = ES_SPI_RECEIVED;
                     __builtin_disable_interrupts();
-                    curCmd = incomingCmd;
+                    //curCmd = incomingCmd;
                     __builtin_enable_interrupts();
                     NewEvent.EventParam = curCmd;
                     PostSPIFollowerService(NewEvent);
@@ -267,6 +267,10 @@ void __ISR(_SPI1_VECTOR, IPL7SOFT) SPI1_Handler(void) {
         IFS1CLR = _IFS1_SPI1RXIF_MASK;
         // Preload response for next transaction
         SPI1BUF = CMD_NOOP;
-        ES_Timer_InitTimer(CMD_WAIT_TIMER, CMD_DELAY); // might need to change to a flag
+        if (incomingCmd != curCmd) {
+           ES_Timer_InitTimer(CMD_WAIT_TIMER, CMD_DELAY); // might need to change to a flag
+           DB_printf("%d\r\n", curCmd);
+           curCmd = incomingCmd;
+        }
     }
 }
