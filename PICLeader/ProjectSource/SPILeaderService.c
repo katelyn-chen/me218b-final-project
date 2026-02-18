@@ -88,8 +88,8 @@ bool InitSPILeaderService(uint8_t Priority)
 {
   MyPriority = Priority;
   curState = SEND;
-  //curCmd = CMD_TRANS_FWD;
-  curCmd = CMD_GET_BEACON_FREQ;
+  curCmd = CMD_TRANS_FWD;
+  //curCmd = CMD_GET_BEACON_FREQ;
   InitSPIHardware();
   ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
   DB_printf("SPILeaderService initialized\r\n");
@@ -118,7 +118,7 @@ ES_Event_t RunSPILeaderService(ES_Event_t ThisEvent)
             DB_printf("Sending cur command: %d\r\n", curCmd);
             SPIOperate_SPI1_Send8Wait(curCmd);
             ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
-            //curState = RECEIVE;
+            curState = RECEIVE;
             break;
         }
         
