@@ -88,6 +88,7 @@ bool InitSPILeaderService(uint8_t Priority)
 {
   MyPriority = Priority;
   curState = SEND;
+  curCmd = CMD_TRANS_FWD;
   InitSPIHardware();
   ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
   DB_printf("SPILeaderService initialized\r\n");
@@ -111,8 +112,9 @@ ES_Event_t RunSPILeaderService(ES_Event_t ThisEvent)
     switch (curState) {
         case SEND:
         {
-            curCmd = CMD_TRANS_FWD;
-            DB_printf("Leader sending forward command! %d\n", curCmd);
+            //curCmd = CMD_TRANS_FWD;
+            //DB_printf("Leader sending forward command! %d\n", curCmd);
+            DB_printf("Sending cur command: %d\r\n", curCmd);
             SPIOperate_SPI1_Send8Wait(curCmd);
             ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
             curState = RECEIVE;
@@ -282,7 +284,10 @@ static void HandleCommandByte(uint8_t cmd)
     }
     
     if (outCmd != CMD_NOOP) {
-       SPIOperate_SPI1_Send8Wait(outCmd);
+       curCmd = outCmd;
+       DB_printf("Setting cur to out command: %d\r\n", outCmd);
+       //SPIOperate_SPI1_Send8Wait(outCmd);
+       curState = SEND;
     }
     
     prevCmd = cmd;

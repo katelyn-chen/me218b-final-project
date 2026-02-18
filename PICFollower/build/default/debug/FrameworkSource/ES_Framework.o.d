@@ -21,8 +21,8 @@ build/default/debug/FrameworkSource/ES_Framework.o: \
  ProjectHeaders/SPIFollowerService.h FrameworkHeaders/ES_Configure.h \
  FrameworkHeaders/ES_Framework.h FrameworkHeaders/ES_Events.h \
  FrameworkHeaders/ES_Types.h ProjectHeaders/NavigateService.h \
- ProjectHeaders/EventCheckWrapper.h ProjectHeaders/EventCheckers.h \
- FrameworkHeaders/ES_Port.h
+ ProjectHeaders/BeaconService.h ProjectHeaders/EventCheckWrapper.h \
+ ProjectHeaders/EventCheckers.h FrameworkHeaders/ES_Port.h
 
 FrameworkSource/../FrameworkHeaders/ES_Configure.h:
 
@@ -73,6 +73,8 @@ FrameworkHeaders/ES_Events.h:
 FrameworkHeaders/ES_Types.h:
 
 ProjectHeaders/NavigateService.h:
+
+ProjectHeaders/BeaconService.h:
 
 ProjectHeaders/EventCheckWrapper.h:
 

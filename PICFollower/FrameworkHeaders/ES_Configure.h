@@ -55,7 +55,7 @@
 // the name of the run function
 #define SERV_0_RUN RunSPIFollowerService
 // How big should this services Queue be?
-#define SERV_0_QUEUE_SIZE 8
+#define SERV_0_QUEUE_SIZE 10
 
 /****************************************************************************/
 // The following sections are used to define the parameters for each of the

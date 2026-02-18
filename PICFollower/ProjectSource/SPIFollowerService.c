@@ -107,34 +107,34 @@ bool PostSPIFollowerService(ES_Event_t ThisEvent)
 
 ES_Event_t RunSPIFollowerService(ES_Event_t ThisEvent)
 {
+  DB_printf("RunSPIFollowerService entered: event %d, param %d\r\n",
+  ThisEvent.EventType, ThisEvent.EventParam);
   ES_Event_t ReturnEvent = { ES_NO_EVENT, 0 };
     switch (curState) {
-        case SEND:
+        /*case SEND:
         {
             //curCmd = 0xAA;
             DB_printf("Follower Sending command! %d\n", curCmd);
             SPIOperate_SPI1_Send8Wait(curCmd);
-            ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
+            //ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
             break;
-        }
+        }*/
         
         case RECEIVE:
         {
-            DB_printf("Receiving\r\n");
-            if (ThisEvent.EventType == ES_TIMEOUT) {
+            //DB_printf("Receiving\r\n");
+            /*if (ThisEvent.EventType == ES_TIMEOUT) {
                 if (ThisEvent.EventParam == CMD_WAIT_TIMER)
                 {
                     DB_printf("CMDWAIT Timer expired\r\n");
                     ES_Event_t NewEvent;
                     NewEvent.EventType = ES_SPI_RECEIVED;
-                    __builtin_disable_interrupts();
-                    //curCmd = incomingCmd;
-                    __builtin_enable_interrupts();
                     NewEvent.EventParam = curCmd;
                     PostSPIFollowerService(NewEvent);
                 }
-            }
+            }*/
             if (ThisEvent.EventType == ES_SPI_RECEIVED) {
+                DB_printf("Received from byte leader %d\r\n", ThisEvent.EventParam);
                 //uint8_t leaderCmd = Leader_QueryByte(CMD_QUERY);
 
                 /* ignore unknown bytes (do not silently convert) */
@@ -145,7 +145,7 @@ ES_Event_t RunSPIFollowerService(ES_Event_t ThisEvent)
                     return ReturnEvent;
                 }
 
-                HandleCommandByte(curCmd);
+                HandleCommandByte(ThisEvent.EventParam);
 
                 //DB_printf("Follower received byte: %d\n", curCmd);
             }
@@ -230,6 +230,7 @@ static bool IsKnownCommand(uint8_t cmd)
 
 static void HandleCommandByte(uint8_t cmd)
 {
+  DB_printf("cmd: %d\r\n", cmd);
   ES_Event_t cmdEvent;
   if (cmd != prevCmd) {
     switch (cmd)
@@ -338,6 +339,7 @@ static void HandleCommandByte(uint8_t cmd)
 }
 
 void __ISR(_SPI1_VECTOR, IPL7SOFT) SPI1_Handler(void) {
+    ES_Event_t NewEvent;
     if (SPI1STATbits.SPIROV) {
         SPI1STATCLR = _SPI1STAT_SPIROV_MASK;
     }
@@ -347,9 +349,12 @@ void __ISR(_SPI1_VECTOR, IPL7SOFT) SPI1_Handler(void) {
         IFS1CLR = _IFS1_SPI1RXIF_MASK;
         SPI1BUF = outgoingCmd;
         if (incomingCmd != curCmd) {
-           ES_Timer_InitTimer(CMD_WAIT_TIMER, CMD_DELAY); // might need to change to a flag
-           DB_printf("%d\r\n", curCmd);
+           NewEvent.EventType = ES_SPI_RECEIVED;
            curCmd = incomingCmd;
+           NewEvent.EventParam = curCmd;
+           bool test = PostSPIFollowerService(NewEvent);
+           DB_printf("%d\r\n", curCmd);
+           //DB_printf("%d\r\n", test);
         }
     }
 }

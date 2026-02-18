@@ -22,6 +22,8 @@
 #include "ES_Configure.h"
 #include "ES_Framework.h"
 #include "dbprintf.h"
+#include "NavigateService.h"
+
 
 
 /*============================== CONFIG ==============================*/
