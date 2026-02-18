@@ -23,7 +23,6 @@
 #include "ES_Framework.h"
 #include "dbprintf.h"
 
-#include "MotorService.h"
 
 /*============================== CONFIG ==============================*/
 #define PBCLK_HZ              20000000u
