@@ -57,7 +57,7 @@
 #define CMD_ROT_CW_45             0x06
 #define CMD_TAPE_T_DETECT         0x07
 #define CMD_LINE_FOLLOW           0x08
-#define CMD_GET_BEACON_FREQ       0x09
+#define CMD_GET_BEACON_FREQ       0x11
 #define CMD_QUERY                 0xAA
 #define CMD_NOOP                  0xFF
 #define CMD_TESTING               0x10  // checkpoint 2 cmd
@@ -88,7 +88,8 @@ bool InitSPILeaderService(uint8_t Priority)
 {
   MyPriority = Priority;
   curState = SEND;
-  curCmd = CMD_TRANS_FWD;
+  //curCmd = CMD_TRANS_FWD;
+  curCmd = CMD_GET_BEACON_FREQ;
   InitSPIHardware();
   ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
   DB_printf("SPILeaderService initialized\r\n");
@@ -117,7 +118,7 @@ ES_Event_t RunSPILeaderService(ES_Event_t ThisEvent)
             DB_printf("Sending cur command: %d\r\n", curCmd);
             SPIOperate_SPI1_Send8Wait(curCmd);
             ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
-            curState = RECEIVE;
+            //curState = RECEIVE;
             break;
         }
         
@@ -136,10 +137,11 @@ ES_Event_t RunSPILeaderService(ES_Event_t ThisEvent)
             }
 
             HandleCommandByte(followerData);
-            //curState = IDLE;
+            curState = IDLE;
             break;
         }
         case IDLE:
+            //curState = SEND;
             break;
     }
     ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
@@ -270,6 +272,7 @@ static void HandleCommandByte(uint8_t cmd)
     case CMD_TESTING: {
         DB_printf("Received TESTING command and sending BEACON\r\n");
         outCmd = CMD_GET_BEACON_FREQ;
+        //outCmd = CMD_ROT_CW_90;
         break;
     }
 

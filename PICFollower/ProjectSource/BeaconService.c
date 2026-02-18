@@ -40,7 +40,7 @@
 #define BEACON_TOL_HZ         1000u
 
 /* require this many good cycles in a row before declaring found */
-#define BEACON_CONFIRM_COUNT  6u
+#define BEACON_CONFIRM_COUNT  15u
 
 /* which ES timer to use if you want periodic debug (optional) */
 #ifndef BEACON_DEBUG_TIMER
@@ -49,7 +49,7 @@
 #define BEACON_DEBUG_MS       200u
 
 /* IC1 input select*/
-#define IC1R_VALUE            0b0011 // mapped to RB10 digital input on IC1
+#define IC1R_VALUE            0b0000 // mapped to RA2 digital input on IC1
 
 /*============================== STATE ==============================*/
 static uint8_t MyPriority;
@@ -93,13 +93,14 @@ ES_Event_t RunBeaconService(ES_Event_t ThisEvent)
 
   /* main logic: if we got a new period measurement, check frequency */
   if (ThisEvent.EventType == ES_BEACON_SIGNAL) {
+    //DB_printf("New Period %d\n", NewPeriod);
     if (NewPeriod)
     {
       NewPeriod = false;
       if (PeriodTicks != 0)
       {
         uint32_t f = ComputeFreqHz(PeriodTicks);
-        DB_printf("IR frequency%d\n", f);
+        //DB_printf("IR frequency%d\n", f);
 
         /* simple tolerance check */
         if ((f > (BEACON_FREQ_HZ - BEACON_TOL_HZ)) && (f < (BEACON_FREQ_HZ + BEACON_TOL_HZ)))
@@ -115,12 +116,12 @@ ES_Event_t RunBeaconService(ES_Event_t ThisEvent)
         /* only post once per “found” */
         if (!BeaconLatched && (GoodCount >= BEACON_CONFIRM_COUNT))
         {
-          DB_printf("Beacon latched!!!!\n");
+          DB_printf("Beacon latched!!!! IR frequency %d\n", f);
           BeaconLatched = true;
 
           ES_Event_t e = { ES_BEACON_FOUND, 0 };
           PostNavigateService(e);
-          BeaconLatched=false;
+          //BeaconLatched=false;
         }
       }
     }
@@ -187,7 +188,7 @@ static uint32_t ComputeFreqHz(uint32_t periodTicks)
 }
 
 /*============================== ISRs ==============================*/
-void __ISR(_INPUT_CAPTURE_2_VECTOR, IPL6SOFT) IC1Handler(void)
+void __ISR(_INPUT_CAPTURE_1_VECTOR, IPL6SOFT) IC1Handler(void)
 {
   uint32_t cap = IC1BUF; /* reading clears the buffer entry */
   IFS0CLR = _IFS0_IC1IF_MASK;

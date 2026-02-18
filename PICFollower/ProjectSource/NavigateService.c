@@ -169,7 +169,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
             DoTranslate(ThisEvent.EventParam);
           }
           if (ThisEvent.EventType == ES_BEACON_SIGNAL) {
-            PostNavigateService(ThisEvent);
+            PostBeaconService(ThisEvent);
             DB_printf("Posting to beacon service!\r\n");
           }
           if (ThisEvent.EventType == ES_BEACON_FOUND) {

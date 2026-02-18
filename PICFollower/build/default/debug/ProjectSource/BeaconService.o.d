@@ -7,7 +7,7 @@ build/default/debug/ProjectSource/BeaconService.o: \
  FrameworkHeaders/Bin_Const.h FrameworkHeaders/terminal.h \
  FrameworkHeaders/ES_Events.h FrameworkHeaders/ES_PostList.h \
  FrameworkHeaders/ES_General.h FrameworkHeaders/ES_Timers.h \
- FrameworkHeaders/dbprintf.h
+ FrameworkHeaders/dbprintf.h ProjectHeaders/NavigateService.h
 
 ProjectHeaders/BeaconService.h:
 
@@ -40,3 +40,5 @@ FrameworkHeaders/ES_General.h:
 FrameworkHeaders/ES_Timers.h:
 
 FrameworkHeaders/dbprintf.h:
+
+ProjectHeaders/NavigateService.h:

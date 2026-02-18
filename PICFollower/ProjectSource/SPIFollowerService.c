@@ -59,7 +59,7 @@
 #define CMD_ROT_CW_45             0x06
 #define CMD_TAPE_T_DETECT         0x07
 #define CMD_LINE_FOLLOW           0x08
-#define CMD_GET_BEACON_FREQ       0x09
+#define CMD_GET_BEACON_FREQ       0x11
 #define CMD_QUERY                 0xAA
 #define CMD_NOOP                  0xFF
 #define CMD_TESTING               0x10  // checkpoint 2 cmd
@@ -97,7 +97,8 @@ bool InitSPIFollowerService(uint8_t Priority)
 
   ES_Event_t ThisEvent;
   ThisEvent.EventType = ES_INIT;
-  return ES_PostToService(MyPriority, ThisEvent);
+  ES_PostToService(MyPriority, ThisEvent);
+  return true;
 }
 
 bool PostSPIFollowerService(ES_Event_t ThisEvent)
@@ -149,6 +150,7 @@ ES_Event_t RunSPIFollowerService(ES_Event_t ThisEvent)
 
                 //DB_printf("Follower received byte: %d\n", curCmd);
             }
+            break;
         }
     //ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
   }
@@ -238,7 +240,7 @@ static void HandleCommandByte(uint8_t cmd)
       case CMD_TRANS_FWD: {
         DB_printf("Received forward command \r\n");
         outgoingCmd = CMD_TRANS_FWD;
-        DB_printf("Follower sending testing command \r\n"); // for chkpoint 2
+        //DB_printf("Follower sending testing command \r\n"); // for chkpoint 2
         cmdEvent.EventType = ES_TRANSLATE;
         cmdEvent.EventParam = PackTranslateParam(TRANS_FULL, DIR_FWD);
         break;
@@ -339,6 +341,7 @@ static void HandleCommandByte(uint8_t cmd)
 }
 
 void __ISR(_SPI1_VECTOR, IPL7SOFT) SPI1_Handler(void) {
+    //__builtin_disable_interrupts();
     ES_Event_t NewEvent;
     if (SPI1STATbits.SPIROV) {
         SPI1STATCLR = _SPI1STAT_SPIROV_MASK;
@@ -346,7 +349,6 @@ void __ISR(_SPI1_VECTOR, IPL7SOFT) SPI1_Handler(void) {
     if (IFS1bits.SPI1RXIF) {
         incomingCmd = SPI1BUF;     // what leader sent
         //DB_printf("%d\r\n", incomingCmd);
-        IFS1CLR = _IFS1_SPI1RXIF_MASK;
         SPI1BUF = outgoingCmd;
         if (incomingCmd != curCmd) {
            NewEvent.EventType = ES_SPI_RECEIVED;
@@ -357,4 +359,6 @@ void __ISR(_SPI1_VECTOR, IPL7SOFT) SPI1_Handler(void) {
            //DB_printf("%d\r\n", test);
         }
     }
+    IFS1CLR = _IFS1_SPI1RXIF_MASK;
+    //__builtin_enable_interrupts();
 }
