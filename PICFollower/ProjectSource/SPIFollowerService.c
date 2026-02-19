@@ -61,6 +61,7 @@
 #define CMD_LINE_FOLLOW           0x08
 #define CMD_GET_BEACON_FREQ       0x11
 #define CMD_INIT_ORIENT           0x12
+#define CMD_SIDE_FOUND            0x13
 #define CMD_END_GAME              0x99
 #define CMD_QUERY                 0xAA
 #define CMD_NOOP                  0xFF
@@ -116,48 +117,29 @@ ES_Event_t RunSPIFollowerService(ES_Event_t ThisEvent)
   DB_printf("RunSPIFollowerService entered: event %d, param %d\r\n",
   ThisEvent.EventType, ThisEvent.EventParam);
   ES_Event_t ReturnEvent = { ES_NO_EVENT, 0 };
-    switch (curState) {
-        /*case SEND:
+    switch (ThisEvent.EventType) {
+
+        case ES_SIDE_INDICATED:
         {
-            //curCmd = 0xAA;
-            DB_printf("Follower Sending command! %d\n", curCmd);
-            SPIOperate_SPI1_Send8Wait(curCmd);
-            //ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
-            break;
-        }*/
-        
-        case RECEIVE:
-        {
-            //DB_printf("Receiving\r\n");
-            /*if (ThisEvent.EventType == ES_TIMEOUT) {
-                if (ThisEvent.EventParam == CMD_WAIT_TIMER)
-                {
-                    DB_printf("CMDWAIT Timer expired\r\n");
-                    ES_Event_t NewEvent;
-                    NewEvent.EventType = ES_SPI_RECEIVED;
-                    NewEvent.EventParam = curCmd;
-                    PostSPIFollowerService(NewEvent);
-                }
-            }*/
-            if (ThisEvent.EventType == ES_SPI_RECEIVED) {
-                DB_printf("Received from byte leader %d\r\n", ThisEvent.EventParam);
-                //uint8_t leaderCmd = Leader_QueryByte(CMD_QUERY);
-
-                /* ignore unknown bytes (do not silently convert) */
-                if (!IsKnownCommand(curCmd))
-                {
-                    DB_printf("SPIService: unknown leaderCmd 0x%02X\r\n", curCmd);
-                    //ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
-                    return ReturnEvent;
-                }
-
-                HandleCommandByte(ThisEvent.EventParam);
-
-                //DB_printf("Follower received byte: %d\n", curCmd);
-            }
+            outgoingCmd = CMD_SIDE_FOUND;
             break;
         }
-    //ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
+
+        case ES_SPI_RECEIVED:
+        {
+            DB_printf("Received from byte leader %d\r\n", ThisEvent.EventParam);
+
+            /* ignore unknown bytes */
+            if (!IsKnownCommand(ThisEvent.EventParam))
+            {
+                DB_printf("SPIService: unknown leaderCmd 0x%02X\r\n", ThisEvent.EventParam);
+                return ReturnEvent;
+            }
+            HandleCommandByte(ThisEvent.EventParam);
+            break;
+        }
+            
+    }
   }
 
   return ReturnEvent;
@@ -230,6 +212,7 @@ static bool IsKnownCommand(uint8_t cmd)
         case CMD_TESTING:
         case CMD_INIT_ORIENT:
         case CMD_END_GAME:
+        case CMD_SIDE_FOUND:
             return true;
 
         default:
@@ -239,21 +222,18 @@ static bool IsKnownCommand(uint8_t cmd)
 
 static void HandleCommandByte(uint8_t cmd)
 {
-  DB_printf("cmd: %d\r\n", cmd);
+  DB_printf("handling cmd from leader: %d\r\n", cmd);
   ES_Event_t cmdEvent;
   if (cmd != prevCmd) {
     switch (cmd)
     {
     case CMD_END_GAME: {
         DB_printf("Received game end command \r\n");
-        //outgoingCmd = ??;
         cmdEvent.EventType = ES_END_GAME;
         break;
     }
       case CMD_TRANS_FWD: {
         DB_printf("Received forward command \r\n");
-        outgoingCmd = CMD_TRANS_FWD;
-        //DB_printf("Follower sending testing command \r\n"); // for chkpoint 2
         cmdEvent.EventType = ES_TRANSLATE;
         cmdEvent.EventParam = PackTranslateParam(TRANS_FULL, DIR_FWD);
         break;
@@ -268,7 +248,6 @@ static void HandleCommandByte(uint8_t cmd)
 
     case CMD_TRANS_BWD: {
         DB_printf("Received backwards command\r\n");
-        //outgoingCmd = CMD_TESTING;
         cmdEvent.EventType = ES_TRANSLATE;
         cmdEvent.EventParam = PackTranslateParam(TRANS_FULL, DIR_REV);
         break;
@@ -276,7 +255,6 @@ static void HandleCommandByte(uint8_t cmd)
 
     case CMD_ROT_CW_90: {
         DB_printf("Received CW 90 rotation command\r\n");
-        //outgoingCmd = CMD_TESTING;
         cmdEvent.EventType = ES_ROTATE;
         cmdEvent.EventParam = PackRotateParam(ROT_90, ROT_CW);
         break;
@@ -284,7 +262,6 @@ static void HandleCommandByte(uint8_t cmd)
 
     case CMD_ROT_CCW_90: {
         DB_printf("Received CCW 90 rotation command\r\n");
-        outgoingCmd = CMD_TESTING;
         cmdEvent.EventType = ES_ROTATE;
         cmdEvent.EventParam = PackRotateParam(ROT_90, ROT_CCW);
         break;
@@ -293,7 +270,6 @@ static void HandleCommandByte(uint8_t cmd)
 
     case CMD_ROT_CW_45: {
         DB_printf("Received CW 45 rotation command\r\n");
-        outgoingCmd = CMD_TESTING;
         cmdEvent.EventType = ES_ROTATE;
         cmdEvent.EventParam = PackRotateParam(ROT_45, ROT_CW);
         break;
@@ -301,7 +277,6 @@ static void HandleCommandByte(uint8_t cmd)
 
     case CMD_ROT_CCW_45: {
         DB_printf("Received CCW 45 rotation command\r\n");
-        outgoingCmd = CMD_TESTING;
         cmdEvent.EventType = ES_ROTATE;
         cmdEvent.EventParam = PackRotateParam(ROT_45, ROT_CCW);
         break;
@@ -309,25 +284,19 @@ static void HandleCommandByte(uint8_t cmd)
 
     case CMD_TAPE_T_DETECT: {
         DB_printf("Received TAPE detect command\r\n");
-        outgoingCmd = CMD_TESTING;
         cmdEvent.EventType = ES_TAPE_DETECT;
-        cmdEvent.EventParam = 0; // no param needed
         break;
     }
 
     case CMD_LINE_FOLLOW: {
         DB_printf("Received LINE FOLLOW command\r\n");
-        outgoingCmd = CMD_TESTING;
         cmdEvent.EventType = ES_LINE_FOLLOW;
-        cmdEvent.EventParam = 0;
         break;
     }
 
     case CMD_GET_BEACON_FREQ: {
         DB_printf("Received GET BEACON FREQ command\r\n");
-        outgoingCmd = CMD_TESTING;
         cmdEvent.EventType = ES_BEACON_SIGNAL;
-        cmdEvent.EventParam = 0;
         break;
     }
 
@@ -342,20 +311,18 @@ static void HandleCommandByte(uint8_t cmd)
         outgoingCmd = CMD_TESTING;
         DB_printf("Sending Testing Cmd to Leader!\r\n");
         break;
-
     }
 
     case CMD_INIT_ORIENT: {
         DB_printf("Received INIT ORIENT command from SPILeaderService!\r\n");
-        //outgoingCmd = CMD_TESTING;
         cmdEvent.EventType = ES_ALIGN_ULTRASONICS;
         DB_printf("Posting align ultrasonics command to nav service!\r\n");
         break;
     }
 
-      default:
+    default:
         break;
-        
+
     }
     PostNavigateService(cmdEvent);
     prevCmd = cmd;

@@ -192,59 +192,52 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         break;
       
       case INIT_ORIENT:
+          /* this is the initial orientation process, moved over from the init SM
+          that was in our original plan since it seems to make more sense here.
+          could potentially make this its own service later down the line to 
+          reduce clutter */
+
           switch (orientState) {
             case IDLE:
+              // starts in idle until it is told to begin ultrasonics alignment search
               if (ThisEvent.EventType == ES_ALIGN_ULTRASONICS) {
                 // start init orientation process
-                StartUltrasonicAlignSearch();
                 orientState = ULTRASONIC_ALIGN;
               }
               break;
 
             case ULTRASONIC_ALIGN {
-              // turning until both ultrasonics have been active
+              // turning until both ultrasonics are active
+              StartUltrasonicAlignSearch();
               if (ThisEvent.EventType == ES_BOTH_ULTRASONIC_ACTIVE) {
+                DB_printf("Both ultrasonics found! Starting beacon seach now\r\n");
+                StopMotors();
                 orientState = BEACON_ALIGN;
               }
-
+              break;
             }
 
             case BEACON_ALIGN {
               // determine which side of the board bot is on
-              // turn CC slowly
+              StartBeaconAlignSearch(void); // turn CC slowly
               if (ThisEvent.EventType == ES_BEACON_DETECTED) {
-              ES_Event_t SideEvent;
-              SideEvent.EventType = ES_SIDE_INDICATED;
+                uint8_t side = ThisEvent.EventParam;
 
-            }
-
-            case SIDE_FOUND {
-
-            }
-          }
-
-
-            case ES_SIDE_DETERMINED:
-
-            if (ThisEvent.EventType == ES_BEACON_DETECTED) {
-              ES_Event_t SideEvent;
-              SideEvent.EventType = ES_SIDE_INDICATED;
-
-              if (ThisEvent.EventParam == LEFT_BEACON_FREQ) {
-                SideEvent.EventParam = LEFT;
-                // move indicator to left
-              } else {
-                SideEvent.EventParam = RIGHT;
-                // move indicator to right
+                // post to follower spi service so it can tell leader that side has been found
+                if (side == LEFT || side == RIGHT) {
+                  StopMotors();
+                  ES_Event_t SideEvent;
+                  SideEvent.EventType = ES_SIDE_INDICATED;
+                  SideEvent.EventParam = side;
+                  PostSPIFollowerService(SideEvent);
+                  DB_printf("Side determined! Bot is in %d arena\r\n", side);
+                } else {
+                  DB_printf("Invalid freq detected. Will keep searching\r\n");
+                }
               }
-
-              ES_PostAll(SideEvent);
-
+            break;
             }
           }
-          break;
-
-
 
     case FIRST_COLLECT:
 
