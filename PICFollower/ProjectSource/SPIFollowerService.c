@@ -60,9 +60,12 @@
 #define CMD_TAPE_T_DETECT         0x07
 #define CMD_LINE_FOLLOW           0x08
 #define CMD_GET_BEACON_FREQ       0x11
+#define CMD_INIT_ORIENT           0x12
+#define CMD_END_GAME              0x99
 #define CMD_QUERY                 0xAA
 #define CMD_NOOP                  0xFF
 #define CMD_TESTING               0x10  // checkpoint 2 cmd
+
 
 
 /*---------------------------- Module Types -------------------------------*/
@@ -85,6 +88,7 @@ static void InitSPIHardware(void);
 static uint8_t Leader_QueryByte(uint8_t outByte);
 static void HandleCommandByte(uint8_t cmd);
 static bool IsKnownCommand(uint8_t cmd);
+static void InitPinHardware(void);
 
 /*------------------------------ Module Code ------------------------------*/
 bool InitSPIFollowerService(uint8_t Priority)
@@ -92,6 +96,7 @@ bool InitSPIFollowerService(uint8_t Priority)
   MyPriority = Priority;
   curState = RECEIVE;
   InitSPIHardware();
+  InitPinHardware();
   //ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
   DB_printf("SPIFollowerService initialized\r\n");
 
@@ -223,6 +228,8 @@ static bool IsKnownCommand(uint8_t cmd)
         case CMD_QUERY:
         case CMD_NOOP:
         case CMD_TESTING:
+        case CMD_INIT_ORIENT:
+        case CMD_END_GAME:
             return true;
 
         default:
@@ -237,6 +244,12 @@ static void HandleCommandByte(uint8_t cmd)
   if (cmd != prevCmd) {
     switch (cmd)
     {
+    case CMD_END_GAME: {
+        DB_printf("Received game end command \r\n");
+        //outgoingCmd = ??;
+        cmdEvent.EventType = ES_END_GAME;
+        break;
+    }
       case CMD_TRANS_FWD: {
         DB_printf("Received forward command \r\n");
         outgoingCmd = CMD_TRANS_FWD;

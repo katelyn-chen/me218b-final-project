@@ -584,4 +584,8 @@ bool SPIOperate_HasSS2_Risen(void);
 
 bool SPISetup_ConfigureInterrupts(SPI_Module_t WhichModule);
 
+uint8_t PIN_ReadDigitalPIC32Pin(SPI_PinMap_t WhichPin);
+
+bool PIN_MapPinInput(SPI_PinMap_t WhichPin);
+
 #endif //PIC32_SPI_HAL defined

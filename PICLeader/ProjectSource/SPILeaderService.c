@@ -44,6 +44,8 @@
 //#define SPI_CLK_PERIOD_NS    2000u
 #define SPI_CLK_PERIOD_NS      50000u
 
+//SPI Pins
+#define InitButton  SPI_RPA2
 /* ---------------- Command Generator bytes (Appendix A) ----------------
    keeping these here so SPIService.c is self-contained.
 ----------------------------------------------------------------------- */
@@ -58,6 +60,8 @@
 #define CMD_TAPE_T_DETECT         0x07
 #define CMD_LINE_FOLLOW           0x08
 #define CMD_GET_BEACON_FREQ       0x11
+#define CMD_INIT_ORIENT           0x12
+#define CMD_END_GAME              0x99
 #define CMD_QUERY                 0xAA
 #define CMD_NOOP                  0xFF
 #define CMD_TESTING               0x10  // checkpoint 2 cmd
@@ -79,6 +83,7 @@ static uint8_t outCmd;
 
 /*====================== PRIVATE FUNCTION PROTOS =====================*/
 static void InitSPIHardware(void);
+static void InitPinHardware(void);
 static uint8_t Follower_QueryByte(uint8_t outByte);
 static void HandleCommandByte(uint8_t cmd);
 static bool IsKnownCommand(uint8_t cmd);
@@ -87,11 +92,11 @@ static bool IsKnownCommand(uint8_t cmd);
 bool InitSPILeaderService(uint8_t Priority)
 {
   MyPriority = Priority;
-  curState = SEND;
+  curState = IDLE;
   curCmd = CMD_TRANS_FWD;
   //curCmd = CMD_GET_BEACON_FREQ;
   InitSPIHardware();
-  ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
+  InitPinHardware();
   DB_printf("SPILeaderService initialized\r\n");
 
   ES_Event_t ThisEvent;
@@ -106,46 +111,66 @@ bool PostSPILeaderService(ES_Event_t ThisEvent)
 
 ES_Event_t RunSPILeaderService(ES_Event_t ThisEvent)
 {
-  ES_Event_t ReturnEvent = { ES_NO_EVENT, 0 };
+  ES_Event_t ReturnEvent = ES_NO_EVENT;
+  switch (ThisEvent.EventType) {
+    case ES_INIT_GAME:
+        // tell follower to start!
+        curCmd = CMD_INIT_ORIENT;
+        curState = SEND;
+        ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);     // init SPI timer
+        break;
+    case ES_END_GAME: {
+        // tell follower to stop
+        SPIOperate_SPI1_Send8Wait(CMD_END_GAME);
+        ES_Timer_StopTimer(SPI_TIMER);
+        // stop all servos
+        break;
+    }
 
-  if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == SPI_TIMER))
-  {
-    switch (curState) {
-        case SEND:
-        {
-            //curCmd = CMD_TRANS_FWD;
-            //DB_printf("Leader sending forward command! %d\n", curCmd);
-            DB_printf("Sending cur command: %d\r\n", curCmd);
-            SPIOperate_SPI1_Send8Wait(curCmd);
-            ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
-            curState = RECEIVE;
-            break;
+    case ES_TIMEOUT:
+        if (ThisEvent.EventParam == SPI_TIMER) {
+            switch (curState) {
+                case SEND:
+                {
+                    //curCmd = CMD_TRANS_FWD;
+                    //DB_printf("Leader sending forward command! %d\n", curCmd);
+                    DB_printf("Sending cur command: %d\r\n", curCmd);
+                    SPIOperate_SPI1_Send8Wait(curCmd);
+                    ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
+                    //curState = RECEIVE;
+                    break;
+                }
+                
+                case RECEIVE:
+                {
+                    uint8_t followerData;
+                    //DB_printf("Leader sending query command! %d\n", curCmd);
+                    followerData = Follower_QueryByte(CMD_QUERY);
+
+                    /* ignore unknown bytes (do not silently convert) */
+                    if (!IsKnownCommand(followerData))
+                    {
+                        DB_printf("SPIService: unknown cmd 0x0%d\r\n", followerData);
+                        ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
+                        return ReturnEvent;
+                    }
+
+                    HandleCommandByte(followerData);
+                    curState = IDLE;
+                    break;
+                }
+
+                case IDLE:
+                {
+                    //curState = SEND;
+                    break;
+                }
+        }
+        ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
         }
         
-        case RECEIVE:
-        {
-            uint8_t followerData;
-            //DB_printf("Leader sending query command! %d\n", curCmd);
-            followerData = Follower_QueryByte(CMD_QUERY);
-
-            /* ignore unknown bytes (do not silently convert) */
-            if (!IsKnownCommand(followerData))
-            {
-                DB_printf("SPIService: unknown cmd 0x0%d\r\n", followerData);
-                ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
-                return ReturnEvent;
-            }
-
-            HandleCommandByte(followerData);
-            curState = IDLE;
-            break;
-        }
-        case IDLE:
-            //curState = SEND;
-            break;
     }
-    ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
-  }
+}
 
   return ReturnEvent;
 }
@@ -295,4 +320,10 @@ static void HandleCommandByte(uint8_t cmd)
     
     prevCmd = cmd;
   } 
+}
+
+static void InitPinHardware(void)
+{
+    // Capacitive Touch Sensor: RA2, Pin 9
+    PIN_MapPinInput(InitButton);
 }

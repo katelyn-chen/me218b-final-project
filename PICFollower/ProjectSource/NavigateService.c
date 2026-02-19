@@ -160,6 +160,11 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
   ES_Event_t ReturnEvent;
   ReturnEvent.EventType = ES_NO_EVENT;
 
+  if (ThisEvent.EventType == ES_END_GAME) {
+    DB_printf("Stopping Motors\r\n");
+    StopMotors();
+  }
+
   switch (curState) {
 
       case DEBUG:

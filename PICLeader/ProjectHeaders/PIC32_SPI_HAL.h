@@ -9,6 +9,12 @@ typedef enum {
     SPI_SPI2 = 1 
 } SPI_Module_t;
 
+typedef enum{
+  SPI_READ_LOW = 0u,
+  SPI_READ_HIGH = 1u,
+  SPI_INVALID_PIN = 0xFFu,
+} SPI_ReadPinState_t;
+
 typedef enum {
         SPI_RPA0 = 0,
         SPI_RPA1,
@@ -582,5 +588,11 @@ Example
 ****************************************************************************/
 bool SPIOperate_HasSS2_Risen(void);
 
+/****************************************************************************
+ Function
+    PIN_MapPinInput
+
+****************************************************************************/
+bool PIN_MapPinInput(SPI_PinMap_t WhichPin);
 
 #endif //PIC32_SPI_HAL defined

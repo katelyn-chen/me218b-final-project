@@ -836,6 +836,41 @@ bool SPISetup_ConfigureInterrupts(SPI_Module_t WhichModule)
     __builtin_enable_interrupts();
 }
 
+bool PIN_MapPinInput(SPI_PinMap_t WhichPin)
+{
+
+ // Make sure pin is valid
+ if ((WhichPin < SPI_RPA0) || (WhichPin > SPI_RPB15)) {
+   return false;
+ }
+
+ // Make pin an Input by setting the TRIS register to 1
+ *setTRISRegisters[WhichPin] = mapPinMap2BitPosn[WhichPin];
+
+ //Make pin DIGITAL by clearing ANSEL to 0
+ *clrANSELRegisters[WhichPin] = mapPinMap2BitPosn[WhichPin];
+
+ return true;
+}
+
+uint8_t PIN_ReadDigitalPIC32Pin(SPI_PinMap_t WhichPin)
+{
+  
+ if ((WhichPin < SPI_RPA0) || (WhichPin > SPI_RPB15)) {
+   return SPI_INVALID_PIN; // 0xFF means unassigned
+ }
+
+ uint32_t portValues = *portRegisters[WhichPin]; //Full Read of either PortA or PortB
+ uint32_t portMask   = mapPinMap2BitPosn[WhichPin]; //bit position of WhichPin
+
+ if ((portValues & portMask) != 0x0u){//There is a 1 in the bit position and Pin is in HIGH State, return 1
+   return SPI_READ_HIGH;
+
+ }else{//There is a 0 in the bit position and Pin is in LOW state, return 0
+   return SPI_READ_LOW;
+ }
+}
+
 //int main(void)
 //{ 
 //  
