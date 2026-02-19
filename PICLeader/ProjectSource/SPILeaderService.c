@@ -61,6 +61,8 @@
 #define CMD_LINE_FOLLOW           0x08
 #define CMD_GET_BEACON_FREQ       0x11
 #define CMD_INIT_ORIENT           0x12
+#define CMD_SIDE_FOUND_RIGHT      0x13
+#define CMD_SIDE_FOUND_LEFT       0x14
 #define CMD_END_GAME              0x99
 #define CMD_QUERY                 0xAA
 #define CMD_NOOP                  0xFF
@@ -119,6 +121,7 @@ ES_Event_t RunSPILeaderService(ES_Event_t ThisEvent)
         curState = SEND;
         ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);     // init SPI timer
         break;
+
     case ES_END_GAME: {
         // tell follower to stop
         SPIOperate_SPI1_Send8Wait(CMD_END_GAME);
@@ -229,6 +232,8 @@ static bool IsKnownCommand(uint8_t cmd)
         case CMD_QUERY:
         case CMD_NOOP:
         case CMD_TESTING:
+        case CMD_SIDE_FOUND_RIGHT:
+        case CMD_SIDE_FOUND_LEFT:
             return true;
 
         default:
@@ -301,10 +306,20 @@ static void HandleCommandByte(uint8_t cmd)
         break;
     }
 
-    case CMD_QUERY: {
-        DB_printf("Received QUERY command\r\n");
-        break;
+    case CMD_SIDE_FOUND_RIGHT: {
+        ES_Event_t SideEvent;
+        SideEvent.EventType = ES_SIDE_INDICATED;
+        SideEvent.EventParam = RIGHT;
+        ES_PostAll(SideEvent);
+        // turn indicator servo
+    }
 
+    case CMD_SIDE_FOUND_LEFT: {
+        ES_Event_t SideEvent;
+        SideEvent.EventType = ES_SIDE_INDICATED;
+        SideEvent.EventParam = LEFT;
+        ES_PostAll(SideEvent);
+        // turn indicator servo
     }
       default:
         break;

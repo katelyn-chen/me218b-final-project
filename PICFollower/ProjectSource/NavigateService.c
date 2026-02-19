@@ -231,6 +231,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
                   SideEvent.EventParam = side;
                   PostSPIFollowerService(SideEvent);
                   DB_printf("Side determined! Bot is in %d arena\r\n", side);
+                  curState = FIRST_COLLECT;
                 } else {
                   DB_printf("Invalid freq detected. Will keep searching\r\n");
                 }

@@ -61,7 +61,8 @@
 #define CMD_LINE_FOLLOW           0x08
 #define CMD_GET_BEACON_FREQ       0x11
 #define CMD_INIT_ORIENT           0x12
-#define CMD_SIDE_FOUND            0x13
+#define CMD_SIDE_FOUND_RIGHT      0x13
+#define CMD_SIDE_FOUND_LEFT       0x14
 #define CMD_END_GAME              0x99
 #define CMD_QUERY                 0xAA
 #define CMD_NOOP                  0xFF
@@ -121,7 +122,11 @@ ES_Event_t RunSPIFollowerService(ES_Event_t ThisEvent)
 
         case ES_SIDE_INDICATED:
         {
-            outgoingCmd = CMD_SIDE_FOUND;
+            if (ThisEvent.EventParam = RIGHT) {
+                outgoingCmd = CMD_SIDE_FOUND_RIGHT;
+            } else {
+                outgoingCmd = CMD_SIDE_FOUND_LEFT;
+            }
             break;
         }
 
@@ -212,7 +217,8 @@ static bool IsKnownCommand(uint8_t cmd)
         case CMD_TESTING:
         case CMD_INIT_ORIENT:
         case CMD_END_GAME:
-        case CMD_SIDE_FOUND:
+        case CMD_SIDE_FOUND_RIGHT:
+        case CMD_SIDE_FOUND_LEFT:
             return true;
 
         default:
