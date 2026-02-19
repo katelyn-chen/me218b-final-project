@@ -10,6 +10,8 @@
 
   Notes
     - using Timer3 + IC1 + RA2
+    - FOLLOWER pinout: Beacon is on RA2 (IC1 input), so IC1 is correct here
+    - Added: EventParam indicates which beacon (LEFT/RIGHT) was found
 ****************************************************************************/
 
 #include "BeaconService.h"
@@ -33,8 +35,10 @@
 #define T3_PRESCALE_BITS      0b010   /* 1:4 */
 #define T3_PRESCALE_VAL       4u
 
-/* expected beacon frequency */
-#define BEACON_FREQ_HZ        1427u
+/* expected beacon frequencies (Hz)
+*/
+#define BEACON_LEFT_FREQ_HZ   2000u
+#define BEACON_RIGHT_FREQ_HZ  909u  
 
 /* tolerance (Hz) */
 #define BEACON_TOL_HZ         1000u
@@ -48,8 +52,14 @@
 #endif
 #define BEACON_DEBUG_MS       200u
 
-/* IC1 input select*/
+/* IC1 input select
+ 
+*/
 #define IC1R_VALUE            0b0000 // mapped to RA2 digital input on IC1
+
+/* Beacon side values for EventParam (match NavigateService enum) */
+#define BEACON_SIDE_LEFT      0u
+#define BEACON_SIDE_RIGHT     1u
 
 /*============================== STATE ==============================*/
 static uint8_t MyPriority;
@@ -61,10 +71,12 @@ static volatile uint32_t RolloverCount = 0;
 
 static uint8_t GoodCount = 0;
 static bool BeaconLatched = false;
+static uint8_t LatchedSide = BEACON_SIDE_LEFT;
 
 /*====================== PRIVATE FUNCTION PROTOS =====================*/
 static void InitBeaconHardware(void);
 static uint32_t ComputeFreqHz(uint32_t periodTicks);
+static bool ClassifyBeaconSide(uint32_t f, uint8_t *sideOut);
 
 /*=========================== PUBLIC API =============================*/
 bool InitBeaconService(uint8_t Priority)
@@ -102,9 +114,13 @@ ES_Event_t RunBeaconService(ES_Event_t ThisEvent)
         uint32_t f = ComputeFreqHz(PeriodTicks);
         //DB_printf("IR frequency%d\n", f);
 
-        /* simple tolerance check */
-        if ((f > (BEACON_FREQ_HZ - BEACON_TOL_HZ)) && (f < (BEACON_FREQ_HZ + BEACON_TOL_HZ)))
+        /* classify as LEFT or RIGHT beacon (or neither) */
+        uint8_t side;
+        bool isBeacon = ClassifyBeaconSide(f, &side);
+
+        if (isBeacon)
         {
+          LatchedSide = side;
           if (GoodCount < 255) GoodCount++;
         }
         else
@@ -113,13 +129,14 @@ ES_Event_t RunBeaconService(ES_Event_t ThisEvent)
           BeaconLatched = false;
         }
 
-        /* only post once per “found” */
+        /* only post once per ?found? */
         if (!BeaconLatched && (GoodCount >= BEACON_CONFIRM_COUNT))
         {
           DB_printf("Beacon latched!!!! IR frequency %d\n", f);
           BeaconLatched = true;
 
-          ES_Event_t e = { ES_BEACON_FOUND, 0 };
+          /* include which beacon in EventParam */
+          ES_Event_t e = { ES_BEACON_FOUND, LatchedSide };
           PostNavigateService(e);
           //BeaconLatched=false;
         }
@@ -133,7 +150,7 @@ ES_Event_t RunBeaconService(ES_Event_t ThisEvent)
     if (PeriodTicks != 0)
     {
       uint32_t f = ComputeFreqHz(PeriodTicks);
-//      DB_printf("Beacon f=%du Hz good=%u latched=%u\r\n", f, GoodCount, BeaconLatched);
+//      DB_printf("Beacon f=%du Hz good=%u latched=%u side=%u\r\n", f, GoodCount, BeaconLatched, LatchedSide);
     }
     ES_Timer_InitTimer(BEACON_DEBUG_TIMER, BEACON_DEBUG_MS);
   }
@@ -145,6 +162,7 @@ ES_Event_t RunBeaconService(ES_Event_t ThisEvent)
 static void InitBeaconHardware(void)
 {
   TRISAbits.TRISA2 = 1;   // input RA2
+  ANSELAbits.ANSA2 = 0;   // digital input
 
   /* Timer3 timebase */
   T3CON = 0;
@@ -154,12 +172,12 @@ static void InitBeaconHardware(void)
   PR3 = 0xFFFF;
   /* Timer3 overflow interrupt to track rollovers (optional but helps) */
   IPC3bits.T3IP = 5;
-  IFS0CLR = _IFS0_T3IF_MASK;  
+  IFS0CLR = _IFS0_T3IF_MASK;
   IEC0SET = _IEC0_T3IE_MASK;
-  
+
   /* enable multi-vector interrupts */
   INTCONbits.MVEC = 1;
- 
+
   IC1CON = 0;
   /* IC1 mapping */
   IC1R = IC1R_VALUE;
@@ -172,7 +190,7 @@ static void InitBeaconHardware(void)
   IPC1bits.IC1IP = 6;
   IEC0SET = _IEC0_IC1IE_MASK;
   IFS0CLR = _IFS0_IC1IF_MASK;
-  
+
   T3CONbits.ON = 1;
   IC1CONbits.ON = 1;
 
@@ -187,12 +205,32 @@ static uint32_t ComputeFreqHz(uint32_t periodTicks)
   return (tickRate / periodTicks);
 }
 
+/* Classify frequency as LEFT or RIGHT beacon.
+   Returns true if f is within tolerance of either beacon frequency.
+*/
+static bool ClassifyBeaconSide(uint32_t f, uint8_t *sideOut)
+{
+  if ((f > (BEACON_LEFT_FREQ_HZ - BEACON_TOL_HZ)) && (f < (BEACON_LEFT_FREQ_HZ + BEACON_TOL_HZ)))
+  {
+    *sideOut = BEACON_SIDE_LEFT;
+    return true;
+  }
+
+  if ((f > (BEACON_RIGHT_FREQ_HZ - BEACON_TOL_HZ)) && (f < (BEACON_RIGHT_FREQ_HZ + BEACON_TOL_HZ)))
+  {
+    *sideOut = BEACON_SIDE_RIGHT;
+    return true;
+  }
+
+  return false;
+}
+
 /*============================== ISRs ==============================*/
 void __ISR(_INPUT_CAPTURE_1_VECTOR, IPL6SOFT) IC1Handler(void)
 {
   uint32_t cap = IC1BUF; /* reading clears the buffer entry */
   IFS0CLR = _IFS0_IC1IF_MASK;
-    if(IFS0bits.T3IF && (cap < 0x8000)) { 
+    if(IFS0bits.T3IF && (cap < 0x8000)) {
          IFS0CLR = _IFS0_T3IF_MASK;
      }
   uint32_t current = (RolloverCount << 16) | cap;
@@ -212,5 +250,4 @@ void __ISR(_TIMER_3_VECTOR, IPL5SOFT) T3Handler(void)
          IFS0CLR = _IFS0_T3IF_MASK;
    }
   __builtin_enable_interrupts();
-
 }
