@@ -55,6 +55,12 @@ typedef enum {
     SPI_32BIT = 2
 } SPI_XferWidth_t;
 
+typedef enum{
+  SPI_READ_LOW = 0u,
+  SPI_READ_HIGH = 1u,
+  SPI_INVALID_PIN = 0xFFu,
+} SPI_ReadPinState_t;
+
 /****************************************************************************
  Function
     SPISetup_BasicConfig
