@@ -62,6 +62,13 @@ typedef enum {
 } NavigateState_t;
 
 typedef enum {
+  IDLE,
+  ULTRASONIC_ALIGN,
+  BEACON_ALIGN,
+  SIDE_FOUND
+} InitOrientState_t;
+
+typedef enum {
     LEFT,
     RIGHT
 } RotateParam_t;
@@ -73,11 +80,12 @@ typedef enum {
 } BucketParam_t;
 
 
-/*---------------------------- Module Functions --------------------------*/
+/*---------------------------- Module Variables --------------------------*/
 static uint8_t      MyPriority;
 static NavigateState_t curState;
+static InitOrientState_t orientState;
 
-/*---------------------------- Private Variables --------------------------*/
+/*---------------------------- Private Functions --------------------------*/
 static void InitPinsAndPPS(void);
 static void InitTimer2ForPWM(void);
 static void InitOCsForPWM(void);
@@ -119,6 +127,7 @@ bool InitNavigateService(uint8_t Priority)
   InitTimer2ForPWM();
   InitOCsForPWM();
   curState = DEBUG;
+  orientState = IDLE;
   
   DB_printf("Navigate Service: init done\r\n");
 
@@ -181,20 +190,60 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
               DB_printf("Nav service received beacon signal from beacon service!\r\n");
           }
         break;
+      
+      case INIT_ORIENT:
+          switch (orientState) {
+            case IDLE:
+              if (ThisEvent.EventType == ES_ALIGN_ULTRASONICS) {
+                // start init orientation process
+                StartUltrasonicAlignSearch();
+                orientState = ULTRASONIC_ALIGN;
+              }
+              break;
 
-      case WAITING_FOR_SIDE:
+            case ULTRASONIC_ALIGN {
+              // turning until both ultrasonics have been active
+              if (ThisEvent.EventType == ES_BOTH_ULTRASONIC_ACTIVE) {
+                orientState = BEACON_ALIGN;
+              }
 
-      if (ThisEvent.EventType == ES_SIDE_INDICATED) {
+            }
 
-        if (ThisEvent.EventParam == LEFT) {
-          // turn 45 CCW
-        } else {
-          // turn 45 CW
-        }
+            case BEACON_ALIGN {
+              // determine which side of the board bot is on
+              // turn CC slowly
+              if (ThisEvent.EventType == ES_BEACON_DETECTED) {
+              ES_Event_t SideEvent;
+              SideEvent.EventType = ES_SIDE_INDICATED;
 
-        curState = FIRST_COLLECT;
-      }
-      break;
+            }
+
+            case SIDE_FOUND {
+
+            }
+          }
+
+
+            case ES_SIDE_DETERMINED:
+
+            if (ThisEvent.EventType == ES_BEACON_DETECTED) {
+              ES_Event_t SideEvent;
+              SideEvent.EventType = ES_SIDE_INDICATED;
+
+              if (ThisEvent.EventParam == LEFT_BEACON_FREQ) {
+                SideEvent.EventParam = LEFT;
+                // move indicator to left
+              } else {
+                SideEvent.EventParam = RIGHT;
+                // move indicator to right
+              }
+
+              ES_PostAll(SideEvent);
+
+            }
+          }
+          break;
+
 
 
     case FIRST_COLLECT:
@@ -467,6 +516,14 @@ static void StartTapeDetect(void)
 static void StartBeaconAlignSearch(void)
 {
   /* slow rotate until BeaconService posts ES_BEACON_FOUND */
+  SetMotor1((int16_t)DUTY_SEARCH);
+  SetMotor2(-(int16_t)DUTY_SEARCH);
+  //DB_printf("rotating");
+}
+
+static void StartUltrasonicAlignSearch(void)
+{
+  /* slow rotate until both ultrasonics read as active */
   SetMotor1((int16_t)DUTY_SEARCH);
   SetMotor2(-(int16_t)DUTY_SEARCH);
   //DB_printf("rotating");

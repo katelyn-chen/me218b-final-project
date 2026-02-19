@@ -344,6 +344,15 @@ static void HandleCommandByte(uint8_t cmd)
         break;
 
     }
+
+    case CMD_INIT_ORIENT: {
+        DB_printf("Received INIT ORIENT command from SPILeaderService!\r\n");
+        //outgoingCmd = CMD_TESTING;
+        cmdEvent.EventType = ES_ALIGN_ULTRASONICS;
+        DB_printf("Posting align ultrasonics command to nav service!\r\n");
+        break;
+    }
+
       default:
         break;
         
