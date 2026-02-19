@@ -40,6 +40,7 @@
 // actual functionsdefinition
 #include "EventCheckers.h"
 #include "PIC32_SPI_HAL.h"
+#include "SPILeaderService.h"
 
 
 /*----------------------------- Module Defines ----------------------------*/
@@ -133,7 +134,7 @@ bool Check4Button(void)
  static uint16_t lastEdgeTime = 0;
  bool ReturnVal = false;
 
- SPI_ReadPinState_t currentButtonState = PIN_ReadDigitalPIC32Pin(ActionButton);
+ SPI_ReadPinState_t currentButtonState = PIN_ReadDigitalPIC32Pin(InitButton);
  if (currentButtonState == SPI_INVALID_PIN) return false;
 
  uint16_t now = ES_Timer_GetTime();

@@ -97,6 +97,14 @@ static volatile uint32_t * const clrANSELRegisters[] = { &ANSELACLR, &ANSELACLR,
          &ANSELBCLR, &ANSELBCLR, &ANSELBCLR, &ANSELBCLR
 };
 
+// these are the ANSELxSET registers indexed by the SPI_PinMap_t value
+static volatile uint32_t * const setANSELRegisters[] = { &ANSELASET, &ANSELASET,
+         &ANSELASET, &ANSELASET, &ANSELASET,
+         &ANSELBSET, &ANSELBSET, &ANSELBSET, &ANSELBSET, &ANSELBSET, &ANSELBSET,
+         &ANSELBSET, &ANSELBSET, &ANSELBSET, &ANSELBSET, &ANSELBSET, &ANSELBSET, 
+         &ANSELBSET, &ANSELBSET, &ANSELBSET, &ANSELBSET
+};
+
 // these are the bit positions indexed by the SPI_PinMap_t value
 static uint32_t const mapPinMap2BitPosn[] = { 1<<0, 1<<1,
          1<<2, 1<<3, 1<<4,
@@ -869,6 +877,24 @@ uint8_t PIN_ReadDigitalPIC32Pin(SPI_PinMap_t WhichPin)
  }else{//There is a 0 in the bit position and Pin is in LOW state, return 0
    return SPI_READ_LOW;
  }
+}
+
+bool PIN_MapAnalogInput(SPI_PinMap_t WhichPin)
+{
+   // Make pin an Input by setting the TRIS register to 1
+  *setTRISRegisters[WhichPin] = mapPinMap2BitPosn[WhichPin];
+  //Make pin ANALOG by setting ANSEL to 1
+  *setANSELRegisters[WhichPin] = mapPinMap2BitPosn[WhichPin];
+  ADC_ConfigAutoScan(mapPinMap2BitPosn[WhichPin]); 
+  return true;
+}
+
+uint16_t PIN_ReadAnalogPIC32Pin(SPI_PinMap_t WhichPin)
+{
+ uint32_t AnalogValue[1];
+ ADC_MultiRead(AnalogValue);
+ 
+
 }
 
 //int main(void)

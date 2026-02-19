@@ -595,4 +595,6 @@ bool SPIOperate_HasSS2_Risen(void);
 ****************************************************************************/
 bool PIN_MapPinInput(SPI_PinMap_t WhichPin);
 
+uint8_t PIN_ReadDigitalPIC32Pin(SPI_PinMap_t WhichPin);
+
 #endif //PIC32_SPI_HAL defined

@@ -39,6 +39,8 @@
 // include our own prototypes to insure consistency between header &
 // actual functionsdefinition
 #include "EventCheckers.h"
+#include "PIC32_AD_Lib.h"
+#include "PIC32_SPI_HAL.h"
 
 // This is the event checking function sample. It is not intended to be
 // included in the module. It is only here as a sample to guide you in writing
@@ -120,43 +122,27 @@ bool Check4Keystroke(void)
 }
 
 
-
-bool Check4Beacon(void)
+bool Check4WallRight(void)
 {
-  // read from beacon sensor input pin
-  // if beacon detected, post ES_BEACON_DETECTED event
-//    uint32_t ADValue[1];
-//    ADC_MultiRead(ADValue);
-//    uint32_t IRValue = ADValue[0];
-//    if (IRValue < currPeak) {
-//        maxPeak = IRValue;
-//        return false;
-//    } elif (IRValue >= maxPeak - 10) {
-//        ES_Event_t ThisEvent;
-//        ThisEvent.EventType   = ES_BEACON_FOUND;
-//        ThisEvent.EventParam  = 0;
-//        ES_PostMotorService(ThisEvent);
-//    }
+  // analog read from ultrasonic sensor input pin
+  
+  // if wall detected, post ES_WALL_DETECTED event
     return true;
 }
 
-bool Check4Command(void)
+bool Check4WallBack(void)
 {
-  // send query byte to Command generator (OxAA)
-  // if OxFF command received:
-    // read next byte for command value
-    // create ES_COMMAND_RECEIVED event
-    // set EventParam to command value
-    // post ES_COMMAND_RECEIVED event
+  // analog read from ultrasonic sensor input pin
+  // if wall detected, post ES_WALL_DETECTED event
+    return true;
 }
 
-//bool Check4Switch(void) {
-//    if (LATBbits.LATB12 == 0) {
-//        ES_Event_t NewEvent;
-//        NewEvent.EventType = ES_STOP;
-//        NewEvent.EventParam = 0;
-//        PostMotorService(NewEvent);
-//        return true;
-//    }
-//    return false;
-//}
+// five line sensors, check for line detected on any of them, read which ones are triggered
+// post line detected with param of which sensors are triggered
+
+bool Check4Tape(void)
+{
+  // read from line sensor input pin
+  // if line detected, post ES_LINE_DETECTED event
+    return true;
+}
