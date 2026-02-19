@@ -19,9 +19,7 @@
 
 typedef enum {
   IDLE,
-  INIT_ORIENT,
-  DETERMINE_SIDE,
-  DEBUG
+  GAME_MODE
 } InitState_t;
 
 /*---------------------------- Module Variables --------------------------*/
@@ -109,45 +107,15 @@ ES_Event_t RunInitService(ES_Event_t ThisEvent)
       break;
 
 
-    case INIT_ORIENT:
+    case GAME_MODE:
       if (ThisEvent.EventType == ES_INIT_GAME) {
         ES_Timer_InitTimer(GAME_TIMER, GAME_TIME_MS); // start game timer
       }
 
-      if (ThisEvent.EventType == ES_BOTH_ULTRASONIC_ACTIVE) {
-        curState = DETERMINE_SIDE;
-      }
-      break;
-
-
-    case DETERMINE_SIDE:
-
-      if (ThisEvent.EventType == ES_ENTER_IDLE) {
-        // turn CC slowly
-      }
-
-      if (ThisEvent.EventType == ES_BEACON_DETECTED) {
-
-        ES_Event_t SideEvent;
-        SideEvent.EventType = ES_SIDE_INDICATED;
-
-        if (ThisEvent.EventParam == LEFT_BEACON_FREQ) {
-          SideEvent.EventParam = LEFT;
-          // move indicator to left
-        } else {
-          SideEvent.EventParam = RIGHT;
-          // move indicator to right
-        }
-
-        ES_PostAll(SideEvent);
-
-        // transition into Navigate SM implicitly handled by HSM
-      }
-
-      if (ThisEvent.EventType == ES_GAME_TIMER_EXPIRED) {
+      if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == GAME_TIMER) {
+        ES_Timer_StopTimer(GAME_TIMER); // stop game timer
         curState = IDLE;
       }
-
       break;
   }
 

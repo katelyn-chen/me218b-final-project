@@ -311,7 +311,6 @@ static void HandleCommandByte(uint8_t cmd)
         SideEvent.EventType = ES_SIDE_INDICATED;
         SideEvent.EventParam = RIGHT;
         ES_PostAll(SideEvent);
-        // turn indicator servo
     }
 
     case CMD_SIDE_FOUND_LEFT: {
@@ -319,7 +318,6 @@ static void HandleCommandByte(uint8_t cmd)
         SideEvent.EventType = ES_SIDE_INDICATED;
         SideEvent.EventParam = LEFT;
         ES_PostAll(SideEvent);
-        // turn indicator servo
     }
       default:
         break;

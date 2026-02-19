@@ -124,8 +124,10 @@ ES_Event_t RunSPIFollowerService(ES_Event_t ThisEvent)
         {
             if (ThisEvent.EventParam = RIGHT) {
                 outgoingCmd = CMD_SIDE_FOUND_RIGHT;
+                // somewhere we have to turn the indicator servo
             } else {
                 outgoingCmd = CMD_SIDE_FOUND_LEFT;
+                // somewhere we have to turn the indicator servo
             }
             break;
         }
