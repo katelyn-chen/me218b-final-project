@@ -57,8 +57,7 @@
 #define IC1R_VALUE             0b0000u /* RA2 -> IC1 */
 
 /*
-  Bucket mapping:
-  Set these based on physical beacon tags on the two target buckets.
+  Bucket beacons mapping:
 */
 #define LEFT_BUCKET_BEACON_ID   BEACON_ID_L   /* 2000 Hz */
 #define RIGHT_BUCKET_BEACON_ID  BEACON_ID_R   /*  909 Hz */
