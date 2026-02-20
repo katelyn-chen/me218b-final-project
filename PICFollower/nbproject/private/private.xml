@@ -5,12 +5,8 @@
         <group>
             <file>file:/U:/_ME218bTeams/TEAM9/FinalProjectNEW/PICFollower/ProjectSource/PWM_PIC32.c</file>
             <file>file:/U:/_ME218bTeams/TEAM9/FinalProjectNEW/PICFollower/ProjectSource/BeaconService.c</file>
-            <file>file:/U:/_ME218bTeams/TEAM9/FinalProjectNEW/PICFollower/FrameworkSource/ES_DeferRecall.c</file>
             <file>file:/U:/_ME218bTeams/TEAM9/FinalProjectNEW/PICFollower/ProjectSource/NavigateService.c</file>
-            <file>file:/U:/_ME218bTeams/TEAM9/FinalProjectNEW/PICFollower/ProjectSource/SPIFollowerService.c</file>
             <file>file:/U:/_ME218bTeams/TEAM9/FinalProjectNEW/PICFollower/FrameworkHeaders/ES_Configure.h</file>
-            <file>file:/U:/_ME218bTeams/TEAM9/FinalProjectNEW/PICFollower/ProjectSource/PIC32_SPI_HAL_Starter.c</file>
-            <file>file:/U:/_ME218bTeams/TEAM9/FinalProjectNEW/PICFollower/FrameworkSource/ES_CheckEvents.c</file>
         </group>
     </open-files>
 </project-private>
