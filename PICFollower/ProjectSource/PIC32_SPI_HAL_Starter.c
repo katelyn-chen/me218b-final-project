@@ -888,15 +888,6 @@ bool PIN_MapAnalogInput(SPI_PinMap_t WhichPin)
   return true;
 }
 
-uint16_t PIN_ReadAnalogPIC32Pin(SPI_PinMap_t WhichPin)
-{
-  uint32_t AnalogValues[16];
-  ADC_MultiRead(AnalogValues);
-  
- 
-
-}
-
 //int main(void)
 //{ 
 //  

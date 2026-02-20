@@ -41,8 +41,8 @@
 #include "EventCheckers.h"
 #include "PIC32_AD_Lib.h"
 #include "PIC32_SPI_HAL.h"
+#include "SPIFollowerService.h"
 
-static uint32_t AnalogValues[16];
 
 // This is the event checking function sample. It is not intended to be
 // included in the module. It is only here as a sample to guide you in writing
@@ -124,27 +124,73 @@ bool Check4Keystroke(void)
 }
 
 
-bool Check4WallRight(void)
-{
-  // analog read from ultrasonic sensor input pin
-  
-  // if wall detected, post ES_WALL_DETECTED event
-    return true;
-}
 
-bool Check4WallBack(void)
-{
-  // analog read from ultrasonic sensor input pin
-  // if wall detected, post ES_WALL_DETECTED event
-    return true;
-}
+// check if ultrasonic distance has been measured -- potentially switch to service with IC?
+bool Check4Wall(void){
+    bool ReturnVal = false; 
+    bool CurrentEchoState = PIN_ReadDigitalPIC32Pin(UltrasonicEcho); // Read the current state of the Echo pin
+    
+    if (CurrentEchoState != LastEchoState) {
+        if (CurrentEchoState == 1) {
+            // start timer when echo is high (start of pulse)
+            TimeAtRise = ES_Timer_GetTime();
+        } else {
+            // echo low, calculate pulse width and convert to distance
+            uint32_t TimeDelta = ES_Timer_GetTime() - TimeAtRise;
+            
+            // assuming 1 tick = 1 microsecond
+            uint16_t DistanceCM = (uint16_t)(TimeDelta / 58);
 
-// five line sensors, check for line detected on any of them, read which ones are triggered
-// post line detected with param of which sensors are triggered
+            ES_Event_t newEvent;
+            newEvent.EventType = ES_NEW_DIST; 
+            newEvent.EventParam = DistanceCM;
+            
+            ES_PostAll(newEvent);
+            
+            ReturnVal = true;
+        }
+    }
+    LastEchoState = CurrentEchoState;
+    return ReturnVal;
+}
 
 bool Check4Tape(void)
 {
-  // read from line sensor input pin
-  // if line detected, post ES_LINE_DETECTED event
-    return true;
+  bool tapeDetected = false;
+  if (PIN_ReadDigitalPIC32Pin(TapeSensor1) == 0) {
+    ES_Event_t ThisEvent;
+    ThisEvent.EventType = ES_TAPE_DETECTED;
+    ThisEvent.EventParam = 1;
+    ES_PostAll(ThisEvent);
+    tapeDetected = true;
+  }
+  if (PIN_ReadDigitalPIC32Pin(TapeSensor2) == 0) {
+    ES_Event_t ThisEvent;
+    ThisEvent.EventType = ES_TAPE_DETECTED;
+    ThisEvent.EventParam = 2;
+    ES_PostAll(ThisEvent);
+    tapeDetected = true;
+  }
+  if (PIN_ReadDigitalPIC32Pin(TapeSensor3) == 0) {
+    ES_Event_t ThisEvent;
+    ThisEvent.EventType = ES_TAPE_DETECTED;
+    ThisEvent.EventParam = 3;
+    ES_PostAll(ThisEvent);
+    tapeDetected = true;
+  }
+  if (PIN_ReadDigitalPIC32Pin(TapeSensor4) == 0) {
+    ES_Event_t ThisEvent;
+    ThisEvent.EventType = ES_TAPE_DETECTED;
+    ThisEvent.EventParam = 4;
+    ES_PostAll(ThisEvent);
+    tapeDetected = true;
+  }
+  if (PIN_ReadDigitalPIC32Pin(TapeSensor5) == 0) {
+    ES_Event_t ThisEvent;
+    ThisEvent.EventType = ES_TAPE_DETECTED;
+    ThisEvent.EventParam = 5;
+    ES_PostAll(ThisEvent);
+    tapeDetected = true;
+  }
+  return tapeDetected;
 }

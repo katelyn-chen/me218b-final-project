@@ -47,13 +47,14 @@
 #define CMD_DELAY            100        // arbitrary delay amt, can change
 
 //SPI Pins
-#define TapeSensor1 SPI_RPB15
+#define TapeSensor1 SPI_RPB8 
 #define TapeSensor2 SPI_RPA1
-#define TapeSensor3  SPI_RPB8
-#define TapeSensor4 SPI_RPB12
-#define TapeSensor5 SPI_RPB13
-#define UltrasonicRight SPI_RPB2
-#define UltrasonicBack SPI_RPB3
+#define TapeSensor3  SPI_RPB2 
+#define TapeSensor4 SPI_RPB3 
+#define TapeSensor5 SPI_RPB15
+#define UltrasonicEcho SPI_RPB8
+#define UltrasonicTrigger SPI_RPB6 
+
 #define SDIPin SPI_RPB11
 #define SDOPin SPI_RPA4
 #define SCKPin SPI_RPB14
@@ -215,15 +216,13 @@ static uint8_t Leader_QueryByte(uint8_t outByte)
 
 static void InitPinHardware(void)
 {
-    PIN_MapAnalogInput(TapeSensor1); // AN15
-    PIN_MapAnalogInput(TapeSensor2); // AN1
-    PIN_MapAnalogInput(TapeSensor3); // AN0
-    PIN_MapAnalogInput(TapeSensor4); // AN12
-    PIN_MapAnalogInput(TapeSensor5); // AN11
-    PIN_MapAnalogInput(UltrasonicRight); // AN4
-    PIN_MapAnalogInput(UltrasonicBack); // AN5
-    ADC_ConfigAutoScan(BIT15HI | BIT1HI | BIT0HI | BIT12HI | BIT11HI | BIT4HI | BIT5HI);
-
+    PIN_MapPinInput(TapeSensor1);
+    PIN_MapPinInput(TapeSensor2);
+    PIN_MapPinInput(TapeSensor3);
+    PIN_MapPinInput(TapeSensor4);
+    PIN_MapPinInput(TapeSensor5);
+    PIN_MapPinInput(UltrasonicEcho);
+    PIN_MapPinOutput(UltrasonicTrigger);
 }
 
 /*======================= COMMAND -> EVENT MAP =======================*/
