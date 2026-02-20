@@ -29,10 +29,10 @@
 #define PBCLK_HZ              20000000u
 
 /* Timer3 prescale for capture timing */
-#define T3_PRESCALE_BITS      0b010   /* 1:4 */
+#define T3_PRESCALE_BITS      0b010u   /* 1:4 */
 #define T3_PRESCALE_VAL       4u
 
-/* Seesaw IR beacon frequencies (Hz) for ALL 4 beacons: GB, LR*/
+/* Seesaw IR beacon frequencies (Hz) */
 #define BEACON_G_HZ           3333u
 #define BEACON_B_HZ           1427u
 #define BEACON_R_HZ            909u
@@ -47,18 +47,18 @@
 /* require this many good cycles in a row before declaring found */
 #define BEACON_CONFIRM_COUNT   15u
 
-/* which ES timer to use if you want periodic debug (optional) */
+/* which ES timer to use if periodic debug is desired */
 #ifndef BEACON_DEBUG_TIMER
 #define BEACON_DEBUG_TIMER     2u
 #endif
 #define BEACON_DEBUG_MS        200u
 
 /* IC1 input select */
-#define IC1R_VALUE             0b0000 /* mapped to RA2 digital input on IC1 */
+#define IC1R_VALUE             0b0000u /* RA2 -> IC1 */
 
 /*
   Bucket mapping:
-    Update these two defines to match which physical bucket has which beacon.
+  Set these based on physical beacon tags on the two target buckets.
 */
 #define LEFT_BUCKET_BEACON_ID   BEACON_ID_L   /* 2000 Hz */
 #define RIGHT_BUCKET_BEACON_ID  BEACON_ID_R   /*  909 Hz */
@@ -66,14 +66,14 @@
 /*============================== STATE ==============================*/
 static uint8_t MyPriority;
 
-static volatile uint32_t LastCapture = 0;
-static volatile uint32_t PeriodTicks = 0;
-static volatile bool     NewPeriod = false;
-static volatile uint32_t RolloverCount = 0;
+static volatile uint32_t LastCapture   = 0u;
+static volatile uint32_t PeriodTicks   = 0u;
+static volatile bool     NewPeriod     = false;
+static volatile uint32_t RolloverCount = 0u;
 
-static uint8_t   GoodCount = 0;
+static uint8_t   GoodCount     = 0u;
 static bool      BeaconLatched = false;
-static BeaconId_t Candidate = BEACON_ID_NONE;
+static BeaconId_t Candidate    = BEACON_ID_NONE;
 
 /*====================== PRIVATE FUNCTION PROTOS =====================*/
 static void InitBeaconHardware(void);
@@ -88,7 +88,6 @@ bool InitBeaconService(uint8_t Priority)
 
   InitBeaconHardware();
 
-  /* optional debug timer */
   ES_Timer_InitTimer(BEACON_DEBUG_TIMER, BEACON_DEBUG_MS);
 
   DB_printf("BeaconService: init done\r\n");
@@ -106,7 +105,6 @@ ES_Event_t RunBeaconService(ES_Event_t ThisEvent)
 {
   ES_Event_t ReturnEvent = { ES_NO_EVENT, 0 };
 
-  /* main logic: if a new period measurement arrived, classify the frequency */
   if (ThisEvent.EventType == ES_BEACON_SIGNAL)
   {
     if (NewPeriod)
@@ -116,12 +114,11 @@ ES_Event_t RunBeaconService(ES_Event_t ThisEvent)
       if (PeriodTicks != 0u)
       {
         uint32_t f = ComputeFreqHz(PeriodTicks);
-
         BeaconId_t id = ClassifyBeacon(f);
 
         if (id != BEACON_ID_NONE)
         {
-          /* consistency check: same candidate repeatedly */
+          /* same candidate repeatedly -> count up, otherwise restart candidate */
           if (id == Candidate)
           {
             if (GoodCount < 255u) GoodCount++;
@@ -133,6 +130,7 @@ ES_Event_t RunBeaconService(ES_Event_t ThisEvent)
             BeaconLatched = false;
           }
 
+          /* latch once per candidate; resets automatically when candidate changes */
           if (!BeaconLatched && (GoodCount >= BEACON_CONFIRM_COUNT))
           {
             BeaconLatched = true;
@@ -149,7 +147,6 @@ ES_Event_t RunBeaconService(ES_Event_t ThisEvent)
         }
         else
         {
-          /* no beacon match -> reset */
           Candidate = BEACON_ID_NONE;
           GoodCount = 0u;
           BeaconLatched = false;
@@ -158,7 +155,6 @@ ES_Event_t RunBeaconService(ES_Event_t ThisEvent)
     }
   }
 
-  /* optional periodic debug print */
   if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == BEACON_DEBUG_TIMER))
   {
     if (PeriodTicks != 0u)
@@ -219,7 +215,6 @@ static void InitBeaconHardware(void)
 
 static uint32_t ComputeFreqHz(uint32_t periodTicks)
 {
-  /* ticks -> seconds: tickRate = PBCLK / prescale */
   uint32_t tickRate = (PBCLK_HZ / T3_PRESCALE_VAL);
   if (periodTicks == 0u) return 0u;
   return (tickRate / periodTicks);
@@ -228,7 +223,6 @@ static uint32_t ComputeFreqHz(uint32_t periodTicks)
 /*=========================== CLASSIFIER ============================*/
 static BeaconId_t ClassifyBeacon(uint32_t fHz)
 {
-  /* choose closest beacon within its tolerance */
   BeaconId_t best = BEACON_ID_NONE;
   uint32_t bestErr = 0xFFFFFFFFu;
 
@@ -239,7 +233,7 @@ static BeaconId_t ClassifyBeacon(uint32_t fHz)
     { BEACON_ID_L, BEACON_L_HZ, BEACON_L_TOL_HZ }
   };
 
-  for (unsigned i = 0; i < (sizeof(candidates)/sizeof(candidates[0])); i++)
+  for (unsigned i = 0u; i < (sizeof(candidates)/sizeof(candidates[0])); i++)
   {
     uint32_t target = candidates[i].f;
     uint32_t tol    = candidates[i].tol;
@@ -268,7 +262,7 @@ static BeaconSide_t ClassifySide(BeaconId_t id)
 /*============================== ISRs ==============================*/
 void __ISR(_INPUT_CAPTURE_1_VECTOR, IPL6SOFT) IC1Handler(void)
 {
-  uint32_t cap = IC1BUF; /* reading clears the buffer entry */
+  uint32_t cap = IC1BUF;
   IFS0CLR = _IFS0_IC1IF_MASK;
 
   if (IFS0bits.T3IF && (cap < 0x8000u))
@@ -281,7 +275,7 @@ void __ISR(_INPUT_CAPTURE_1_VECTOR, IPL6SOFT) IC1Handler(void)
   LastCapture = current;
 
   ES_Event_t ISR;
-  ISR.EventType = ES_BEACON_SIGNAL;
+  ISR.EventType  = ES_BEACON_SIGNAL;
   ISR.EventParam = 0;
 
   NewPeriod = true;
