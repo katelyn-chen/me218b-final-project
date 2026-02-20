@@ -10,6 +10,7 @@
 ****************************************************************************/
 #include "NavigateService.h"
 #include "SPIFollowerService.h"
+#include "BeaconService.h"
 
 #include <xc.h>
 #include <stdint.h>
@@ -37,7 +38,6 @@
 #define DUTY_SEARCH         30u
 
 /* rotate timing (ms) — will calibrate these on the floor */
-// placeholders for now
 #define ROTATE_45_TIME_MS   550u
 #define ROTATE_90_TIME_MS   1100u
 
@@ -49,6 +49,7 @@
 /*---------------------------- Module Types -------------------------------*/
 typedef enum {
   DEBUG,
+  INIT_ORIENT,
   WAITING_FOR_SIDE,
   FIRST_COLLECT,
   COLLECT_ALIGN,
@@ -62,27 +63,26 @@ typedef enum {
 } NavigateState_t;
 
 typedef enum {
-  IDLE,
-  ULTRASONIC_ALIGN,
-  BEACON_ALIGN,
-  SIDE_FOUND
+  ORIENT_IDLE,
+  ORIENT_ULTRASONIC_ALIGN,
+  ORIENT_BEACON_ALIGN,
+  ORIENT_DONE
 } InitOrientState_t;
 
 typedef enum {
-    LEFT,
-    RIGHT
-} RotateParam_t;
+  LEFT = 0,
+  RIGHT = 1
+} Side_t;
 
 typedef enum {
-    FIRST,
-    MIDDLE,
-    END
+  FIRST,
+  MIDDLE,
+  END
 } BucketParam_t;
 
-
 /*---------------------------- Module Variables --------------------------*/
-static uint8_t      MyPriority;
-static NavigateState_t curState;
+static uint8_t          MyPriority;
+static NavigateState_t  curState;
 static InitOrientState_t orientState;
 
 /*---------------------------- Private Functions --------------------------*/
@@ -91,159 +91,154 @@ static void InitTimer2ForPWM(void);
 static void InitOCsForPWM(void);
 
 static void StopMotors(void);
-static void SetMotor1(int16_t dutySignedPercent); /* RA1/RB9 */
-static void SetMotor2(int16_t dutySignedPercent); /* RB3/RB2 */
+static void SetMotor1(int16_t dutySignedPercent); /* left motor */
+static void SetMotor2(int16_t dutySignedPercent); /* right motor */
 
 static uint16_t DutyPercentToOCrs(uint16_t dutyPercent);
 
 static void DoRotate(uint16_t rotateParam);
-static void StartRotateTimer(uint16_t rotateParam);
 static void DoTranslate(uint16_t translateParam);
 static void StartTapeDetect(void);
 static void StartBeaconAlignSearch(void);
+static void StartUltrasonicAlignSearch(void);
 
 /*------------------------------ Module Code ------------------------------*/
 
-/****************************************************************************
- Function
-     InitNavigateService
-
- Parameters
-     uint8_t : the priorty of this service
-
- Returns
-     bool, false if error in initialization, true otherwise
-
- Description
-     Saves away the priority, and does any
-     other required initialization for this service
-****************************************************************************/
 bool InitNavigateService(uint8_t Priority)
 {
   ES_Event_t ThisEvent;
   MyPriority = Priority;
-  
+
   InitPinsAndPPS();
   InitTimer2ForPWM();
   InitOCsForPWM();
+
   curState = DEBUG;
-  orientState = IDLE;
-  
+  orientState = ORIENT_IDLE;
+
   DB_printf("Navigate Service: init done\r\n");
 
-    if (ES_PostToService(MyPriority, ThisEvent) == true)
-  {
-    return true;
-  }
-  else
-  {
-    return false;
-  }
+  ThisEvent.EventType = ES_INIT;
+  ThisEvent.EventParam = 0;
+
+  return ES_PostToService(MyPriority, ThisEvent);
 }
 
-/****************************************************************************
- Function
-    PostNavigateService
-
- Parameters
-     EF_Event_t ThisEvent, the event to post to the queue
-
- Returns
-     bool false if the Enqueue operation failed, true otherwise
-
- Description
-     Posts an event to this state machine's queue
-****************************************************************************/
 bool PostNavigateService(ES_Event_t ThisEvent)
 {
   return ES_PostToService(MyPriority, ThisEvent);
 }
 
-/****************************************************************************
- Function
-    RunNavigateService
-****************************************************************************/
-
 ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
 {
   ES_Event_t ReturnEvent;
   ReturnEvent.EventType = ES_NO_EVENT;
+  ReturnEvent.EventParam = 0;
 
-  if (ThisEvent.EventType == ES_END_GAME) {
+  if (ThisEvent.EventType == ES_END_GAME)
+  {
     DB_printf("Stopping Motors\r\n");
     StopMotors();
+    return ReturnEvent;
   }
 
-  switch (curState) {
+  switch (curState)
+  {
+    case DEBUG:
+    {
+      if (ThisEvent.EventType == ES_TRANSLATE)
+      {
+        DB_printf("Do Translate!\r\n");
+        DoTranslate(ThisEvent.EventParam);
+      }
+      else if (ThisEvent.EventType == ES_ROTATE)
+      {
+        DB_printf("Do Rotate!\r\n");
+        DoRotate(ThisEvent.EventParam);
+      }
+      else if (ThisEvent.EventType == ES_TAPE_DETECT)
+      {
+        DB_printf("Start Tape Detect\r\n");
+        StartTapeDetect();
+      }
+      else if (ThisEvent.EventType == ES_ALIGN_ULTRASONICS)
+      {
+        DB_printf("Starting INIT_ORIENT\r\n");
+        curState = INIT_ORIENT;
+        orientState = ORIENT_ULTRASONIC_ALIGN;
+        StartUltrasonicAlignSearch();
+      }
+      break;
+    }
 
-      case DEBUG:
-          //DB_printf("Debug Case for nav service\r\n");
-          if (ThisEvent.EventType == ES_TRANSLATE) {
-            DB_printf("Do Translate!\r\n");
-            DoTranslate(ThisEvent.EventParam);
+    case INIT_ORIENT:
+    {
+      switch (orientState)
+      {
+        case ORIENT_IDLE:
+        {
+          if (ThisEvent.EventType == ES_ALIGN_ULTRASONICS)
+          {
+            orientState = ORIENT_ULTRASONIC_ALIGN;
+            StartUltrasonicAlignSearch();
           }
-          if (ThisEvent.EventType == ES_BEACON_SIGNAL) {
-            PostBeaconService(ThisEvent);
-            DB_printf("Posting to beacon service!\r\n");
-          }
-          if (ThisEvent.EventType == ES_BEACON_FOUND) {
-              DB_printf("Nav service received beacon signal from beacon service!\r\n");
-          }
-        break;
-      
-      case INIT_ORIENT:
-          /* this is the initial orientation process, moved over from the init SM
-          that was in our original plan since it seems to make more sense here.
-          could potentially make this its own service later down the line to 
-          reduce clutter */
+          break;
+        }
 
-          switch (orientState) {
-            case IDLE:
-              // starts in idle until it is told to begin ultrasonics alignment search
-              if (ThisEvent.EventType == ES_ALIGN_ULTRASONICS) {
-                // start init orientation process
-                orientState = ULTRASONIC_ALIGN;
-              }
-              break;
+        case ORIENT_ULTRASONIC_ALIGN:
+        {
+          /* rotates until both ultrasonics are active */
+          if (ThisEvent.EventType == ES_BOTH_ULTRASONIC_ACTIVE)
+          {
+            DB_printf("Both ultrasonics found! Starting beacon search\r\n");
+            StopMotors();
+            orientState = ORIENT_BEACON_ALIGN;
+            StartBeaconAlignSearch();
+          }
+          break;
+        }
 
-            case ULTRASONIC_ALIGN {
-              // turning until both ultrasonics are active
-              StartUltrasonicAlignSearch();
-              if (ThisEvent.EventType == ES_BOTH_ULTRASONIC_ACTIVE) {
-                DB_printf("Both ultrasonics found! Starting beacon seach now\r\n");
-                StopMotors();
-                orientState = BEACON_ALIGN;
-              }
-              break;
+        case ORIENT_BEACON_ALIGN:
+        {
+          /* waits for BeaconService to post ES_BEACON_FOUND */
+          if (ThisEvent.EventType == ES_BEACON_FOUND)
+          {
+            BeaconId_t id;
+            BeaconSide_t side;
+            UnpackBeaconParam((uint16_t)ThisEvent.EventParam, &id, &side);
+
+            DB_printf("Beacon event: id=%u side=%u\r\n", (unsigned)id, (unsigned)side);
+
+            if (side == BEACON_SIDE_LEFT || side == BEACON_SIDE_RIGHT)
+            {
+              StopMotors();
+
+              ES_Event_t SideEvent;
+              SideEvent.EventType = ES_SIDE_INDICATED;
+              SideEvent.EventParam = (side == BEACON_SIDE_LEFT) ? LEFT : RIGHT;
+
+              PostSPIFollowerService(SideEvent);
+
+              DB_printf("Side determined! side=%u\r\n", (unsigned)SideEvent.EventParam);
+
+              orientState = ORIENT_DONE;
+              curState = FIRST_COLLECT;
             }
-
-            case BEACON_ALIGN {
-              // determine which side of the board bot is on
-              StartBeaconAlignSearch(void); // turn CC slowly
-              if (ThisEvent.EventType == ES_BEACON_DETECTED) {
-                uint8_t side = ThisEvent.EventParam;
-
-                // post to follower spi service so it can tell leader that side has been found
-                if (side == LEFT || side == RIGHT) {
-                  StopMotors();
-                  ES_Event_t SideEvent;
-                  SideEvent.EventType = ES_SIDE_INDICATED;
-                  SideEvent.EventParam = side;
-                  PostSPIFollowerService(SideEvent);
-                  DB_printf("Side determined! Bot is in %d arena\r\n", side);
-                  curState = FIRST_COLLECT;
-                } else {
-                  DB_printf("Invalid freq detected. Will keep searching\r\n");
-                }
-              }
-            break;
-            }
           }
+          break;
+        }
+
+        case ORIENT_DONE:
+        default:
+          break;
+      }
+      break;
+    }
 
     case FIRST_COLLECT:
-
-      if (ThisEvent.EventType == ES_T_DETECTED) {
-
+    {
+      if (ThisEvent.EventType == ES_T_DETECTED)
+      {
         ES_Event_t AlignEvent;
         AlignEvent.EventType = ES_ALIGN_COLLECT;
         AlignEvent.EventParam = FIRST;
@@ -252,100 +247,84 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         curState = COLLECT_ALIGN;
       }
       break;
-
+    }
 
     case COLLECT_ALIGN:
-
-      if (ThisEvent.EventType == ES_ALIGN_COLLECT) {
-        //StartCollectSM(ThisEvent.EventParam);
-      }
-
-      if (ThisEvent.EventType == ES_FIND_BUCKET) {
-
-        if (ThisEvent.EventParam == FIRST) {
-          curState = FIRST_DISPENSE;
-        }
-        else if (ThisEvent.EventParam == MIDDLE) {
-          curState = INIT_FIND_MIDDLE;
-        }
-        else if (ThisEvent.EventParam == END) {
-          curState = INIT_FIND_END;
-        }
+    {
+      if (ThisEvent.EventType == ES_FIND_BUCKET)
+      {
+        if (ThisEvent.EventParam == FIRST)      curState = FIRST_DISPENSE;
+        else if (ThisEvent.EventParam == MIDDLE) curState = INIT_FIND_MIDDLE;
+        else if (ThisEvent.EventParam == END)    curState = INIT_FIND_END;
       }
       break;
-
+    }
 
     case FIRST_DISPENSE:
-
-      if (ThisEvent.EventType == ES_DISPENSE) {
-        //StartDispenseSM(FULL);
-      }
-
-      if (ThisEvent.EventType == ES_DISPENSE_COMPLETE) {
+    {
+      if (ThisEvent.EventType == ES_DISPENSE_COMPLETE)
+      {
         curState = INIT_FIND_MIDDLE;
       }
       break;
-
+    }
 
     case INIT_FIND_MIDDLE:
-
-      if (ThisEvent.EventType == ES_T_DETECTED) {
+    {
+      if (ThisEvent.EventType == ES_T_DETECTED)
+      {
         curState = ALIGN_MID_BUCKET;
       }
       break;
-
+    }
 
     case ALIGN_MID_BUCKET:
-
-      if (ThisEvent.EventType == ES_DISPENSE) {
-        //StartDispenseSM(SPLIT1);
-      }
-
-      if (ThisEvent.EventType == ES_DISPENSE_COMPLETE) {
+    {
+      if (ThisEvent.EventType == ES_DISPENSE_COMPLETE)
+      {
         curState = INIT_FIND_END;
       }
       break;
-
+    }
 
     case INIT_FIND_END:
-
-      if (ThisEvent.EventType == ES_T_DETECTED) {
+    {
+      if (ThisEvent.EventType == ES_T_DETECTED)
+      {
         curState = ALIGN_END_BUCKET;
       }
       break;
-
+    }
 
     case ALIGN_END_BUCKET:
-
-      if (ThisEvent.EventType == ES_DISPENSE) {
-        //StartDispenseSM(SPLIT2);
-      }
-
-      if (ThisEvent.EventType == ES_DISPENSE_COMPLETE) {
+    {
+      if (ThisEvent.EventType == ES_DISPENSE_COMPLETE)
+      {
         curState = INIT_REPEAT_COLLECT;
       }
       break;
-
+    }
 
     case INIT_REPEAT_COLLECT:
-
-      if (ThisEvent.EventType == ES_T_DETECTED) {
+    {
+      if (ThisEvent.EventType == ES_T_DETECTED)
+      {
         curState = FIND_COLLECT;
       }
       break;
-
+    }
 
     case FIND_COLLECT:
-
-      if (ThisEvent.EventType == ES_T_DETECTED) {
-
-        ES_Event_t AlignEvent;
-        AlignEvent.EventType = ES_ALIGN_COLLECT;
-        //AlignEvent.EventParam = OTHER;
-        //PostNavigateService(AlignEvent);
-
+    {
+      if (ThisEvent.EventType == ES_T_DETECTED)
+      {
         curState = COLLECT_ALIGN;
       }
+      break;
+    }
+
+    case WAITING_FOR_SIDE:
+    default:
       break;
   }
 
@@ -356,18 +335,17 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
 static void InitPinsAndPPS(void)
 {
   /* motor pins as digital outputs */
-  TRISAbits.TRISA4 = 0;  ANSELAbits.ANSA4 = 0; // left motor direction, OC4
-  TRISBbits.TRISB5 = 0;  ANSELBbits.ANSB5 = 0; // right motor PWM, OC2
-  TRISBbits.TRISB7 = 0;  ANSELBbits.ANSB7 = 0; // left motor PWM, OC1
-  TRISBbits.TRISB9 = 0;  ANSELBbits.ANSB9 = 0; // right motor direction, OC3
-  
-  TRISBbits.TRISB4 = 0; LATBbits.LATB4 = 0; // LED align
-  
+  TRISAbits.TRISA1 = 0;  ANSELAbits.ANSA1 = 0;
+  TRISBbits.TRISB3 = 0;  ANSELBbits.ANSB3 = 0;
+  TRISBbits.TRISB2 = 0;  ANSELBbits.ANSB2 = 0;
+
+  TRISBbits.TRISB4 = 0; LATBbits.LATB4 = 0; /* LED align */
+
   #define PPS_FN_PWM 0b0101
-  RPA4Rbits.RPA4R = PPS_FN_PWM;
-  RPB5Rbits.RPB5R = PPS_FN_PWM;
-  RPB7Rbits.RPB7R = PPS_FN_PWM;
+  RPA1Rbits.RPA1R = PPS_FN_PWM;
   RPB9Rbits.RPB9R = PPS_FN_PWM;
+  RPB3Rbits.RPB3R = PPS_FN_PWM;
+  RPB2Rbits.RPB2R = PPS_FN_PWM;
 }
 
 static void InitTimer2ForPWM(void)
@@ -398,16 +376,14 @@ static uint16_t DutyPercentToOCrs(uint16_t dutyPercent)
 
 static void StopMotors(void)
 {
-  OC2RS = 0; /* Motor1 IN1, RB5 */
-  OC3RS = 0; /* Motor1 IN2, RB9 */
-  OC1RS = 0; /* Motor2 IN3, RB7 */
-  OC4RS = 0; /* Motor2 IN4, RA4 */
+  OC2RS = 0;
+  OC3RS = 0;
+  OC1RS = 0;
+  OC4RS = 0;
 }
 
-/* Motor1 uses RB5(OC2)=IN1 and RB9(OC3)=IN2 */
-static void SetMotor1(int16_t dutySignedPercent) // left
+static void SetMotor1(int16_t dutySignedPercent)
 {
-    DB_printf("Motor1 set %d\n", dutySignedPercent);
   uint16_t mag = (dutySignedPercent < 0) ? (uint16_t)(-dutySignedPercent) : (uint16_t)dutySignedPercent;
   uint16_t ocrs = DutyPercentToOCrs(mag);
 
@@ -428,10 +404,8 @@ static void SetMotor1(int16_t dutySignedPercent) // left
   }
 }
 
-/* Motor2 uses RB7(OC1)=IN3 and RA4(OC4)=IN4 */
-static void SetMotor2(int16_t dutySignedPercent) // right
+static void SetMotor2(int16_t dutySignedPercent)
 {
-  DB_printf("Motor2 set, %d\n", dutySignedPercent);
   uint16_t mag = (dutySignedPercent < 0) ? (uint16_t)(-dutySignedPercent) : (uint16_t)dutySignedPercent;
   uint16_t ocrs = DutyPercentToOCrs(mag);
 
@@ -453,14 +427,15 @@ static void SetMotor2(int16_t dutySignedPercent) // right
 }
 
 /*=========================== MOTION PRIMITIVES ============================*/
-
 static void DoTranslate(uint16_t translateParam)
 {
   TransSpeed_t spd;
   TransDir_t dir;
   UnpackTranslateParam(translateParam, &spd, &dir);
+
   uint16_t duty = (spd == TRANS_FULL) ? DUTY_TRANS_FULL : DUTY_TRANS_HALF;
   int16_t signedDuty = (dir == DIR_FWD) ? (int16_t)duty : -(int16_t)duty;
+
   SetMotor1(signedDuty);
   SetMotor2(signedDuty);
 }
@@ -484,42 +459,20 @@ static void DoRotate(uint16_t rotateParam)
   }
 }
 
-static void StartRotateTimer(uint16_t rotateParam)
-{
-  RotAngle_t ang;
-  RotDir_t dir;
-  UnpackRotateParam(rotateParam, &ang, &dir);
-  (void)dir;
-
-  if (ang == ROT_45)
-  {
-    ES_Timer_InitTimer(ROTATE_TIMER, ROTATE_45_TIME_MS);
-  }
-  else
-  {
-    ES_Timer_InitTimer(ROTATE_TIMER, ROTATE_90_TIME_MS);
-  }
-}
-
 static void StartTapeDetect(void)
 {
-  /* just move forward until ReflectiveSense posts ES_TAPE_FOUND */
   SetMotor1((int16_t)DUTY_TRANS_HALF);
   SetMotor2((int16_t)DUTY_TRANS_HALF);
 }
 
 static void StartBeaconAlignSearch(void)
 {
-  /* slow rotate until BeaconService posts ES_BEACON_FOUND */
   SetMotor1((int16_t)DUTY_SEARCH);
   SetMotor2(-(int16_t)DUTY_SEARCH);
-  //DB_printf("rotating");
 }
 
 static void StartUltrasonicAlignSearch(void)
 {
-  /* slow rotate until both ultrasonics read as active */
   SetMotor1((int16_t)DUTY_SEARCH);
   SetMotor2(-(int16_t)DUTY_SEARCH);
-  //DB_printf("rotating");
 }
