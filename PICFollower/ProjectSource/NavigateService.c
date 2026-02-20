@@ -37,15 +37,6 @@
 #define DUTY_ROTATE         45u
 #define DUTY_SEARCH         30u
 
-/* rotate timing (ms) — will calibrate these on the floor */
-#define ROTATE_45_TIME_MS   550u
-#define ROTATE_90_TIME_MS   1100u
-
-/* match with ES timer ID in ES_Configure.h */
-#ifndef ROTATE_TIMER
-#define ROTATE_TIMER MOTOR_TIMER
-#endif
-
 /*---------------------------- Module Types -------------------------------*/
 typedef enum {
   DEBUG,
@@ -64,26 +55,30 @@ typedef enum {
 
 typedef enum {
   ORIENT_IDLE,
-  ORIENT_ULTRASONIC_ALIGN,
-  ORIENT_BEACON_ALIGN,
+  ORIENT_BEACON_SWEEP,
   ORIENT_DONE
 } InitOrientState_t;
 
+/*
+  Field identification:
+    FIELD_GREEN means beacons appear CCW in the BLRG cycle (with rotation offset).
+    FIELD_BLUE  means beacons appear CCW in the GRLB cycle (with rotation offset).
+*/
 typedef enum {
-  LEFT = 0,
-  RIGHT = 1
-} Side_t;
-
-typedef enum {
-  FIRST,
-  MIDDLE,
-  END
-} BucketParam_t;
+  FIELD_UNKNOWN = 0,
+  FIELD_GREEN   = 1,
+  FIELD_BLUE    = 2
+} Field_t;
 
 /*---------------------------- Module Variables --------------------------*/
-static uint8_t          MyPriority;
-static NavigateState_t  curState;
+static uint8_t           MyPriority;
+static NavigateState_t   curState;
 static InitOrientState_t orientState;
+
+/* beacon sweep history (store unique transitions only) */
+#define BEACON_SEQ_MAX 8u
+static BeaconId_t Seq[BEACON_SEQ_MAX];
+static uint8_t SeqLen = 0u;
 
 /*---------------------------- Private Functions --------------------------*/
 static void InitPinsAndPPS(void);
@@ -100,7 +95,10 @@ static void DoRotate(uint16_t rotateParam);
 static void DoTranslate(uint16_t translateParam);
 static void StartTapeDetect(void);
 static void StartBeaconAlignSearch(void);
-static void StartUltrasonicAlignSearch(void);
+
+static void ResetBeaconSequence(void);
+static bool PushBeaconIfNew(BeaconId_t id);
+static Field_t DetermineFieldFromSequence(void);
 
 /*------------------------------ Module Code ------------------------------*/
 
@@ -115,10 +113,11 @@ bool InitNavigateService(uint8_t Priority)
 
   curState = DEBUG;
   orientState = ORIENT_IDLE;
+  ResetBeaconSequence();
 
   DB_printf("Navigate Service: init done\r\n");
 
-  ThisEvent.EventType = ES_INIT;
+  ThisEvent.EventType  = ES_INIT;
   ThisEvent.EventParam = 0;
 
   return ES_PostToService(MyPriority, ThisEvent);
@@ -132,7 +131,7 @@ bool PostNavigateService(ES_Event_t ThisEvent)
 ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
 {
   ES_Event_t ReturnEvent;
-  ReturnEvent.EventType = ES_NO_EVENT;
+  ReturnEvent.EventType  = ES_NO_EVENT;
   ReturnEvent.EventParam = 0;
 
   if (ThisEvent.EventType == ES_END_GAME)
@@ -163,10 +162,17 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
       }
       else if (ThisEvent.EventType == ES_ALIGN_ULTRASONICS)
       {
-        DB_printf("Starting INIT_ORIENT\r\n");
+        /*
+          Reusing ES_ALIGN_ULTRASONICS as the “begin initial orientation” trigger.
+          Initial orientation is now beacon-only: rotate CCW and classify field
+          based on the beacon order.
+        */
+        DB_printf("Starting INIT_ORIENT (beacon sweep)\r\n");
         curState = INIT_ORIENT;
-        orientState = ORIENT_ULTRASONIC_ALIGN;
-        StartUltrasonicAlignSearch();
+        orientState = ORIENT_BEACON_SWEEP;
+
+        ResetBeaconSequence();
+        StartBeaconAlignSearch();
       }
       break;
     }
@@ -179,50 +185,47 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         {
           if (ThisEvent.EventType == ES_ALIGN_ULTRASONICS)
           {
-            orientState = ORIENT_ULTRASONIC_ALIGN;
-            StartUltrasonicAlignSearch();
-          }
-          break;
-        }
-
-        case ORIENT_ULTRASONIC_ALIGN:
-        {
-          /* rotates until both ultrasonics are active */
-          if (ThisEvent.EventType == ES_BOTH_ULTRASONIC_ACTIVE)
-          {
-            DB_printf("Both ultrasonics found! Starting beacon search\r\n");
-            StopMotors();
-            orientState = ORIENT_BEACON_ALIGN;
+            orientState = ORIENT_BEACON_SWEEP;
+            ResetBeaconSequence();
             StartBeaconAlignSearch();
           }
           break;
         }
 
-        case ORIENT_BEACON_ALIGN:
+        case ORIENT_BEACON_SWEEP:
         {
-          /* waits for BeaconService to post ES_BEACON_FOUND */
           if (ThisEvent.EventType == ES_BEACON_FOUND)
           {
             BeaconId_t id;
             BeaconSide_t side;
             UnpackBeaconParam((uint16_t)ThisEvent.EventParam, &id, &side);
+            (void)side;
 
-            DB_printf("Beacon event: id=%u side=%u\r\n", (unsigned)id, (unsigned)side);
-
-            if (side == BEACON_SIDE_LEFT || side == BEACON_SIDE_RIGHT)
+            if (id != BEACON_ID_NONE)
             {
-              StopMotors();
+              bool pushed = PushBeaconIfNew(id);
+              if (pushed)
+              {
+                DB_printf("Beacon seq add: id=%u (len=%u)\r\n",
+                          (unsigned)id, (unsigned)SeqLen);
 
-              ES_Event_t SideEvent;
-              SideEvent.EventType = ES_SIDE_INDICATED;
-              SideEvent.EventParam = (side == BEACON_SIDE_LEFT) ? LEFT : RIGHT;
+                Field_t field = DetermineFieldFromSequence();
+                if (field != FIELD_UNKNOWN)
+                {
+                  StopMotors();
 
-              PostSPIFollowerService(SideEvent);
+                  ES_Event_t SideEvent;
+                  SideEvent.EventType = ES_SIDE_INDICATED;
+                  SideEvent.EventParam = (field == FIELD_GREEN) ? 0u : 1u; /* 0=GREEN, 1=BLUE */
 
-              DB_printf("Side determined! side=%u\r\n", (unsigned)SideEvent.EventParam);
+                  PostSPIFollowerService(SideEvent);
 
-              orientState = ORIENT_DONE;
-              curState = FIRST_COLLECT;
+                  DB_printf("Field determined: %u\r\n", (unsigned)field);
+
+                  orientState = ORIENT_DONE;
+                  curState = FIRST_COLLECT;
+                }
+              }
             }
           }
           break;
@@ -240,7 +243,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
       if (ThisEvent.EventType == ES_T_DETECTED)
       {
         ES_Event_t AlignEvent;
-        AlignEvent.EventType = ES_ALIGN_COLLECT;
+        AlignEvent.EventType  = ES_ALIGN_COLLECT;
         AlignEvent.EventParam = FIRST;
         PostNavigateService(AlignEvent);
 
@@ -253,7 +256,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
     {
       if (ThisEvent.EventType == ES_FIND_BUCKET)
       {
-        if (ThisEvent.EventParam == FIRST)      curState = FIRST_DISPENSE;
+        if (ThisEvent.EventParam == FIRST)       curState = FIRST_DISPENSE;
         else if (ThisEvent.EventParam == MIDDLE) curState = INIT_FIND_MIDDLE;
         else if (ThisEvent.EventParam == END)    curState = INIT_FIND_END;
       }
@@ -334,7 +337,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
 /*=========================== INIT HELPERS ============================*/
 static void InitPinsAndPPS(void)
 {
-  /* motor pins as digital outputs */
+  /* motor pins as digital outputs (update these mappings if motor wiring changes) */
   TRISAbits.TRISA1 = 0;  ANSELAbits.ANSA1 = 0;
   TRISBbits.TRISB3 = 0;  ANSELBbits.ANSB3 = 0;
   TRISBbits.TRISB2 = 0;  ANSELBbits.ANSB2 = 0;
@@ -467,12 +470,82 @@ static void StartTapeDetect(void)
 
 static void StartBeaconAlignSearch(void)
 {
+  /* CCW in-place sweep to collect beacon ordering */
   SetMotor1((int16_t)DUTY_SEARCH);
   SetMotor2(-(int16_t)DUTY_SEARCH);
 }
 
-static void StartUltrasonicAlignSearch(void)
+/*=========================== BEACON ORDER LOGIC ============================*/
+static void ResetBeaconSequence(void)
 {
-  SetMotor1((int16_t)DUTY_SEARCH);
-  SetMotor2(-(int16_t)DUTY_SEARCH);
+  for (uint8_t i = 0u; i < BEACON_SEQ_MAX; i++) Seq[i] = BEACON_ID_NONE;
+  SeqLen = 0u;
+}
+
+static bool PushBeaconIfNew(BeaconId_t id)
+{
+  if (SeqLen > 0u)
+  {
+    if (Seq[SeqLen - 1u] == id) return false;
+  }
+
+  if (SeqLen < BEACON_SEQ_MAX)
+  {
+    Seq[SeqLen++] = id;
+  }
+  else
+  {
+    /* shift left and append */
+    for (uint8_t i = 1u; i < BEACON_SEQ_MAX; i++) Seq[i - 1u] = Seq[i];
+    Seq[BEACON_SEQ_MAX - 1u] = id;
+  }
+  return true;
+}
+
+static bool MatchCycle(const BeaconId_t *cycle4, const BeaconId_t *obs, uint8_t nObs)
+{
+  /* allow any rotation offset of the 4-cycle */
+  for (uint8_t offset = 0u; offset < 4u; offset++)
+  {
+    bool ok = true;
+    for (uint8_t k = 0u; k < nObs; k++)
+    {
+      BeaconId_t expect = cycle4[(offset + k) & 0x03u];
+      if (obs[k] != expect)
+      {
+        ok = false;
+        break;
+      }
+    }
+    if (ok) return true;
+  }
+  return false;
+}
+
+static Field_t DetermineFieldFromSequence(void)
+{
+  /*
+    Green field CCW cycle: B L R G
+    Blue  field CCW cycle: G R L B
+
+    Require 5 unique transitions before deciding to reduce false positives.
+  */
+  if (SeqLen < 5u) return FIELD_UNKNOWN;
+
+  BeaconId_t last5[5];
+  for (uint8_t i = 0u; i < 5u; i++)
+  {
+    last5[i] = Seq[SeqLen - 5u + i];
+  }
+
+  const BeaconId_t greenCycle[4] = { BEACON_ID_B, BEACON_ID_L, BEACON_ID_R, BEACON_ID_G };
+  const BeaconId_t blueCycle[4]  = { BEACON_ID_G, BEACON_ID_R, BEACON_ID_L, BEACON_ID_B };
+
+  bool greenOK = MatchCycle(greenCycle, last5, 5u);
+  bool blueOK  = MatchCycle(blueCycle,  last5, 5u);
+
+  if (greenOK && !blueOK) return FIELD_GREEN;
+  if (blueOK  && !greenOK) return FIELD_BLUE;
+
+  return FIELD_UNKNOWN;
 }
