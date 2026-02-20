@@ -528,7 +528,8 @@ static Field_t DetermineFieldFromSequence(void)
     Green field CCW cycle: B L R G
     Blue  field CCW cycle: G R L B
 
-    Require 5 unique transitions before deciding to reduce false positives.
+    Require 5 unique transitions before deciding to reduce false positives? 
+    We should probably test in field and change the logic to whatever works best.
   */
   if (SeqLen < 5u) return FIELD_UNKNOWN;
 
