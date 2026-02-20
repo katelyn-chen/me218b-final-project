@@ -46,6 +46,20 @@
 #define SPI_CLK_PERIOD_NS    50000u
 #define CMD_DELAY            100        // arbitrary delay amt, can change
 
+//SPI Pins
+#define TapeSensor1 SPI_RPB15
+#define TapeSensor2 SPI_RPA1
+#define TapeSensor3  SPI_RPB8
+#define TapeSensor4 SPI_RPB12
+#define TapeSensor5 SPI_RPB13
+#define UltrasonicRight SPI_RPB2
+#define UltrasonicBack SPI_RPB3
+#define SDIPin SPI_RPB11
+#define SDOPin SPI_RPA4
+#define SCKPin SPI_RPB14
+#define SSPin SPI_RPB4
+
+
 /* ---------------- Command Generator bytes (Appendix A) ----------------
    keeping these here so SPIService.c is self-contained.
 ----------------------------------------------------------------------- */
@@ -171,9 +185,9 @@ static void InitSPIHardware(void)
   //TRISAbits.TRISRA3 = 0;  // SDO to output
 
    /* map data pins */
-  SPISetup_MapSDOutput(CG_SPI_MODULE, SPI_RPA4);
-  SPISetup_MapSDInput(CG_SPI_MODULE,  SPI_RPB8); // was RPA0, needs to be RPB8
-  SPISetup_MapSSInput(CG_SPI_MODULE, SPI_RPB15);
+  SPISetup_MapSDOutput(CG_SPI_MODULE, SDOPin);
+  SPISetup_MapSDInput(CG_SPI_MODULE,  SDIPin);
+  SPISetup_MapSSInput(CG_SPI_MODULE, SSPin);
 
   /* clock mode settings */
   SPISetup_SetClockIdleState(CG_SPI_MODULE, SPI_CLK_HI);    // CKP = 1
@@ -197,6 +211,19 @@ static uint8_t Leader_QueryByte(uint8_t outByte)
 {
   /* send one byte and read back the received byte */
   return (uint8_t)SPIOperate_ReadData(CG_SPI_MODULE);
+}
+
+static void InitPinHardware(void)
+{
+    PIN_MapAnalogInput(TapeSensor1); // AN15
+    PIN_MapAnalogInput(TapeSensor2); // AN1
+    PIN_MapAnalogInput(TapeSensor3); // AN0
+    PIN_MapAnalogInput(TapeSensor4); // AN12
+    PIN_MapAnalogInput(TapeSensor5); // AN11
+    PIN_MapAnalogInput(UltrasonicRight); // AN4
+    PIN_MapAnalogInput(UltrasonicBack); // AN5
+    ADC_ConfigAutoScan(BIT15HI | BIT1HI | BIT0HI | BIT12HI | BIT11HI | BIT4HI | BIT5HI);
+
 }
 
 /*======================= COMMAND -> EVENT MAP =======================*/

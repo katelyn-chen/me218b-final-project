@@ -356,17 +356,18 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
 static void InitPinsAndPPS(void)
 {
   /* motor pins as digital outputs */
-  TRISAbits.TRISA1 = 0;  ANSELAbits.ANSA1 = 0;
-  TRISBbits.TRISB3 = 0;  ANSELBbits.ANSB3 = 0;
-  TRISBbits.TRISB2 = 0;  ANSELBbits.ANSB2 = 0;
+  TRISAbits.TRISA4 = 0;  ANSELAbits.ANSA4 = 0; // left motor direction, OC4
+  TRISBbits.TRISB5 = 0;  ANSELBbits.ANSB5 = 0; // right motor PWM, OC2
+  TRISBbits.TRISB7 = 0;  ANSELBbits.ANSB7 = 0; // left motor PWM, OC1
+  TRISBbits.TRISB9 = 0;  ANSELBbits.ANSB9 = 0; // right motor direction, OC3
   
   TRISBbits.TRISB4 = 0; LATBbits.LATB4 = 0; // LED align
   
   #define PPS_FN_PWM 0b0101
-  RPA1Rbits.RPA1R = PPS_FN_PWM;
+  RPA4Rbits.RPA4R = PPS_FN_PWM;
+  RPB5Rbits.RPB5R = PPS_FN_PWM;
+  RPB7Rbits.RPB7R = PPS_FN_PWM;
   RPB9Rbits.RPB9R = PPS_FN_PWM;
-  RPB3Rbits.RPB3R = PPS_FN_PWM;
-  RPB2Rbits.RPB2R = PPS_FN_PWM;
 }
 
 static void InitTimer2ForPWM(void)
@@ -397,13 +398,13 @@ static uint16_t DutyPercentToOCrs(uint16_t dutyPercent)
 
 static void StopMotors(void)
 {
-  OC2RS = 0; /* Motor1 IN1, RA1 */
+  OC2RS = 0; /* Motor1 IN1, RB5 */
   OC3RS = 0; /* Motor1 IN2, RB9 */
-  OC1RS = 0; /* Motor2 IN3, RB3 */
-  OC4RS = 0; /* Motor2 IN4, RB2 */
+  OC1RS = 0; /* Motor2 IN3, RB7 */
+  OC4RS = 0; /* Motor2 IN4, RA4 */
 }
 
-/* Motor1 uses RA1(OC2)=IN1 and RB9(OC3)=IN2 */
+/* Motor1 uses RB5(OC2)=IN1 and RB9(OC3)=IN2 */
 static void SetMotor1(int16_t dutySignedPercent) // left
 {
     DB_printf("Motor1 set %d\n", dutySignedPercent);
@@ -427,7 +428,7 @@ static void SetMotor1(int16_t dutySignedPercent) // left
   }
 }
 
-/* Motor2 uses RB3(OC1)=IN3 and RB2(OC4)=IN4 */
+/* Motor2 uses RB7(OC1)=IN3 and RA4(OC4)=IN4 */
 static void SetMotor2(int16_t dutySignedPercent) // right
 {
   DB_printf("Motor2 set, %d\n", dutySignedPercent);

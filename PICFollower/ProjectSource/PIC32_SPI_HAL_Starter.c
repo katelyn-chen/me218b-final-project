@@ -885,14 +885,14 @@ bool PIN_MapAnalogInput(SPI_PinMap_t WhichPin)
   *setTRISRegisters[WhichPin] = mapPinMap2BitPosn[WhichPin];
   //Make pin ANALOG by setting ANSEL to 1
   *setANSELRegisters[WhichPin] = mapPinMap2BitPosn[WhichPin];
-  ADC_ConfigAutoScan(mapPinMap2BitPosn[WhichPin]); 
   return true;
 }
 
 uint16_t PIN_ReadAnalogPIC32Pin(SPI_PinMap_t WhichPin)
 {
- uint32_t AnalogValue[1];
- ADC_MultiRead(AnalogValue);
+  uint32_t AnalogValues[16];
+  ADC_MultiRead(AnalogValues);
+  
  
 
 }

@@ -42,6 +42,8 @@
 #include "PIC32_AD_Lib.h"
 #include "PIC32_SPI_HAL.h"
 
+static uint32_t AnalogValues[16];
+
 // This is the event checking function sample. It is not intended to be
 // included in the module. It is only here as a sample to guide you in writing
 // your own event checkers
