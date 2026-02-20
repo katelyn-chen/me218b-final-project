@@ -1,6 +1,8 @@
 #ifndef BEACON_SERVICE_H
 #define BEACON_SERVICE_H
 
+#include <stdint.h>
+
 #include "ES_Configure.h"
 #include "ES_Types.h"
 #include "ES_Events.h"
