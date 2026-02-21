@@ -46,20 +46,6 @@
 #define SPI_CLK_PERIOD_NS    50000u
 #define CMD_DELAY            100        // arbitrary delay amt, can change
 
-//SPI Pins
-#define TapeSensor1 SPI_RPB8 
-#define TapeSensor2 SPI_RPA1
-#define TapeSensor3  SPI_RPB2 
-#define TapeSensor4 SPI_RPB3 
-#define TapeSensor5 SPI_RPB15
-#define UltrasonicEcho SPI_RPB8
-#define UltrasonicTrigger SPI_RPB6 
-
-#define SDIPin SPI_RPB11
-#define SDOPin SPI_RPA4
-#define SCKPin SPI_RPB14
-#define SSPin SPI_RPB4
-
 
 /* ---------------- Command Generator bytes (Appendix A) ----------------
    keeping these here so SPIService.c is self-contained.
@@ -92,6 +78,10 @@ typedef enum {
   DEBUG
 } FollowerState_t;
 
+typedef enum {
+    RIGHT,
+    LEFT
+} SideIndicate_t;
 /*---------------------------- Module Variables --------------------------*/
 static uint8_t MyPriority;
 FollowerState_t curState;
@@ -162,8 +152,6 @@ ES_Event_t RunSPIFollowerService(ES_Event_t ThisEvent)
         }
             
     }
-  }
-
   return ReturnEvent;
 }
 

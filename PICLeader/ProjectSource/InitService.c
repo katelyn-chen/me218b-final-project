@@ -102,7 +102,7 @@ ES_Event_t RunInitService(ES_Event_t ThisEvent)
         DB_printf("Start button has been pressed!\r\n");
         ReturnEvent.EventType = ES_INIT_GAME;
         ES_PostAll(ReturnEvent);
-        curState = INIT_ORIENT;
+        curState = GAME_MODE;
       }
       break;
 

@@ -41,7 +41,7 @@
 #include "EventCheckers.h"
 #include "PIC32_SPI_HAL.h"
 #include "SPILeaderService.h"
-
+#include "InitService.h"
 
 /*----------------------------- Module Defines ----------------------------*/
 

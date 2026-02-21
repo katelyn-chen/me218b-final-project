@@ -9,7 +9,8 @@ build/default/debug/ProjectSource/EventCheckers.o: \
  FrameworkHeaders/ES_PostList.h FrameworkHeaders/ES_ServiceHeaders.h \
  ProjectHeaders/SPIFollowerService.h FrameworkHeaders/ES_Types.h \
  ProjectHeaders/NavigateService.h ProjectHeaders/BeaconService.h \
- FrameworkHeaders/ES_Port.h ProjectHeaders/EventCheckers.h
+ FrameworkHeaders/ES_Port.h ProjectHeaders/EventCheckers.h \
+ ProjectHeaders/PIC32_AD_Lib.h ProjectHeaders/PIC32_SPI_HAL.h
 
 FrameworkHeaders/ES_Configure.h:
 
@@ -52,3 +53,7 @@ ProjectHeaders/BeaconService.h:
 FrameworkHeaders/ES_Port.h:
 
 ProjectHeaders/EventCheckers.h:
+
+ProjectHeaders/PIC32_AD_Lib.h:
+
+ProjectHeaders/PIC32_SPI_HAL.h:

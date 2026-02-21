@@ -44,8 +44,6 @@
 //#define SPI_CLK_PERIOD_NS    2000u
 #define SPI_CLK_PERIOD_NS      50000u
 
-//SPI Pins
-#define InitButton  SPI_RPA2
 /* ---------------- Command Generator bytes (Appendix A) ----------------
    keeping these here so SPIService.c is self-contained.
 ----------------------------------------------------------------------- */
@@ -75,6 +73,11 @@ typedef enum {
   DEBUG,
   IDLE
 } LeaderState_t;
+
+typedef enum {
+    LEFT,
+    RIGHT
+} SideIndicated_t;
 
 /*---------------------------- Module Variables --------------------------*/
 static uint8_t MyPriority;
@@ -113,7 +116,8 @@ bool PostSPILeaderService(ES_Event_t ThisEvent)
 
 ES_Event_t RunSPILeaderService(ES_Event_t ThisEvent)
 {
-  ES_Event_t ReturnEvent = ES_NO_EVENT;
+  ES_Event_t ReturnEvent;
+  ReturnEvent.EventType = ES_NO_EVENT;
   switch (ThisEvent.EventType) {
     case ES_INIT_GAME:
         // tell follower to start!
@@ -173,7 +177,6 @@ ES_Event_t RunSPILeaderService(ES_Event_t ThisEvent)
         }
         
     }
-}
 
   return ReturnEvent;
 }

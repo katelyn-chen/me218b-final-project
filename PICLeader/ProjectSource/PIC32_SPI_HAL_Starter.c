@@ -132,6 +132,13 @@ static SPI_PinMap_t const LegalSDOxPins[] = { SPI_NO_PIN, SPI_RPA1, SPI_RPA2,
 static SPI_PinMap_t const LegalSDIxPins[][6] = {{SPI_NO_PIN, SPI_RPA1, SPI_RPB1, SPI_RPB5, SPI_RPB8, SPI_RPB11},
 {SPI_NO_PIN, SPI_RPA2, SPI_RPA4, SPI_RPB2, SPI_RPB6,SPI_RPB13}};
 
+static volatile uint32_t * const portRegisters[] = { &PORTA, &PORTA,
+        &PORTA, &PORTA, &PORTA,
+        &PORTB, &PORTB, &PORTB, &PORTB, &PORTB, &PORTB,
+        &PORTB, &PORTB, &PORTB, &PORTB, &PORTB, &PORTB,
+        &PORTB, &PORTB, &PORTB, &PORTB
+};
+
 /*------------------------------ Module Code ------------------------------*/
 
 
@@ -809,6 +816,23 @@ bool PIN_MapPinInput(SPI_PinMap_t WhichPin)
 
  // Make pin an Input by setting the TRIS register to 1
  *setTRISRegisters[WhichPin] = mapPinMap2BitPosn[WhichPin];
+
+ //Make pin DIGITAL by clearing ANSEL to 0
+ *clrANSELRegisters[WhichPin] = mapPinMap2BitPosn[WhichPin];
+
+ return true;
+}
+
+bool PIN_MapPinOutput(SPI_PinMap_t WhichPin)
+{
+
+ // Make sure pin is valid
+ if ((WhichPin < SPI_RPA0) || (WhichPin > SPI_RPB15)) {
+   return false;
+ }
+
+ // Make pin an Output by setting the TRIS register to 0
+ *clrTRISRegisters[WhichPin] = mapPinMap2BitPosn[WhichPin];
 
  //Make pin DIGITAL by clearing ANSEL to 0
  *clrANSELRegisters[WhichPin] = mapPinMap2BitPosn[WhichPin];

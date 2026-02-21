@@ -174,7 +174,6 @@ static void InitBeaconHardware(void)
 {
   /* RA2 as digital input for IC1 */
   TRISAbits.TRISA2 = 1;
-  ANSELAbits.ANSA2 = 0;
 
   /* Timer3 timebase */
   T3CON = 0;

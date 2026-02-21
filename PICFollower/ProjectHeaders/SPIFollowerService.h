@@ -15,6 +15,19 @@ bool InitSPIFollowerService(uint8_t Priority);
 bool PostSPIFollowerService(ES_Event_t ThisEvent);
 ES_Event_t RunSPIFollowerService(ES_Event_t ThisEvent);
 
+/* DEFINING PINS FOR EVENT CHECKERS */
+//SPI Pins
+#define TapeSensor1 SPI_RPB8 
+#define TapeSensor2 SPI_RPA1
+#define TapeSensor3  SPI_RPB2 
+#define TapeSensor4 SPI_RPB3 
+#define TapeSensor5 SPI_RPB15
+#define UltrasonicEcho SPI_RPB8
+#define UltrasonicTrigger SPI_RPB6 
 
+#define SDIPin SPI_RPB11
+#define SDOPin SPI_RPA4
+#define SCKPin SPI_RPB14
+#define SSPin SPI_RPB4
 
 #endif /* SPI_FOLLOWER_SERVICE_H */

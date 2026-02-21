@@ -59,6 +59,12 @@ typedef enum {
   ORIENT_DONE
 } InitOrientState_t;
 
+typedef enum {
+    FIRST,
+    MIDDLE,
+    END
+} TapeTState_t;
+
 /*
   Field identification:
     FIELD_GREEN means beacons appear CCW in the BLRG cycle (with rotation offset).

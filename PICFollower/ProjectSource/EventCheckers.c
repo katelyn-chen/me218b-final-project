@@ -129,6 +129,8 @@ bool Check4Keystroke(void)
 bool Check4Wall(void){
     bool ReturnVal = false; 
     bool CurrentEchoState = PIN_ReadDigitalPIC32Pin(UltrasonicEcho); // Read the current state of the Echo pin
+    static bool LastEchoState = 0;
+    static uint8_t TimeAtRise = 0;
     
     if (CurrentEchoState != LastEchoState) {
         if (CurrentEchoState == 1) {

@@ -77,6 +77,7 @@
       <itemPath>ProjectSource/SPIFollowerService.c</itemPath>
       <itemPath>ProjectSource/NavigateService.c</itemPath>
       <itemPath>ProjectSource/InitService.c</itemPath>
+      <itemPath>../PICLeader/ProjectSource/InitService.c</itemPath>
     </logicalFolder>
     <logicalFolder name="ExternalFiles"
                    displayName="Important Files"
@@ -89,6 +90,7 @@
     <Elem>FrameworkSource</Elem>
     <Elem>ProjectSource</Elem>
     <Elem>ProjectHeaders</Elem>
+    <Elem>../PICLeader/ProjectSource</Elem>
   </sourceRootList>
   <projectmakefile>Makefile</projectmakefile>
   <confs>
@@ -133,6 +135,10 @@
         <makeCustomizationEnableLongLines>false</makeCustomizationEnableLongLines>
         <makeCustomizationNormalizeHexFile>false</makeCustomizationNormalizeHexFile>
       </makeCustomizationType>
+      <item path="../PICLeader/ProjectSource/InitService.c"
+            ex="true"
+            overriding="false">
+      </item>
       <C32>
         <property key="additional-warnings" value="false"/>
         <property key="addresss-attribute-use" value="false"/>
@@ -257,6 +263,19 @@
         <property key="use-iar" value="false"/>
         <property key="use-indirect-calls" value="false"/>
       </C32CPP>
+      <C32Global>
+        <property key="common-include-directories" value=""/>
+        <property key="gp-relative-option" value=""/>
+        <property key="legacy-libc" value="true"/>
+        <property key="mdtcm" value=""/>
+        <property key="mitcm" value=""/>
+        <property key="mstacktcm" value="false"/>
+        <property key="omit-pack-options" value="1"/>
+        <property key="relaxed-math" value="false"/>
+        <property key="save-temps" value="false"/>
+        <property key="stack-smashing" value=""/>
+        <property key="wpo-lto" value="false"/>
+      </C32Global>
       <item path="ProjectHeaders/ADService.h" ex="true" overriding="false">
         <C32>
         </C32>
@@ -270,6 +289,8 @@
         </C32-LD>
         <C32CPP>
         </C32CPP>
+        <C32Global>
+        </C32Global>
       </item>
       <item path="ProjectHeaders/MotorService.h" ex="true" overriding="false">
         <C32>
@@ -284,6 +305,8 @@
         </C32-LD>
         <C32CPP>
         </C32CPP>
+        <C32Global>
+        </C32Global>
       </item>
       <item path="ProjectHeaders/SPIService.h" ex="true" overriding="false">
         <C32>
@@ -298,6 +321,8 @@
         </C32-LD>
         <C32CPP>
         </C32CPP>
+        <C32Global>
+        </C32Global>
       </item>
       <item path="ProjectSource/ADService.c" ex="true" overriding="false">
         <C32>
@@ -312,6 +337,8 @@
         </C32-LD>
         <C32CPP>
         </C32CPP>
+        <C32Global>
+        </C32Global>
       </item>
       <item path="ProjectSource/BeaconService.c" ex="false" overriding="false">
         <C32>
@@ -326,6 +353,8 @@
         </C32-LD>
         <C32CPP>
         </C32CPP>
+        <C32Global>
+        </C32Global>
       </item>
       <item path="ProjectSource/InitService.c" ex="true" overriding="false">
         <C32>
@@ -340,6 +369,8 @@
         </C32-LD>
         <C32CPP>
         </C32CPP>
+        <C32Global>
+        </C32Global>
       </item>
       <item path="ProjectSource/MotorService.c" ex="true" overriding="false">
         <C32>
@@ -354,6 +385,8 @@
         </C32-LD>
         <C32CPP>
         </C32CPP>
+        <C32Global>
+        </C32Global>
       </item>
       <item path="ProjectSource/PWM_PIC32.c" ex="true" overriding="false">
         <C32>
@@ -368,6 +401,8 @@
         </C32-LD>
         <C32CPP>
         </C32CPP>
+        <C32Global>
+        </C32Global>
       </item>
       <item path="ProjectSource/ReflectiveSenseService.c"
             ex="true"
@@ -384,6 +419,8 @@
         </C32-LD>
         <C32CPP>
         </C32CPP>
+        <C32Global>
+        </C32Global>
       </item>
       <item path="ProjectSource/main.c" ex="false" overriding="false">
         <C32>
@@ -398,6 +435,8 @@
         </C32-LD>
         <C32CPP>
         </C32CPP>
+        <C32Global>
+        </C32Global>
       </item>
       <Simulator>
         <property key="codecoverage.enabled" value="Disable"/>
@@ -1012,8 +1051,6 @@
                   value="${memories.instruction.ram.ranges}"/>
         <property key="memories.programmemory" value="true"/>
         <property key="memories.programmemory.ranges" value="1d000000-1d03ffff"/>
-        <property key="programmerToGoFilePath"
-                  value="U:/katelync/Lab5/debug/default/default_ptg"/>
         <property key="programoptions.donoteraseauxmem" value="false"/>
         <property key="programoptions.eraseb4program" value="true"/>
         <property key="programoptions.pgmentry.voltage" value="low"/>

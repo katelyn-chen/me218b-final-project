@@ -1,5 +1,5 @@
 #ifndef SPI_LEADER_SERVICE_H
-#define SPI__LEADER_SERVICE_H
+#define SPI_LEADER_SERVICE_H
 
 //#include <stdint.h>
 #include <stdbool.h>
@@ -8,6 +8,9 @@
 #include "ES_Framework.h"
 #include "ES_Events.h"
 #include "ES_Types.h"     /* gets bool type for returns */
+
+/* DEFINING PINS FOR EVENT CHECKERS */
+#define InitButton  SPI_RPA2
 
 /* Translate param helpers */
 typedef enum { TRANS_HALF = 0, TRANS_FULL = 1 } TransSpeed_t;

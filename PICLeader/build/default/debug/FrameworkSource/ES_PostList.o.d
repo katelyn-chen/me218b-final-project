@@ -18,7 +18,7 @@ build/default/debug/FrameworkSource/ES_PostList.o: \
  FrameworkHeaders/ES_Port.h FrameworkHeaders/ES_Events.h \
  FrameworkHeaders/ES_PostList.h FrameworkHeaders/ES_General.h \
  FrameworkHeaders/ES_Timers.h FrameworkHeaders/ES_Events.h \
- FrameworkHeaders/ES_Types.h
+ FrameworkHeaders/ES_Types.h ProjectHeaders/InitService.h
 
 FrameworkSource/../FrameworkHeaders/ES_Port.h:
 
@@ -67,3 +67,5 @@ FrameworkHeaders/ES_Timers.h:
 FrameworkHeaders/ES_Events.h:
 
 FrameworkHeaders/ES_Types.h:
+
+ProjectHeaders/InitService.h:

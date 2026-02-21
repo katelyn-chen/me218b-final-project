@@ -33,7 +33,7 @@
 /****************************************************************************/
 // This macro determines that nuber of services that are *actually* used in
 // a particular application. It will vary in value from 1 to MAX_NUM_SERVICES
-#define NUM_SERVICES 1
+#define NUM_SERVICES 2
 
 /****************************************************************************/
 /* I include my service headers here so the Post*Service() prototypes exist
@@ -65,11 +65,11 @@
 // These are the definitions for Service 1
 #if NUM_SERVICES > 1
 // the header file with the public function prototypes
-#define SERV_1_HEADER "SPILeaderService.h"
+#define SERV_1_HEADER "InitService.h"
 // the name of the Init function
-#define SERV_1_INIT InitSPILeaderService
+#define SERV_1_INIT InitInitService
 // the name of the run function
-#define SERV_1_RUN RunSPILeaderService
+#define SERV_1_RUN RunInitService
 // How big should this services Queue be?
 #define SERV_1_QUEUE_SIZE 6
 #endif
@@ -287,7 +287,11 @@ typedef enum
   ES_SIDE_INDICATED, // param: LEFT-RIGHT
   ES_ALIGN_COLLECT, // param: FIRST-SECOND-OTHER
   ES_FIND_BUCKET,   // param: FIRST-MIDDLE-END
-  ES_DISPENSE       // param: FULL-SPLIT1-SPLIT2
+  ES_DISPENSE,       // param: FULL-SPLIT1-SPLIT2
+  ES_START_BUTTON,
+  ES_INIT_GAME,
+  ES_END_GAME,
+  ES_ENTER_IDLE
 } ES_EventType_t; // changed to be event type
 
 /****************************************************************************/
@@ -336,7 +340,7 @@ typedef enum
 #define TIMER2_RESP_FUNC TIMER_UNUSED
 //#define TIMER1_RESP_FUNC PostCollectService
 //#define TIMER2_RESP_FUNC PostDispenseService
-#define TIMER3_RESP_FUNC TIMER_UNUSED
+#define TIMER3_RESP_FUNC PostInitService
 #define TIMER4_RESP_FUNC TIMER_UNUSED
 #define TIMER5_RESP_FUNC TIMER_UNUSED
 #define TIMER6_RESP_FUNC TIMER_UNUSED
@@ -360,6 +364,7 @@ typedef enum
 #define SPI_TIMER 0
 #define COLLECT_TIMER 1
 #define DISPENSE_TIMER 2
+#define GAME_TIMER 3
 
 /*#define SERVICE0_TIMER 15
 #define REFLECT_TIMER 1

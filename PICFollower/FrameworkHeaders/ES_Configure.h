@@ -288,7 +288,11 @@ typedef enum
   ES_DISPENSE,
   ES_DISPENSE_COMPLETE,
   ES_SPI_RECEIVED,
-  ES_LINE_FOLLOW
+  ES_LINE_FOLLOW,
+  ES_TAPE_DETECTED,
+  ES_NEW_DIST,
+  ES_END_GAME,
+  ES_ALIGN_ULTRASONICS
 }ES_EventType_t; // changed to be event type
 
 /****************************************************************************/

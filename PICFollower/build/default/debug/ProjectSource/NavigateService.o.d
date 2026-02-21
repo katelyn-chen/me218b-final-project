@@ -7,7 +7,8 @@ build/default/debug/ProjectSource/NavigateService.o: \
  FrameworkHeaders/ES_Configure.h FrameworkHeaders/ES_PostList.h \
  FrameworkHeaders/ES_General.h FrameworkHeaders/ES_Timers.h \
  FrameworkHeaders/ES_Events.h FrameworkHeaders/ES_Types.h \
- ProjectHeaders/SPIFollowerService.h FrameworkHeaders/dbprintf.h
+ ProjectHeaders/SPIFollowerService.h ProjectHeaders/BeaconService.h \
+ FrameworkHeaders/dbprintf.h
 
 ProjectHeaders/NavigateService.h:
 
@@ -40,5 +41,7 @@ FrameworkHeaders/ES_Events.h:
 FrameworkHeaders/ES_Types.h:
 
 ProjectHeaders/SPIFollowerService.h:
+
+ProjectHeaders/BeaconService.h:
 
 FrameworkHeaders/dbprintf.h:
