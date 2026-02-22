@@ -61,6 +61,10 @@
 #define CMD_INIT_ORIENT           0x12
 #define CMD_SIDE_FOUND_RIGHT      0x13
 #define CMD_SIDE_FOUND_LEFT       0x14
+#define CMD_BEACON_R_FOUND        0x15
+#define CMD_BEACON_L_FOUND        0x16
+#define CMD_BEACON_G_FOUND        0x17
+#define CMD_BEACON_B_FOUND        0x18
 #define CMD_END_GAME              0x99
 #define CMD_QUERY                 0xAA
 #define CMD_NOOP                  0xFF
@@ -75,6 +79,12 @@ typedef enum {
 } LeaderState_t;
 
 typedef enum {
+    INIT,
+    LOCATE_BEACON,
+    BEACON_FOUND
+} DebugState_t;
+
+typedef enum {
     LEFT,
     RIGHT
 } SideIndicated_t;
@@ -82,6 +92,7 @@ typedef enum {
 /*---------------------------- Module Variables --------------------------*/
 static uint8_t MyPriority;
 LeaderState_t curState;
+DebugState_t debugState;
 static uint8_t curCmd;
 uint8_t prevCmd;
 static uint8_t outCmd;
@@ -97,8 +108,9 @@ static bool IsKnownCommand(uint8_t cmd);
 bool InitSPILeaderService(uint8_t Priority)
 {
   MyPriority = Priority;
-  curState = IDLE;
+  curState = DEBUG;
   curCmd = CMD_TRANS_FWD;
+  debugState = INIT;
   //curCmd = CMD_GET_BEACON_FREQ;
   InitSPIHardware();
   InitPinHardware();
@@ -106,6 +118,7 @@ bool InitSPILeaderService(uint8_t Priority)
 
   ES_Event_t ThisEvent;
   ThisEvent.EventType = ES_INIT;
+  ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS); // comment out later for button
   return ES_PostToService(MyPriority, ThisEvent);
 }
 
@@ -137,6 +150,43 @@ ES_Event_t RunSPILeaderService(ES_Event_t ThisEvent)
     case ES_TIMEOUT:
         if (ThisEvent.EventParam == SPI_TIMER) {
             switch (curState) {
+                case DEBUG:
+                {
+                    switch (debugState) {
+                        case INIT:
+                        {
+                            curCmd = CMD_GET_BEACON_FREQ;
+                            DB_printf("Leader sending get beacon freq command: %d\r\n", curCmd);
+                            SPIOperate_SPI1_Send8Wait(curCmd);
+                            break;
+                        }
+                        
+                        case LOCATE_BEACON: 
+                        {
+                            uint8_t followerData;
+                            DB_printf("Leader sending query command! %d\n", curCmd);
+                            followerData = Follower_QueryByte(CMD_QUERY);
+                            
+                            if (!IsKnownCommand(followerData))
+                            {
+                                DB_printf("SPIService: unknown cmd 0x0%d\r\n", followerData);
+                            }
+
+                            HandleCommandByte(followerData);
+                            break;
+                        }
+                        
+                        case BEACON_FOUND:
+                        {
+                            curCmd = CMD_TRANS_FWD;
+                            DB_printf("Leader sending get fwd command: %d\r\n", curCmd);
+                            SPIOperate_SPI1_Send8Wait(curCmd);
+                            break;
+                        }
+                        
+                    }
+                    ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
+                }
                 case SEND:
                 {
                     //curCmd = CMD_TRANS_FWD;
@@ -237,6 +287,10 @@ static bool IsKnownCommand(uint8_t cmd)
         case CMD_TESTING:
         case CMD_SIDE_FOUND_RIGHT:
         case CMD_SIDE_FOUND_LEFT:
+        case CMD_BEACON_R_FOUND:
+        case CMD_BEACON_L_FOUND:
+        case CMD_BEACON_G_FOUND:
+        case CMD_BEACON_B_FOUND:
             return true;
 
         default:
@@ -321,6 +375,26 @@ static void HandleCommandByte(uint8_t cmd)
         SideEvent.EventType = ES_SIDE_INDICATED;
         SideEvent.EventParam = LEFT;
         ES_PostAll(SideEvent);
+    }
+    
+    case CMD_BEACON_R_FOUND: {
+        DB_printf("Received BEACON R FOUND command\r\n");
+        debugState = BEACON_FOUND;
+    }
+    
+    case CMD_BEACON_B_FOUND: {
+        DB_printf("Received BEACON B FOUND command\r\n");
+        debugState = BEACON_FOUND;
+    }
+    
+    case CMD_BEACON_L_FOUND: {
+        DB_printf("Received BEACON L FOUND command\r\n");
+        debugState = BEACON_FOUND;
+    }
+    
+    case CMD_BEACON_G_FOUND: {
+        DB_printf("Received BEACON G FOUND command\r\n");
+        debugState = BEACON_FOUND;
     }
       default:
         break;

@@ -8,7 +8,7 @@ build/default/debug/ProjectSource/SPIFollowerService.o: \
  FrameworkHeaders/ES_General.h FrameworkHeaders/ES_Timers.h \
  FrameworkHeaders/ES_Events.h FrameworkHeaders/ES_Types.h \
  FrameworkHeaders/dbprintf.h ProjectHeaders/PIC32_SPI_HAL.h \
- ProjectHeaders/NavigateService.h
+ ProjectHeaders/NavigateService.h ProjectHeaders/BeaconService.h
 
 ProjectHeaders/SPIFollowerService.h:
 
@@ -45,3 +45,5 @@ FrameworkHeaders/dbprintf.h:
 ProjectHeaders/PIC32_SPI_HAL.h:
 
 ProjectHeaders/NavigateService.h:
+
+ProjectHeaders/BeaconService.h:

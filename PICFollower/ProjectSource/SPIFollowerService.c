@@ -28,6 +28,7 @@
 #include "PIC32_SPI_HAL.h"
 
 #include "NavigateService.h"
+#include "BeaconService.h"
 
 /*----------------------------- Module Defines ----------------------------*/
 /* use the symbolic timer name from ES_Configure.h */
@@ -64,6 +65,10 @@
 #define CMD_INIT_ORIENT           0x12
 #define CMD_SIDE_FOUND_RIGHT      0x13
 #define CMD_SIDE_FOUND_LEFT       0x14
+#define CMD_BEACON_R_FOUND        0x15
+#define CMD_BEACON_L_FOUND        0x16
+#define CMD_BEACON_G_FOUND        0x17
+#define CMD_BEACON_B_FOUND        0x18
 #define CMD_END_GAME              0x99
 #define CMD_QUERY                 0xAA
 #define CMD_NOOP                  0xFF
@@ -120,8 +125,8 @@ bool PostSPIFollowerService(ES_Event_t ThisEvent)
 
 ES_Event_t RunSPIFollowerService(ES_Event_t ThisEvent)
 {
-  DB_printf("RunSPIFollowerService entered: event %d, param %d\r\n",
-  ThisEvent.EventType, ThisEvent.EventParam);
+  //DB_printf("RunSPIFollowerService entered: event %d, param %d\r\n",
+  //ThisEvent.EventType, ThisEvent.EventParam);
   ES_Event_t ReturnEvent = { ES_NO_EVENT, 0 };
     switch (ThisEvent.EventType) {
 
@@ -150,6 +155,30 @@ ES_Event_t RunSPIFollowerService(ES_Event_t ThisEvent)
             HandleCommandByte(ThisEvent.EventParam);
             break;
         }
+        
+        case ES_BEACON_FOUND:
+        {
+            uint8_t id = ThisEvent.EventParam;
+            DB_printf("Beacon found! ID: %d\r\n", id);
+            switch (id) {
+                case BEACON_ID_G:
+                    outgoingCmd = CMD_BEACON_G_FOUND;
+                    break;
+                    
+                case BEACON_ID_B:
+                    outgoingCmd = CMD_BEACON_B_FOUND;
+                    break;
+                    
+                case BEACON_ID_R:
+                    outgoingCmd = CMD_BEACON_L_FOUND;
+                    break;
+                    
+                case BEACON_ID_L:
+                    outgoingCmd = CMD_BEACON_L_FOUND;
+                    break;                
+            }
+        }
+            
             
     }
   return ReturnEvent;
@@ -254,7 +283,7 @@ static void HandleCommandByte(uint8_t cmd)
         cmdEvent.EventType = ES_END_GAME;
         break;
     }
-      case CMD_TRANS_FWD: {
+    case CMD_TRANS_FWD: {
         DB_printf("Received forward command \r\n");
         cmdEvent.EventType = ES_TRANSLATE;
         cmdEvent.EventParam = PackTranslateParam(TRANS_FULL, DIR_FWD);
@@ -324,13 +353,13 @@ static void HandleCommandByte(uint8_t cmd)
 
     case CMD_TESTING: {
         DB_printf("Received TESTING command\r\n");
-        outgoingCmd = CMD_TESTING;
+        //outgoingCmd = CMD_TESTING;
         break;
     }
 
     case CMD_QUERY: {
         DB_printf("Received QUERY command from SPILeaderService!\r\n");
-        outgoingCmd = CMD_TESTING;
+        //outgoingCmd = CMD_TESTING;
         DB_printf("Sending Testing Cmd to Leader!\r\n");
         break;
     }
@@ -339,6 +368,11 @@ static void HandleCommandByte(uint8_t cmd)
         DB_printf("Received INIT ORIENT command from SPILeaderService!\r\n");
         cmdEvent.EventType = ES_ALIGN_ULTRASONICS;
         DB_printf("Posting align ultrasonics command to nav service!\r\n");
+        break;
+    }
+    
+    case CMD_NOOP: {
+        DB_printf("Received NOOP command from SPILeaderService!\r\n");
         break;
     }
 

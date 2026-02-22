@@ -154,6 +154,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
       if (ThisEvent.EventType == ES_TRANSLATE)
       {
         DB_printf("Do Translate!\r\n");
+        ES_Timer_InitTimer(MOTOR_TIMER, 5000);
         DoTranslate(ThisEvent.EventParam);
       }
       else if (ThisEvent.EventType == ES_ROTATE)
@@ -174,13 +175,32 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
           based on the beacon order.
         */
         DB_printf("Starting INIT_ORIENT (beacon sweep)\r\n");
-        curState = INIT_ORIENT;
-        orientState = ORIENT_BEACON_SWEEP;
+        //curState = INIT_ORIENT;
+        //orientState = ORIENT_BEACON_SWEEP;
 
         ResetBeaconSequence();
         StartBeaconAlignSearch();
+      } else if (ThisEvent.EventType == ES_BEACON_FOUND) {
+        /*
+          Reusing ES_ALIGN_ULTRASONICS as the “begin initial orientation” trigger.
+          Initial orientation is now beacon-only: rotate CCW and classify field
+          based on the beacon order.
+        */
+        BeaconId_t id;
+        BeaconSide_t side;
+        UnpackBeaconParam((uint16_t)ThisEvent.EventParam, &id, &side);
+        
+        DB_printf("Beacon %d found)\r\n", id);
+        StopMotors();
+        ReturnEvent.EventType = ES_BEACON_FOUND;
+        ReturnEvent.EventParam = id;
+        PostSPIFollowerService(ReturnEvent);
+      } else if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == MOTOR_TIMER) {
+        DB_printf("Motor timer expired");  
+        StopMotors();
       }
       break;
+      
     }
 
     case INIT_ORIENT:
