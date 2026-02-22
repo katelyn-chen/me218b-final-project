@@ -35,7 +35,7 @@
 #define DUTY_TRANS_HALF     50u
 #define DUTY_TRANS_FULL     100u
 #define DUTY_ROTATE         45u
-#define DUTY_SEARCH         30u
+#define DUTY_SEARCH         50u
 
 /*---------------------------- Module Types -------------------------------*/
 typedef enum {
@@ -180,7 +180,8 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
 
         ResetBeaconSequence();
         StartBeaconAlignSearch();
-      } else if (ThisEvent.EventType == ES_BEACON_FOUND) {
+      } 
+      else if (ThisEvent.EventType == ES_BEACON_FOUND) {
         /*
           Reusing ES_ALIGN_ULTRASONICS as the “begin initial orientation” trigger.
           Initial orientation is now beacon-only: rotate CCW and classify field
@@ -190,14 +191,21 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         BeaconSide_t side;
         UnpackBeaconParam((uint16_t)ThisEvent.EventParam, &id, &side);
         
-        DB_printf("Beacon %d found)\r\n", id);
+        DB_printf("Beacon %d found \r\n", id);
         StopMotors();
-        ReturnEvent.EventType = ES_BEACON_FOUND;
-        ReturnEvent.EventParam = id;
-        PostSPIFollowerService(ReturnEvent);
-      } else if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == MOTOR_TIMER) {
+        ES_Event_t BeaconEvent;
+        BeaconEvent.EventType = ES_BEACON_FOUND;
+        BeaconEvent.EventParam = id;
+        PostSPIFollowerService(BeaconEvent);
+      } 
+      else if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == MOTOR_TIMER) {
         DB_printf("Motor timer expired");  
         StopMotors();
+      } else if (ThisEvent.EventType == ES_BEACON_SIGNAL) {
+          DB_printf("Starting Turn\r\n");  
+          ResetBeaconSequence();
+          StartBeaconAlignSearch();
+          PostBeaconService(ThisEvent);
       }
       break;
       
@@ -418,13 +426,13 @@ static void SetMotor1(int16_t dutySignedPercent)
 
   if (dutySignedPercent > 0)
   {
-    OC2RS = ocrs*PR2/100;
+    OC2RS = ocrs/100;
     OC3RS = 0;
   }
   else if (dutySignedPercent < 0)
   {
     OC2RS = 0;
-    OC3RS = ocrs*PR2/100;
+    OC3RS = ocrs/100;
   }
   else
   {
@@ -437,16 +445,17 @@ static void SetMotor2(int16_t dutySignedPercent)
 {
   uint16_t mag = (dutySignedPercent < 0) ? (uint16_t)(-dutySignedPercent) : (uint16_t)dutySignedPercent;
   uint16_t ocrs = DutyPercentToOCrs(mag);
+  DB_printf("Duty*PR2: %d\r\n", ocrs);
 
   if (dutySignedPercent > 0)
   {
-    OC1RS = ocrs*PR2/100;
+    OC1RS = ocrs;
     OC4RS = 0;
   }
   else if (dutySignedPercent < 0)
   {
     OC1RS = 0;
-    OC4RS = ocrs*PR2/100;
+    OC4RS = ocrs;
   }
   else
   {

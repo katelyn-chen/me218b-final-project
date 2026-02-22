@@ -155,9 +155,11 @@ ES_Event_t RunSPILeaderService(ES_Event_t ThisEvent)
                     switch (debugState) {
                         case INIT:
                         {
+                            uint8_t followerData;
                             curCmd = CMD_GET_BEACON_FREQ;
                             DB_printf("Leader sending get beacon freq command: %d\r\n", curCmd);
-                            SPIOperate_SPI1_Send8Wait(curCmd);
+                            followerData = Follower_QueryByte(curCmd);
+                            debugState = LOCATE_BEACON;
                             break;
                         }
                         

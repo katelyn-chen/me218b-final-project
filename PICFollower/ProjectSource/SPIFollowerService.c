@@ -177,6 +177,7 @@ ES_Event_t RunSPIFollowerService(ES_Event_t ThisEvent)
                     outgoingCmd = CMD_BEACON_L_FOUND;
                     break;                
             }
+            break;
         }
             
             
@@ -233,13 +234,13 @@ static uint8_t Leader_QueryByte(uint8_t outByte)
 
 static void InitPinHardware(void)
 {
-    PIN_MapPinInput(TapeSensor1);
+    /*PIN_MapPinInput(TapeSensor1);
     PIN_MapPinInput(TapeSensor2);
     PIN_MapPinInput(TapeSensor3);
     PIN_MapPinInput(TapeSensor4);
     PIN_MapPinInput(TapeSensor5);
     PIN_MapPinInput(UltrasonicEcho);
-    PIN_MapPinOutput(UltrasonicTrigger);
+    PIN_MapPinOutput(UltrasonicTrigger);*/
 }
 
 /*======================= COMMAND -> EVENT MAP =======================*/
@@ -348,6 +349,7 @@ static void HandleCommandByte(uint8_t cmd)
     case CMD_GET_BEACON_FREQ: {
         DB_printf("Received GET BEACON FREQ command\r\n");
         cmdEvent.EventType = ES_BEACON_SIGNAL;
+        //cmdEvent.EventType = ES_ALIGN_ULTRASONICS;
         break;
     }
 

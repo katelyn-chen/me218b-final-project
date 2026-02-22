@@ -45,7 +45,7 @@
 #define BEACON_L_TOL_HZ        150u
 
 /* require this many good cycles in a row before declaring found */
-#define BEACON_CONFIRM_COUNT   15u
+#define BEACON_CONFIRM_COUNT   10u
 
 /* which ES timer to use if periodic debug is desired */
 #ifndef BEACON_DEBUG_TIMER
@@ -114,6 +114,7 @@ ES_Event_t RunBeaconService(ES_Event_t ThisEvent)
       {
         uint32_t f = ComputeFreqHz(PeriodTicks);
         BeaconId_t id = ClassifyBeacon(f);
+        //DB_printf("freq detected, %d\r\n", f);
 
         if (id != BEACON_ID_NONE)
         {
@@ -137,7 +138,7 @@ ES_Event_t RunBeaconService(ES_Event_t ThisEvent)
             BeaconSide_t side = ClassifySide(id);
             uint16_t packed = PackBeaconParam(id, side);
 
-            DB_printf("Beacon latched: id=%u f=%lu Hz side=%u\r\n",
+            DB_printf("Beacon latched: id=%u f=%u Hz side=%u\r\n",
                       (unsigned)id, (unsigned long)f, (unsigned)side);
 
             ES_Event_t e = { ES_BEACON_FOUND, packed };

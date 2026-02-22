@@ -25,9 +25,9 @@ ES_Event_t RunSPIFollowerService(ES_Event_t ThisEvent);
 #define UltrasonicEcho SPI_RPB8
 #define UltrasonicTrigger SPI_RPB6 
 
-#define SDIPin SPI_RPB11
+#define SDIPin SPI_RPB8
 #define SDOPin SPI_RPA4
 #define SCKPin SPI_RPB14
-#define SSPin SPI_RPB4
+#define SSPin SPI_RPB15
 
 #endif /* SPI_FOLLOWER_SERVICE_H */
