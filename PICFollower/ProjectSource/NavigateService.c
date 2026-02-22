@@ -32,10 +32,10 @@
 
 /* duty presets (percent 0..100) */
 #define DUTY_STOP           0u
-#define DUTY_TRANS_HALF     50u
-#define DUTY_TRANS_FULL     100u
+#define DUTY_TRANS_HALF     30u
+#define DUTY_TRANS_FULL     50u
 #define DUTY_ROTATE         45u
-#define DUTY_SEARCH         50u
+#define DUTY_SEARCH         30u
 
 /*---------------------------- Module Types -------------------------------*/
 typedef enum {
@@ -375,6 +375,7 @@ static void InitPinsAndPPS(void)
   TRISAbits.TRISA1 = 0;  ANSELAbits.ANSA1 = 0;
   TRISBbits.TRISB3 = 0;  ANSELBbits.ANSB3 = 0;
   TRISBbits.TRISB2 = 0;  ANSELBbits.ANSB2 = 0;
+  TRISBbits.TRISB0 = 0;
 
   TRISBbits.TRISB4 = 0; LATBbits.LATB4 = 0; /* LED align */
 
@@ -408,7 +409,7 @@ static void InitOCsForPWM(void)
 static uint16_t DutyPercentToOCrs(uint16_t dutyPercent)
 {
   if (dutyPercent > 100u) dutyPercent = 100u;
-  return (uint16_t)(((uint32_t)dutyPercent * (uint32_t)(PR2 + 1u)) / 100u);
+  return (uint16_t)(((uint32_t)dutyPercent * (uint32_t)(PR2)) / 100u);
 }
 
 static void StopMotors(void)
@@ -426,13 +427,13 @@ static void SetMotor1(int16_t dutySignedPercent)
 
   if (dutySignedPercent > 0)
   {
-    OC2RS = ocrs/100;
+    OC2RS = ocrs;
     OC3RS = 0;
   }
   else if (dutySignedPercent < 0)
   {
     OC2RS = 0;
-    OC3RS = ocrs/100;
+    OC3RS = ocrs;
   }
   else
   {
