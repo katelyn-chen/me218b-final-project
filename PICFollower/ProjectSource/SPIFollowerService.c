@@ -234,13 +234,13 @@ static uint8_t Leader_QueryByte(uint8_t outByte)
 
 static void InitPinHardware(void)
 {
-    /*PIN_MapPinInput(TapeSensor1);
+    PIN_MapPinInput(TapeSensor1);
     PIN_MapPinInput(TapeSensor2);
     PIN_MapPinInput(TapeSensor3);
     PIN_MapPinInput(TapeSensor4);
     PIN_MapPinInput(TapeSensor5);
     PIN_MapPinInput(UltrasonicEcho);
-    PIN_MapPinOutput(UltrasonicTrigger);*/
+    PIN_MapPinOutput(UltrasonicTrigger);
 }
 
 /*======================= COMMAND -> EVENT MAP =======================*/
