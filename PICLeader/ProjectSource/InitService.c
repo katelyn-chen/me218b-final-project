@@ -27,9 +27,11 @@ typedef enum {
 
 static uint8_t MyPriority;
 static InitState_t curState;
+static uint16_t SecondsElapsed;   // counter for game duration
 
 /*---------------------------- Module Defines --------------------------*/
-#define   GAME_TIME_MS    218000
+#define   GAME_TIME_MS    1000    // 1 second timer
+#define   GAME_DURATION   138     // 2 minutes 18 seconds = 138 seconds
 
 /*------------------------------ Module Code ------------------------------*/
 /****************************************************************************
@@ -110,12 +112,19 @@ ES_Event_t RunInitService(ES_Event_t ThisEvent)
 
     case GAME_MODE:
       if (ThisEvent.EventType == ES_INIT_GAME) {
+        SecondsElapsed = 0;  // reset counter
         ES_Timer_InitTimer(GAME_TIMER, GAME_TIME_MS); // start game timer
       }
 
       if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == GAME_TIMER) {
-        ES_Timer_StopTimer(GAME_TIMER); // stop game timer
-        curState = IDLE;
+        SecondsElapsed++;
+
+        if (SecondsElapsed >= GAME_DURATION) {
+          ES_Timer_StopTimer(GAME_TIMER); // stop game timer
+          curState = IDLE;
+        } else {
+          ES_Timer_InitTimer(GAME_TIMER, GAME_TIME_MS); // restart 1 second timer
+        }
       }
       break;
   }
