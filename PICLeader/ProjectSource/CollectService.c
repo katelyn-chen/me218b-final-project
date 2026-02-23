@@ -1,206 +1,359 @@
-#include "Collect.h"
-#include "ES_Timers.h"
-#include "ES_Configure.h"
-#include "SPISM.h"
-#include <stdbool.h>
+/****************************************************************************
+  Module
+    CollectService.c
+
+  Summary
+    - Runs the full 6-ball collection routine at the dispenser
+    - So logic is: Arm down -> close gripper -> nudge back -> arm up/drop -> nudge forward
+    - Repeats until 6 balls are collected
+    - All nudges are requested by sending SPI command bytes to the follower
+
+  Notes
+    - Servo PWM is generated on this PIC (Leader)
+    - Motor motion happens on follower PIC; this service requests nudges via SPI
+****************************************************************************/
+
+#include "CollectService.h"
+
+#include <xc.h>
 #include <stdint.h>
+#include <stdbool.h>
 
-// ------------------- params -------------------
-#define FIRST   1
-#define SECOND  2
-#define OTHER   3
+#include "ES_Framework.h"
+#include "ES_Timers.h"
+#include "dbprintf.h"
+#include "PIC32_SPI_HAL.h"
 
-#define MIDDLE  4
+/*============================== CONFIG ==============================*/
+#define PBCLK_HZ               20000000u
 
-// ------------------- tuning -------------------
-#define BALL_TARGET_COUNT   6
+#ifndef COLLECT_TIMER
+#define COLLECT_TIMER          COLLECT_TIMER
+#endif
 
-#define T_APPROACH_MS       2000
-#define T_GRAB_PREP_MS      400
-#define T_GRAB_CLOSE_MS     350
-#define T_DROP_MS           500
-#define T_BACKUP_MS         800
+/* collect target */
+#define BALL_TARGET_COUNT      6u
 
-// ------------------- follower SPI command words -------------------
-// keep simple for now
-#define OPCODE_DRIVE        0x1
-#define OPCODE_STOP         0x2
-#define DRIVE_FWD_SLOW      0x001
-#define DRIVE_REV_SLOW      0x002
+/* timing (ms) */
+#define T_ARM_DOWN_MS          450u
+#define T_GRIP_CLOSE_MS        350u
+#define T_NUDGE_MS             300u   /* we need to be test on field and tune */
+#define T_ARM_UP_DROP_MS       450u
+#define T_GRIP_OPEN_MS         250u
+#define T_ARM_TRAVEL_MS        350u
 
-static void Follower_Stop(void) {
-  SPISM_SendFollowerCmd((OPCODE_STOP << 12));
-}
+/* SPI bytes for follower motion nudges */
+#define CMD_NUDGE_BACK         0x22u
+#define CMD_NUDGE_FWD          0x23u
 
-static void Follower_FwdSlow(void) {
-  SPISM_SendFollowerCmd((OPCODE_DRIVE << 12) | DRIVE_FWD_SLOW);
-}
+/*=========================== SERVO PWM HW ============================*/
+/*
+  Servo outputs (PIC1 pins):
+    OC2 -> RA1  Grab Servo 1 (rack/pinion)
+    OC1 -> RB4  Grab Servo 2 (grabber rotation)
+    OC4 -> RA4  Rotate Servo 1 (lever arm)
+    OC5 -> RB6  Lower Arm Servo 1
+    OC3 -> RB10 Rotate Servo 2 (bucket)
 
-static void Follower_RevSlow(void) {
-  SPISM_SendFollowerCmd((OPCODE_DRIVE << 12) | DRIVE_REV_SLOW);
-}
+  This service uses:
+    - Grab servos (OC2/OC1)
+    - Lever arm (OC4)
+*/
+#define SERVO_TIMER_PRESCALE_BITS   0b011u   /* 1:8 */
+#define SERVO_TIMER_PRESCALE_VAL    8u
 
-// ------------------- hardware hooks (Leader-owned) -------------------
-static bool DispenserSensorTriggered(void);
+/* 50 Hz: 20ms period */
+#define SERVO_HZ                    50u
+#define SERVO_PR2_VALUE             ((PBCLK_HZ / (SERVO_TIMER_PRESCALE_VAL * SERVO_HZ)) - 1u)
 
-static void GrabServoOpen(void);
-static void GrabServoClose(void);
+/* pulse widths in microseconds (tune these on the robot) */
+#define US_GRIP_OPEN_1              1900u
+#define US_GRIP_CLOSE_1             1100u
 
+#define US_GRIP_OPEN_2              1800u
+#define US_GRIP_CLOSE_2             1200u
+
+#define US_ARM_PICK                 2000u   /* down to dispenser */
+#define US_ARM_DROP                 1100u   /* up to bucket */
+#define US_ARM_TRAVEL               1500u   /* safe mid pose */
+
+static bool ServoInitDone = false;
+
+static void InitServoPWM(void);
+static uint16_t UsToOCrs(uint16_t us);
+static void ServoSet_OC1_us(uint16_t us);
+static void ServoSet_OC2_us(uint16_t us);
+static void ServoSet_OC4_us(uint16_t us);
+
+/*============================== STATE ==============================*/
+typedef enum {
+  COLLECT_IDLE = 0,
+  COLLECT_ARM_DOWN,
+  COLLECT_GRIP_CLOSE,
+  COLLECT_NUDGE_BACK,
+  COLLECT_ARM_UP_DROP,
+  COLLECT_GRIP_OPEN,
+  COLLECT_NUDGE_FWD,
+  COLLECT_ARM_TRAVEL,
+  COLLECT_CHECK_COUNT,
+  COLLECT_DONE
+} CollectState_t;
+
+static uint8_t MyPriority;
+static CollectState_t CurState = COLLECT_IDLE;
+static uint8_t BallCount = 0u;
+
+/*====================== PRIVATE FUNCTION PROTOS =====================*/
+static void TransitionTo(CollectState_t next, uint16_t tMs);
+static void RequestNudge(uint8_t cmdByte);
+
+static void GrabOpen(void);
+static void GrabClose(void);
 static void ArmPickPose(void);
 static void ArmDropPose(void);
 static void ArmTravelPose(void);
 
-// Post function back to Navigate/HSM service
-static void PostFindBucket(uint16_t param);
+/*=========================== PUBLIC API =============================*/
+bool InitCollectService(uint8_t Priority)
+{
+  MyPriority = Priority;
+  CurState = COLLECT_IDLE;
+  BallCount = 0u;
 
-// ------------------- module state -------------------
-static CSM_State_t CurrentState = CSM_IDLE;
-static uint16_t CollectMode = OTHER;
-static uint8_t BallCount = 0;
+  if (!ServoInitDone) InitServoPWM();
 
-static void TransitionTo(CSM_State_t NextState, uint16_t timeMs);
-
-void InitCollectSM(void) {
-  CurrentState = CSM_IDLE;
-  CollectMode = OTHER;
-  BallCount = 0;
-
-  Follower_Stop();
+  GrabOpen();
   ArmTravelPose();
-  GrabServoOpen();
-  ES_Timer_StopTimer(CollectTimer);
+
+  ES_Timer_StopTimer(COLLECT_TIMER);
+
+  DB_printf("CollectService: init done\r\n");
+
+  ES_Event_t e = { ES_INIT, 0 };
+  return ES_PostToService(MyPriority, e);
 }
 
-CSM_State_t GetCollectSMState(void) {
-  return CurrentState;
+bool PostCollectService(ES_Event_t ThisEvent)
+{
+  return ES_PostToService(MyPriority, ThisEvent);
 }
 
-ES_Event_t RunCollectSM(ES_Event_t ThisEvent) {
+ES_Event_t RunCollectService(ES_Event_t ThisEvent)
+{
   ES_Event_t ReturnEvent = { ES_NO_EVENT, 0 };
 
-  switch (CurrentState) {
-
-    case CSM_IDLE:
-      if (ThisEvent.EventType == ES_ALIGN_COLLECT) {
-        CollectMode = ThisEvent.EventParam;  // FIRST/SECOND/OTHER
-        BallCount = 0;
-        TransitionTo(CSM_APPROACH_DISPENSER, T_APPROACH_MS);
+  switch (CurState)
+  {
+    case COLLECT_IDLE:
+      if (ThisEvent.EventType == ES_COLLECT_START)
+      {
+        DB_printf("CollectService: start\r\n");
+        BallCount = 0u;
+        TransitionTo(COLLECT_ARM_DOWN, T_ARM_DOWN_MS);
       }
       break;
 
-    case CSM_APPROACH_DISPENSER:
-      if (DispenserSensorTriggered()) {
-        Follower_Stop();
-        TransitionTo(CSM_GRAB_PREP, T_GRAB_PREP_MS);
-      } else if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == CollectTimer)) {
-        Follower_Stop();
-        TransitionTo(CSM_GRAB_PREP, T_GRAB_PREP_MS);
+    case COLLECT_ARM_DOWN:
+      if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == COLLECT_TIMER))
+      {
+        TransitionTo(COLLECT_GRIP_CLOSE, T_GRIP_CLOSE_MS);
       }
       break;
 
-    case CSM_GRAB_PREP:
-      if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == CollectTimer)) {
-        TransitionTo(CSM_GRAB_CLOSE, T_GRAB_CLOSE_MS);
+    case COLLECT_GRIP_CLOSE:
+      if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == COLLECT_TIMER))
+      {
+        TransitionTo(COLLECT_NUDGE_BACK, T_NUDGE_MS);
       }
       break;
 
-    case CSM_GRAB_CLOSE:
-      if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == CollectTimer)) {
-        TransitionTo(CSM_LIFT_AND_DROP, T_DROP_MS);
+    case COLLECT_NUDGE_BACK:
+      if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == COLLECT_TIMER))
+      {
+        TransitionTo(COLLECT_ARM_UP_DROP, T_ARM_UP_DROP_MS);
       }
       break;
 
-    case CSM_LIFT_AND_DROP:
-      if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == CollectTimer)) {
-        BallCount++;
-        TransitionTo(CSM_CHECK_COUNT, 0);
+    case COLLECT_ARM_UP_DROP:
+      if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == COLLECT_TIMER))
+      {
+        TransitionTo(COLLECT_GRIP_OPEN, T_GRIP_OPEN_MS);
       }
       break;
 
-    case CSM_CHECK_COUNT:
-      if (BallCount < BALL_TARGET_COUNT) {
-        TransitionTo(CSM_GRAB_PREP, T_GRAB_PREP_MS);
-      } else {
-        TransitionTo(CSM_BACK_OUT, T_BACKUP_MS);
+    case COLLECT_GRIP_OPEN:
+      if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == COLLECT_TIMER))
+      {
+        TransitionTo(COLLECT_NUDGE_FWD, T_NUDGE_MS);
       }
       break;
 
-    case CSM_BACK_OUT:
-      if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == CollectTimer)) {
-        Follower_Stop();
-        ArmTravelPose();
-        TransitionTo(CSM_DONE, 0);
+    case COLLECT_NUDGE_FWD:
+      if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == COLLECT_TIMER))
+      {
+        TransitionTo(COLLECT_ARM_TRAVEL, T_ARM_TRAVEL_MS);
       }
       break;
 
-    case CSM_DONE:
-      if (CollectMode == FIRST) {
-        PostFindBucket(FIRST);
-      } else {
-        PostFindBucket(MIDDLE);
+    case COLLECT_ARM_TRAVEL:
+      if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == COLLECT_TIMER))
+      {
+        TransitionTo(COLLECT_CHECK_COUNT, 0u);
       }
-      TransitionTo(CSM_IDLE, 0);
       break;
+
+    case COLLECT_CHECK_COUNT:
+      BallCount++;
+      DB_printf("CollectService: ball=%u\r\n", (unsigned)BallCount);
+
+      if (BallCount < BALL_TARGET_COUNT)
+      {
+        TransitionTo(COLLECT_ARM_DOWN, T_ARM_DOWN_MS);
+      }
+      else
+      {
+        TransitionTo(COLLECT_DONE, 0u);
+      }
+      break;
+
+    case COLLECT_DONE:
+    {
+      DB_printf("CollectService: done\r\n");
+      GrabOpen();
+      ArmTravelPose();
+
+      ES_Event_t doneEvt = { ES_COLLECT_DONE, 0 };
+      ES_PostAll(doneEvt);
+
+      TransitionTo(COLLECT_IDLE, 0u);
+      break;
+    }
 
     default:
-      TransitionTo(CSM_IDLE, 0);
+      TransitionTo(COLLECT_IDLE, 0u);
       break;
   }
 
   return ReturnEvent;
 }
 
-static void TransitionTo(CSM_State_t NextState, uint16_t timeMs) {
-  CurrentState = NextState;
+/*=========================== TRANSITIONS ============================*/
+static void TransitionTo(CollectState_t next, uint16_t tMs)
+{
+  CurState = next;
 
-  switch (NextState) {
-
-    case CSM_IDLE:
-      Follower_Stop();
-      ArmTravelPose();
-      GrabServoOpen();
-      ES_Timer_StopTimer(CollectTimer);
+  switch (next)
+  {
+    case COLLECT_IDLE:
+      ES_Timer_StopTimer(COLLECT_TIMER);
       break;
 
-    case CSM_APPROACH_DISPENSER:
-      Follower_FwdSlow();
-      ES_Timer_SetTimer(CollectTimer, timeMs);
-      ES_Timer_StartTimer(CollectTimer);
-      break;
-
-    case CSM_GRAB_PREP:
-      GrabServoOpen();
+    case COLLECT_ARM_DOWN:
       ArmPickPose();
-      ES_Timer_SetTimer(CollectTimer, timeMs);
-      ES_Timer_StartTimer(CollectTimer);
+      GrabOpen();
+      ES_Timer_InitTimer(COLLECT_TIMER, tMs);
       break;
 
-    case CSM_GRAB_CLOSE:
-      GrabServoClose();
-      ES_Timer_SetTimer(CollectTimer, timeMs);
-      ES_Timer_StartTimer(CollectTimer);
+    case COLLECT_GRIP_CLOSE:
+      GrabClose();
+      ES_Timer_InitTimer(COLLECT_TIMER, tMs);
       break;
 
-    case CSM_LIFT_AND_DROP:
+    case COLLECT_NUDGE_BACK:
+      RequestNudge(CMD_NUDGE_BACK);
+      ES_Timer_InitTimer(COLLECT_TIMER, tMs);
+      break;
+
+    case COLLECT_ARM_UP_DROP:
       ArmDropPose();
-      ES_Timer_SetTimer(CollectTimer, timeMs);
-      ES_Timer_StartTimer(CollectTimer);
+      ES_Timer_InitTimer(COLLECT_TIMER, tMs);
       break;
 
-    case CSM_CHECK_COUNT:
-      ES_Timer_StopTimer(CollectTimer);
+    case COLLECT_GRIP_OPEN:
+      GrabOpen();
+      ES_Timer_InitTimer(COLLECT_TIMER, tMs);
       break;
 
-    case CSM_BACK_OUT:
-      Follower_RevSlow();
+    case COLLECT_NUDGE_FWD:
+      RequestNudge(CMD_NUDGE_FWD);
+      ES_Timer_InitTimer(COLLECT_TIMER, tMs);
+      break;
+
+    case COLLECT_ARM_TRAVEL:
       ArmTravelPose();
-      ES_Timer_SetTimer(CollectTimer, timeMs);
-      ES_Timer_StartTimer(CollectTimer);
+      ES_Timer_InitTimer(COLLECT_TIMER, tMs);
       break;
 
-    case CSM_DONE:
-      Follower_Stop();
-      ES_Timer_StopTimer(CollectTimer);
+    case COLLECT_CHECK_COUNT:
+    case COLLECT_DONE:
+    default:
+      ES_Timer_StopTimer(COLLECT_TIMER);
       break;
   }
 }
+
+/*=========================== SPI NUDGE ============================*/
+static void RequestNudge(uint8_t cmdByte)
+{
+  SPIOperate_SPI1_Send8Wait(cmdByte);
+}
+
+/*=========================== SERVO POSES ============================*/
+static void GrabOpen(void)
+{
+  ServoSet_OC2_us(US_GRIP_OPEN_1);
+  ServoSet_OC1_us(US_GRIP_OPEN_2);
+}
+
+static void GrabClose(void)
+{
+  ServoSet_OC2_us(US_GRIP_CLOSE_1);
+  ServoSet_OC1_us(US_GRIP_CLOSE_2);
+}
+
+static void ArmPickPose(void)
+{
+  ServoSet_OC4_us(US_ARM_PICK);
+}
+
+static void ArmDropPose(void)
+{
+  ServoSet_OC4_us(US_ARM_DROP);
+}
+
+static void ArmTravelPose(void)
+{
+  ServoSet_OC4_us(US_ARM_TRAVEL);
+}
+
+/*=========================== SERVO PWM INIT ============================*/
+static void InitServoPWM(void)
+{
+  /* Timer2 as 50Hz timebase for all OC servo outputs */
+  T2CON = 0;
+  T2CONbits.TCS = 0;
+  T2CONbits.TCKPS = SERVO_TIMER_PRESCALE_BITS;
+  TMR2 = 0;
+  PR2 = (uint16_t)SERVO_PR2_VALUE;
+
+  /* OC modules in PWM mode using Timer2 */
+  OC1CON = 0; OC1R = 0; OC1RS = 0; OC1CONbits.OCTSEL = 0; OC1CONbits.OCM = 0b110; OC1CONbits.ON = 1;
+  OC2CON = 0; OC2R = 0; OC2RS = 0; OC2CONbits.OCTSEL = 0; OC2CONbits.OCM = 0b110; OC2CONbits.ON = 1;
+  OC4CON = 0; OC4R = 0; OC4RS = 0; OC4CONbits.OCTSEL = 0; OC4CONbits.OCM = 0b110; OC4CONbits.ON = 1;
+
+  T2CONbits.ON = 1;
+
+  ServoInitDone = true;
+}
+
+static uint16_t UsToOCrs(uint16_t us)
+{
+  /* tickRate = PBCLK/8 = 2.5 MHz -> 1 us = 2.5 ticks */
+  uint32_t ticks = ((uint32_t)us * 25u) / 10u;
+  if (ticks > (uint32_t)PR2) ticks = PR2;
+  return (uint16_t)ticks;
+}
+
+static void ServoSet_OC1_us(uint16_t us) { OC1RS = UsToOCrs(us); }
+static void ServoSet_OC2_us(uint16_t us) { OC2RS = UsToOCrs(us); }
+static void ServoSet_OC4_us(uint16_t us) { OC4RS = UsToOCrs(us); }
