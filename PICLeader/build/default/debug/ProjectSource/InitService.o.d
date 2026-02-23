@@ -7,7 +7,7 @@ build/default/debug/ProjectSource/InitService.o: \
  FrameworkHeaders/ES_General.h FrameworkHeaders/ES_Timers.h \
  ProjectHeaders/InitService.h FrameworkHeaders/ES_Types.h \
  ProjectHeaders/SPILeaderService.h FrameworkHeaders/ES_Configure.h \
- FrameworkHeaders/ES_Events.h
+ FrameworkHeaders/ES_Events.h FrameworkHeaders/dbprintf.h
 
 FrameworkHeaders/ES_Framework.h:
 
@@ -40,3 +40,5 @@ ProjectHeaders/SPILeaderService.h:
 FrameworkHeaders/ES_Configure.h:
 
 FrameworkHeaders/ES_Events.h:
+
+FrameworkHeaders/dbprintf.h:

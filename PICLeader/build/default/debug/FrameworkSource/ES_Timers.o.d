@@ -16,6 +16,7 @@ build/default/debug/FrameworkSource/ES_Timers.o: \
  ProjectHeaders/SPILeaderService.h FrameworkHeaders/ES_Configure.h \
  FrameworkHeaders/ES_Framework.h FrameworkHeaders/ES_Events.h \
  FrameworkHeaders/ES_Types.h ProjectHeaders/InitService.h \
+ ProjectHeaders/CollectService.h ProjectHeaders/DispenseService.h \
  FrameworkSource/../FrameworkHeaders/ES_General.h \
  FrameworkSource/../FrameworkHeaders/ES_Events.h \
  FrameworkSource/../FrameworkHeaders/ES_PostList.h \
@@ -60,6 +61,10 @@ FrameworkHeaders/ES_Events.h:
 FrameworkHeaders/ES_Types.h:
 
 ProjectHeaders/InitService.h:
+
+ProjectHeaders/CollectService.h:
+
+ProjectHeaders/DispenseService.h:
 
 FrameworkSource/../FrameworkHeaders/ES_General.h:
 

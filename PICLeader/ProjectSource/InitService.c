@@ -14,6 +14,7 @@
 #include "ES_Framework.h"
 #include "InitService.h"
 #include "SPILeaderService.h"
+#include "dbprintf.h"
 
 /*---------------------------- Module Types -------------------------------*/
 
