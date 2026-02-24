@@ -21,6 +21,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "ES_Configure.h"
 #include "ES_Framework.h"
 #include "ES_Timers.h"
 #include "dbprintf.h"
@@ -47,6 +48,11 @@
 #define US_BUCKET_STOP        1500u
 #define US_BUCKET_ROTATE_CW   1700u
 
+/*============================== TIMER ==============================*/
+#ifndef DISPENSE_TIMER
+#define DISPENSE_TIMER         2u
+#endif
+
 /*============================== STATE ==============================*/
 typedef enum {
   DISP_IDLE,
@@ -67,6 +73,8 @@ static uint8_t MyPriority;
 static uint8_t BucketQuarterTurns = 0;
 
 /*====================== PWM HELPERS =====================*/
+static bool ServoInitDone = false;
+
 static void InitServoPWM(void);
 static uint16_t UsToOCrs(uint16_t us);
 
@@ -89,11 +97,17 @@ bool InitDispenseService(uint8_t Priority)
 {
   MyPriority = Priority;
 
-  InitServoPWM();
+  if (!ServoInitDone) InitServoPWM();
+
+  BucketQuarterTurns = 0u;
 
   BucketRotateStop();
   PushArmUp();
   BucketToCollect();
+
+  ES_Timer_StopTimer(DISPENSE_TIMER);
+
+  DB_printf("DispenseService: init done\r\n");
 
   ES_Event_t e = { ES_INIT,0 };
   return ES_PostToService(MyPriority,e);
@@ -122,7 +136,7 @@ ES_Event_t RunDispenseService(ES_Event_t ThisEvent)
       break;
 
     case DISP_PUSH_ARM_DOWN:
-      if(ThisEvent.EventType==ES_TIMEOUT)
+      if((ThisEvent.EventType==ES_TIMEOUT) && (ThisEvent.EventParam==DISPENSE_TIMER))
       {
         CurState = DISP_BACKUP_DELAY;
         ES_Timer_InitTimer(DISPENSE_TIMER,T_BACKUP_DELAY_MS);
@@ -130,7 +144,7 @@ ES_Event_t RunDispenseService(ES_Event_t ThisEvent)
       break;
 
     case DISP_BACKUP_DELAY:
-      if(ThisEvent.EventType==ES_TIMEOUT)
+      if((ThisEvent.EventType==ES_TIMEOUT) && (ThisEvent.EventParam==DISPENSE_TIMER))
       {
         BucketToDispense();
         CurState = DISP_MOVE_BUCKET;
@@ -139,7 +153,7 @@ ES_Event_t RunDispenseService(ES_Event_t ThisEvent)
       break;
 
     case DISP_MOVE_BUCKET:
-      if(ThisEvent.EventType==ES_TIMEOUT)
+      if((ThisEvent.EventType==ES_TIMEOUT) && (ThisEvent.EventParam==DISPENSE_TIMER))
       {
         BucketRotateStart();
         CurState = DISP_ROTATE_BUCKET;
@@ -148,7 +162,7 @@ ES_Event_t RunDispenseService(ES_Event_t ThisEvent)
       break;
 
     case DISP_ROTATE_BUCKET:
-      if(ThisEvent.EventType==ES_TIMEOUT)
+      if((ThisEvent.EventType==ES_TIMEOUT) && (ThisEvent.EventParam==DISPENSE_TIMER))
       {
         BucketRotateStop();
         BucketQuarterTurns++;
@@ -158,7 +172,7 @@ ES_Event_t RunDispenseService(ES_Event_t ThisEvent)
       break;
 
     case DISP_WAIT_DROP:
-      if(ThisEvent.EventType==ES_TIMEOUT)
+      if((ThisEvent.EventType==ES_TIMEOUT) && (ThisEvent.EventParam==DISPENSE_TIMER))
       {
         BucketToCollect();
         CurState = DISP_RETURN_BUCKET;
@@ -167,7 +181,7 @@ ES_Event_t RunDispenseService(ES_Event_t ThisEvent)
       break;
 
     case DISP_RETURN_BUCKET:
-      if(ThisEvent.EventType==ES_TIMEOUT)
+      if((ThisEvent.EventType==ES_TIMEOUT) && (ThisEvent.EventParam==DISPENSE_TIMER))
       {
         PushArmUp();
         CurState = DISP_PUSH_ARM_UP;
@@ -176,7 +190,7 @@ ES_Event_t RunDispenseService(ES_Event_t ThisEvent)
       break;
 
     case DISP_PUSH_ARM_UP:
-      if(ThisEvent.EventType==ES_TIMEOUT)
+      if((ThisEvent.EventType==ES_TIMEOUT) && (ThisEvent.EventParam==DISPENSE_TIMER))
       {
         CurState = DISP_DONE;
       }
@@ -192,6 +206,10 @@ ES_Event_t RunDispenseService(ES_Event_t ThisEvent)
         CurState = DISP_IDLE;
         break;
     }
+
+    default:
+      CurState = DISP_IDLE;
+      break;
   }
 
   return ReturnEvent;
@@ -200,15 +218,21 @@ ES_Event_t RunDispenseService(ES_Event_t ThisEvent)
 /*=========================== PWM ============================*/
 static void InitServoPWM(void)
 {
+  /* Timer2 as 50Hz timebase for OC3/OC4/OC5 PWM */
   T2CON = 0;
-  T2CONbits.TCKPS = 0b011;
+  T2CONbits.TCS = 0;
+  T2CONbits.TCKPS = 0b011;   /* 1:8 */
   PR2 = 49999;
   TMR2 = 0;
+
+  /* ensure OCs use Timer2 */
+  OC3CON=0; OC3R=0; OC3RS=0; OC3CONbits.OCTSEL=0; OC3CONbits.OCM=0b110; OC3CONbits.ON=1;
+  OC4CON=0; OC4R=0; OC4RS=0; OC4CONbits.OCTSEL=0; OC4CONbits.OCM=0b110; OC4CONbits.ON=1;
+  OC5CON=0; OC5R=0; OC5RS=0; OC5CONbits.OCTSEL=0; OC5CONbits.OCM=0b110; OC5CONbits.ON=1;
+
   T2CONbits.ON = 1;
 
-  OC3CON=0; OC3CONbits.OCM=0b110; OC3CONbits.ON=1;
-  OC4CON=0; OC4CONbits.OCM=0b110; OC4CONbits.ON=1;
-  OC5CON=0; OC5CONbits.OCM=0b110; OC5CONbits.ON=1;
+  ServoInitDone = true;
 }
 
 static uint16_t UsToOCrs(uint16_t us)
