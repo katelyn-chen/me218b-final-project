@@ -19,6 +19,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "ES_Configure.h"
 #include "ES_Framework.h"
 #include "ES_Timers.h"
 #include "dbprintf.h"
@@ -28,7 +29,7 @@
 #define PBCLK_HZ               20000000u
 
 #ifndef COLLECT_TIMER
-#define COLLECT_TIMER          COLLECT_TIMER
+#define COLLECT_TIMER          1u
 #endif
 
 /* collect target */
