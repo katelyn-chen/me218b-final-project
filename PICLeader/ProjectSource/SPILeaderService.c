@@ -84,6 +84,10 @@
 #define CMD_COLLECT_START         0x20
 #define CMD_DISPENSE_START        0x21
 
+/* optional unfreeze hooks */
+#define CMD_COLLECT_DONE          0x24
+#define CMD_DISPENSE_DONE         0x25
+
 /*---------------------------- Module Types -------------------------------*/
 typedef enum {
   LEADER_IDLE = 0,
@@ -97,7 +101,7 @@ typedef enum {
 } SideIndicated_t;
 
 /*---------------------------- Module Variables --------------------------*/
-static uint8_t      MyPriority;
+static uint8_t       MyPriority;
 static LeaderState_t curState;
 
 static uint8_t PendingCmd;
@@ -175,6 +179,10 @@ ES_Event_t RunSPILeaderService(ES_Event_t ThisEvent)
       Optional “freeze motors while servos run” hooks:
         call ES_PostAll({ES_COMMAND_RECEIVED, CMD_COLLECT_START}) from CollectService
         call ES_PostAll({ES_COMMAND_RECEIVED, CMD_DISPENSE_START}) from DispenseService
+
+      also optional for now:
+        call ES_PostAll({ES_COMMAND_RECEIVED, CMD_COLLECT_DONE}) when CollectService finishes
+        call ES_PostAll({ES_COMMAND_RECEIVED, CMD_DISPENSE_DONE}) when DispenseService finishes
     */
     case ES_COMMAND_RECEIVED:
     {
@@ -248,7 +256,7 @@ static void InitSPIHardware(void)
   SPISetup_MapSSOutput(CG_SPI_MODULE, SPI_RPB15);
 
   /* clock mode settings */
-  SPISetup_SetClockIdleState(CG_SPI_MODULE, SPI_CLK_HI);    // CKP = 1
+  SPISetup_SetClockIdleState(CG_SPI_MODULE, SPI_CLK_HI);     // CKP = 1
   SPISetup_SetActiveEdge(CG_SPI_MODULE,     SPI_SECOND_EDGE);// CKE = 0
 
   SPISetEnhancedBuffer(CG_SPI_MODULE, true);
@@ -340,7 +348,6 @@ static void HandleFollowerStatus(uint8_t statusByte)
 
     /*
       Beacon found status is mainly for debug / early alignment
-      If needed, these can be converted into a PIC1-side event too
     */
     case CMD_BEACON_R_FOUND:
       DB_printf("Follower status: BEACON R FOUND\r\n");
