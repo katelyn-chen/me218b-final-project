@@ -19,6 +19,7 @@
 
 #include "ES_Configure.h"
 #include "ES_Framework.h"
+#include "ES_Timers.h"
 #include "dbprintf.h"
 
 /*---------------------------- Module Defines -------------------------------*/
@@ -45,6 +46,9 @@
 #define ROTATE_90_TIME_MS         1100u
 #define ROTATE_FIRST_COLLECT_MS   400u
 
+#ifndef MOTOR_TIMER
+#define MOTOR_TIMER               14u
+#endif
 
 /*---------------------------- Module Types -------------------------------*/
 typedef enum {
@@ -69,7 +73,7 @@ typedef enum {
 } InitOrientState_t;
 
 typedef enum {
-  
+
 } FirstCollectState_t;
 
 typedef enum {
@@ -90,10 +94,12 @@ typedef enum {
 } Field_t;
 
 /*---------------------------- Module Variables --------------------------*/
-static uint8_t           MyPriority;
-static NavigateState_t   curState;
-static InitOrientState_t orientState;
+static uint8_t             MyPriority;
+static NavigateState_t     curState;
+static InitOrientState_t   orientState;
 static FirstCollectState_t fcState;
+static Field_t             field = FIELD_UNKNOWN;
+static uint16_t            duty = DUTY_STOP;
 
 /* beacon sweep history (store unique transitions only) */
 #define BEACON_SEQ_MAX 8u
@@ -133,7 +139,10 @@ bool InitNavigateService(uint8_t Priority)
 
   curState = DEBUG;
   orientState = ORIENT_IDLE;
-  //fcState = 
+  (void)fcState;
+  field = FIELD_UNKNOWN;
+  duty = DUTY_STOP;
+
   ResetBeaconSequence();
 
   DB_printf("Navigate Service: init done\r\n");
@@ -187,13 +196,14 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
           case ES_ALIGN_ULTRASONICS:
               /*
                 Reusing ES_ALIGN_ULTRASONICS as the “begin initial orientation” trigger.
-                Initial orientation is now beacon-only: rotate CCW and classify field
+                Initial orientation is beacon-only: rotate CCW and classify field
                 based on the beacon order.
               */
               DB_printf("Starting INIT_ORIENT (beacon sweep)\r\n");
 
-              //curState = INIT_ORIENT;
-              //orientState = ORIENT_BEACON_SWEEP;
+              curState = INIT_ORIENT;
+              orientState = ORIENT_BEACON_SWEEP;
+              field = FIELD_UNKNOWN;
 
               ResetBeaconSequence();
               StartBeaconAlignSearch();
@@ -218,7 +228,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
           case ES_TIMEOUT:
               if (ThisEvent.EventParam == MOTOR_TIMER)
               {
-                  DB_printf("Motor timer expired");
+                  DB_printf("Motor timer expired\r\n");
                   StopMotors();
               }
               break;
@@ -232,9 +242,9 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
 
           default:
               break;
-        }
-      break;
       }
+      break;
+    }
 
     case INIT_ORIENT:
     {
@@ -245,6 +255,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
           if (ThisEvent.EventType == ES_ALIGN_ULTRASONICS)
           {
             orientState = ORIENT_BEACON_SWEEP;
+            field = FIELD_UNKNOWN;
             ResetBeaconSequence();
             StartBeaconAlignSearch();
           }
@@ -268,21 +279,27 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
                 DB_printf("Beacon seq add: id=%u (len=%u)\r\n",
                           (unsigned)id, (unsigned)SeqLen);
 
-                Field_t field = DetermineFieldFromSequence();
+                field = DetermineFieldFromSequence();
                 if (field != FIELD_UNKNOWN)
                 {
                   StopMotors();
 
+                  /*
+                    Convert field classification into a LEFT/RIGHT indication that the
+                    leader understands. We map:
+                      FIELD_GREEN -> RIGHT
+                      FIELD_BLUE  -> LEFT
+                    (If you decide the opposite mapping on the real field, swap these.)
+                  */
                   ES_Event_t SideEvent;
                   SideEvent.EventType = ES_SIDE_INDICATED;
-                  SideEvent.EventParam = (field == FIELD_GREEN) ? 0u : 1u; /* 0=GREEN, 1=BLUE */
+                  SideEvent.EventParam = (field == FIELD_GREEN) ? 1u : 0u; /* 1=RIGHT, 0=LEFT */
 
                   PostSPIFollowerService(SideEvent);
 
                   DB_printf("Field determined: %u\r\n", (unsigned)field);
 
                   orientState = ORIENT_DONE;
-                  curState = FIRST_COLLECT;
 
                   DB_printf("ORIENT_DONE: Rotating to find dispenser beacon based on field\r\n");
                   StartBeaconAlignSearch();
@@ -295,8 +312,10 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
 
         case ORIENT_DONE:
         {
-          // rotate until beacon G OR beacon B detected
-          // adjust dir by rotating based on timer
+          /*
+            Rotate until target beacon detected, then do a small settle rotate, then
+            translate forward for first collect.
+          */
           switch (ThisEvent.EventType)
           {
             case ES_BEACON_FOUND:
@@ -317,10 +336,10 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
                 targetBeacon = BEACON_ID_B;
               }
 
-              if (id == targetBeacon)
+              if ((targetBeacon != BEACON_ID_NONE) && (id == targetBeacon))
               {
                 DB_printf("Target beacon found: %u\r\n", (unsigned)id);
-                // small adjustment to face straight based on timer
+
                 DoRotate(PackRotateParam(ROT_90, ROT_CW));
                 ES_Timer_InitTimer(MOTOR_TIMER, ROTATE_FIRST_COLLECT_MS);
               }
@@ -328,7 +347,8 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
             }
 
             case ES_TIMEOUT:
-              if (ThisEvent.EventParam == MOTOR_TIMER) {
+              if (ThisEvent.EventParam == MOTOR_TIMER)
+              {
                 StopMotors();
                 curState = FIRST_COLLECT;
                 DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_FWD));
@@ -340,6 +360,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
           }
           break;
         }
+
         default:
           break;
       }
@@ -348,16 +369,16 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
 
     case FIRST_COLLECT:
     {
-      // drive forward until T detected
+      /* drive forward until T detected */
       if (ThisEvent.EventType == ES_T_DETECTED)
       {
-        DoRotate(PackRotateParam(ROT_90, ROT_CCW)); // turn 90 to face dispenser
-        DoTranslate(PackTranslateParam(TRANS_HALF, DIR_FWD)); // move forward to dispenser
+        DoRotate(PackRotateParam(ROT_90, ROT_CCW)); /* turn 90 to face dispenser */
+        DoTranslate(PackTranslateParam(TRANS_HALF, DIR_FWD)); /* move forward to dispenser */
       }
 
       if (ThisEvent.EventType == ES_ULTRASONIC_DETECTED)
       {
-        // need to determine which sensors we are using for dispenser alignment
+        /* determine which sensors we are using for dispenser alignment */
         curState = COLLECT_ALIGN;
       }
       break;
@@ -454,13 +475,6 @@ static void InitPinsAndPPS(void)
   PIN_MapPinOutput(LEFT_IN2);
   PIN_MapPinOutput(RIGHT_IN3);
   PIN_MapPinOutput(RIGHT_IN4);
-
-  /*TRISAbits.TRISA1 = 0;  ANSELAbits.ANSA1 = 0;
-  TRISBbits.TRISB3 = 0;  ANSELBbits.ANSB3 = 0;
-  TRISBbits.TRISB2 = 0;  ANSELBbits.ANSB2 = 0;
-  TRISBbits.TRISB0 = 0;
-
-  TRISBbits.TRISB4 = 0; LATBbits.LATB4 = 0; // LED Align */
 
   // Selecting OC Channels
   #define PPS_FN_PWM 0b0101
@@ -570,12 +584,16 @@ static void DoTranslate(uint16_t translateParam)
       duty = DUTY_TRANS_TAPE_DET;
       break;
 
+    default:
+      duty = DUTY_STOP;
+      break;
   }
 
-  int16_t signedDuty = (dir == DIR_FWD) ? (int16_t)duty : -(int16_t)duty;
-
-  SetMotor1(signedDuty);
-  SetMotor2(signedDuty);
+  {
+    int16_t signedDuty = (dir == DIR_FWD) ? (int16_t)duty : -(int16_t)duty;
+    SetMotor1(signedDuty);
+    SetMotor2(signedDuty);
+  }
 }
 
 static void DoRotate(uint16_t rotateParam)
@@ -662,9 +680,6 @@ static Field_t DetermineFieldFromSequence(void)
   /*
     Green field CCW cycle: B L R G
     Blue  field CCW cycle: G R L B
-
-    Require 5 unique transitions before deciding to reduce false positives? 
-    We should probably test in field and change the logic to whatever works best.
   */
   if (SeqLen < 5u) return FIELD_UNKNOWN;
 
