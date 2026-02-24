@@ -287,11 +287,10 @@ typedef enum
   ES_SIDE_INDICATED, // param: LEFT-RIGHT
   ES_ALIGN_COLLECT, // param: FIRST-SECOND-OTHER
   ES_FIND_BUCKET,   // param: FIRST-MIDDLE-END
-  ES_DISPENSE,       // param: FULL-SPLIT1-SPLIT2
   ES_COLLECT_START,  // param: 0
   ES_DISPENSE_START, // param: 0
   ES_COLLECT_DONE,   // param: 0
-  ES_DISPENSE_DONE,  // param: 0
+  ES_DISPENSE_COMPLETE,  // param: 0
   ES_START_BUTTON,
   ES_INIT_GAME,
   ES_END_GAME,
