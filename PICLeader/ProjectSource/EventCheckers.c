@@ -128,36 +128,21 @@ bool Check4Keystroke(void)
 }
 
 bool Check4Button(void)
-
 {
- static SPI_ReadPinState_t lastButtonState = SPI_READ_LOW;
- static uint16_t lastEdgeTime = 0;
- bool ReturnVal = false;
+  static uint8_t lastButtonState = 0;
+  bool ReturnVal = false;
 
- SPI_ReadPinState_t currentButtonState = PIN_ReadDigitalPIC32Pin(InitButton);
- if (currentButtonState == SPI_INVALID_PIN) return false;
-
- uint16_t now = ES_Timer_GetTime();
-
- if (currentButtonState != lastButtonState) {
-   uint16_t delta = now - lastEdgeTime;
-   lastEdgeTime = now;
-
-   if (delta < MIN_BUTTON_EDGE_DELTA_MS) {
-     lastButtonState = currentButtonState;
-     return false;
-   }
-
-   if (currentButtonState == SPI_READ_HIGH) {
-    // post to init service that the start button has been pressed!
-     ES_Event_t ThisEvent = { .EventType = ES_START_BUTTON, .EventParam = now };
-     PostInitService(ThisEvent);
-     ReturnVal = true;
-   }
-
-   lastButtonState = currentButtonState;
- }
- return ReturnVal;
+  uint8_t currentButtonState = PORTAbits.RA2;
+  if (currentButtonState && currentButtonState != lastButtonState) {
+      //DB_printf("Testing 1, state:\r\n");
+      ES_Event_t NewEvent;
+      NewEvent.EventType = ES_START_BUTTON;
+      PostInitService(NewEvent);
+      ReturnVal = true;
+  }
+  
+  lastButtonState = currentButtonState;
+  return ReturnVal;
 }
 
 bool Check4Beacon(void)
