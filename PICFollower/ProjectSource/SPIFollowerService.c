@@ -360,9 +360,9 @@ static void HandleCommandByte(uint8_t cmd)
     }
 
     case CMD_QUERY: {
-        DB_printf("Received QUERY command from SPILeaderService!\r\n");
+        DB_printf("Received QUERY command from SPILeaderService! Outgoing cmd %d\r\n", outgoingCmd);
         //outgoingCmd = CMD_TESTING;
-        DB_printf("Sending Testing Cmd to Leader!\r\n");
+        //DB_printf("Sending Testing Cmd to Leader!\r\n");
         break;
     }
 

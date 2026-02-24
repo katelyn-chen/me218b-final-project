@@ -843,18 +843,14 @@ bool PIN_MapPinOutput(SPI_PinMap_t WhichPin)
 uint8_t PIN_ReadDigitalPIC32Pin(SPI_PinMap_t WhichPin)
 {
   
- if ((WhichPin < SPI_RPA0) || (WhichPin > SPI_RPB15)) {
-   return SPI_INVALID_PIN; // 0xFF means unassigned
- }
-
  uint32_t portValues = *portRegisters[WhichPin]; //Full Read of either PortA or PortB
  uint32_t portMask   = mapPinMap2BitPosn[WhichPin]; //bit position of WhichPin
 
  if ((portValues & portMask) != 0x0u){//There is a 1 in the bit position and Pin is in HIGH State, return 1
-   return SPI_READ_HIGH;
+   return 1;
 
  }else{//There is a 0 in the bit position and Pin is in LOW state, return 0
-   return SPI_READ_LOW;
+   return 0;
  }
 }
 

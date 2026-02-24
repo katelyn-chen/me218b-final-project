@@ -446,7 +446,7 @@ static void SetMotor2(int16_t dutySignedPercent)
 {
   uint16_t mag = (dutySignedPercent < 0) ? (uint16_t)(-dutySignedPercent) : (uint16_t)dutySignedPercent;
   uint16_t ocrs = DutyPercentToOCrs(mag);
-  DB_printf("Duty*PR2: %d\r\n", ocrs);
+  //DB_printf("Duty*PR2: %d\r\n", ocrs);
 
   if (dutySignedPercent > 0)
   {

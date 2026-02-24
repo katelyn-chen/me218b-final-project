@@ -75,6 +75,7 @@ typedef enum {
   SEND,
   RECEIVE,
   DEBUG,
+  WAITING_START,
   IDLE
 } LeaderState_t;
 
@@ -108,7 +109,7 @@ static bool IsKnownCommand(uint8_t cmd);
 bool InitSPILeaderService(uint8_t Priority)
 {
   MyPriority = Priority;
-  curState = DEBUG;
+  curState = WAITING_START;
   curCmd = CMD_TRANS_FWD;
   debugState = INIT;
   //curCmd = CMD_GET_BEACON_FREQ;
@@ -134,8 +135,9 @@ ES_Event_t RunSPILeaderService(ES_Event_t ThisEvent)
   switch (ThisEvent.EventType) {
     case ES_INIT_GAME:
         // tell follower to start!
-        curCmd = CMD_INIT_ORIENT;
-        curState = SEND;
+        //curCmd = CMD_INIT_ORIENT;
+        //curState = SEND;
+        curState = DEBUG;
         ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);     // init SPI timer
         break;
 
@@ -146,10 +148,13 @@ ES_Event_t RunSPILeaderService(ES_Event_t ThisEvent)
         // stop all servos
         break;
     }
+   
 
     case ES_TIMEOUT:
         if (ThisEvent.EventParam == SPI_TIMER) {
             switch (curState) {
+                case WAITING_START:
+                    break;
                 case DEBUG:
                 {
                     switch (debugState) {
@@ -159,6 +164,7 @@ ES_Event_t RunSPILeaderService(ES_Event_t ThisEvent)
                             curCmd = CMD_GET_BEACON_FREQ;
                             DB_printf("Leader sending get beacon freq command: %d\r\n", curCmd);
                             followerData = Follower_QueryByte(curCmd);
+                            //if (This)
                             debugState = LOCATE_BEACON;
                             break;
                         }
@@ -166,6 +172,7 @@ ES_Event_t RunSPILeaderService(ES_Event_t ThisEvent)
                         case LOCATE_BEACON: 
                         {
                             uint8_t followerData;
+                            curCmd = CMD_QUERY;
                             DB_printf("Leader sending query command! %d\n", curCmd);
                             followerData = Follower_QueryByte(CMD_QUERY);
                             
@@ -218,12 +225,8 @@ ES_Event_t RunSPILeaderService(ES_Event_t ThisEvent)
                     curState = IDLE;
                     break;
                 }
-
                 case IDLE:
-                {
-                    //curState = SEND;
                     break;
-                }
         }
         ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
         }

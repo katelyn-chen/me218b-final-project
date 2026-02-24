@@ -91,7 +91,10 @@ ES_Event_t RunInitService(ES_Event_t ThisEvent)
 
   switch (curState) {
     case IDLE:
-      if (ThisEvent.EventType == ES_ENTER_IDLE) {
+        if (ThisEvent.EventType == ES_INIT) {
+            DB_printf("InitService received ES_INIT\r\n");
+        }
+        if (ThisEvent.EventType == ES_ENTER_IDLE) {
         // send motor stop command to follower to stop motors
         // indicators off
         ReturnEvent.EventType = ES_END_GAME;
@@ -100,8 +103,9 @@ ES_Event_t RunInitService(ES_Event_t ThisEvent)
 
       if (ThisEvent.EventType == ES_START_BUTTON) {
         DB_printf("Start button has been pressed!\r\n");
-        ReturnEvent.EventType = ES_INIT_GAME;
-        ES_PostAll(ReturnEvent);
+        ES_Event_t NewEvent;
+        NewEvent.EventType = ES_INIT_GAME;
+        ES_PostAll(NewEvent);
         curState = GAME_MODE;
       }
       break;

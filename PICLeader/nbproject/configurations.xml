@@ -100,7 +100,7 @@
         <platform>3</platform>
       </toolsSet>
       <packs>
-        <pack name="PIC32MX_DFP" vendor="Microchip" version="1.4.243"/>
+        <pack name="PIC32MX_DFP" vendor="Microchip" version="1.5.259"/>
       </packs>
       <ScriptingSettings>
       </ScriptingSettings>
@@ -962,8 +962,6 @@
                   value="${memories.instruction.ram.ranges}"/>
         <property key="memories.programmemory" value="true"/>
         <property key="memories.programmemory.ranges" value="1d000000-1d03ffff"/>
-        <property key="programmerToGoFilePath"
-                  value="U:/katelync/Lab5/debug/default/default_ptg"/>
         <property key="programoptions.donoteraseauxmem" value="false"/>
         <property key="programoptions.eraseb4program" value="true"/>
         <property key="programoptions.pgmentry.voltage" value="low"/>
