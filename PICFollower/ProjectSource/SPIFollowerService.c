@@ -74,11 +74,15 @@
 #define CMD_NOOP                  0xFF
 #define CMD_TESTING               0x10  // checkpoint 2 cmd
 
-/* NEW: nudges requested by CollectService on leader */
+/* collect/dispense sync (leader owns servos; follower freezes motors) */
+#define CMD_COLLECT_START         0x20
+#define CMD_DISPENSE_START        0x21
+#define CMD_COLLECT_DONE          0x24
+#define CMD_DISPENSE_DONE         0x25
+
+/* nudges requested by CollectService on leader */
 #define CMD_NUDGE_BACK            0x22
 #define CMD_NUDGE_FWD             0x23
-
-
 
 /*---------------------------- Module Types -------------------------------*/
 typedef enum {
@@ -91,6 +95,7 @@ typedef enum {
     RIGHT,
     LEFT
 } SideIndicate_t;
+
 /*---------------------------- Module Variables --------------------------*/
 static uint8_t MyPriority;
 FollowerState_t curState;
@@ -98,6 +103,9 @@ static uint8_t curCmd;
 static uint8_t prevCmd;
 static volatile uint8_t incomingCmd;
 static uint8_t outgoingCmd;
+
+/* NEW: freeze gate (while leader servos run) */
+static bool MotorsFrozen = false;
 
 /*====================== PRIVATE FUNCTION PROTOS =====================*/
 static void InitSPIHardware(void);
@@ -111,6 +119,13 @@ bool InitSPIFollowerService(uint8_t Priority)
 {
   MyPriority = Priority;
   curState = RECEIVE;
+
+  /* IMPORTANT: initialize these so first SPI reply isn't garbage */
+  outgoingCmd = CMD_NOOP;
+  curCmd = CMD_NOOP;
+  prevCmd = CMD_NOOP;
+  MotorsFrozen = false;
+
   InitSPIHardware();
   InitPinHardware();
   //ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
@@ -159,7 +174,7 @@ ES_Event_t RunSPIFollowerService(ES_Event_t ThisEvent)
             HandleCommandByte(ThisEvent.EventParam);
             break;
         }
-        
+
         case ES_BEACON_FOUND:
         {
             uint8_t id = ThisEvent.EventParam;
@@ -168,23 +183,27 @@ ES_Event_t RunSPIFollowerService(ES_Event_t ThisEvent)
                 case BEACON_ID_G:
                     outgoingCmd = CMD_BEACON_G_FOUND;
                     break;
-                    
+
                 case BEACON_ID_B:
                     outgoingCmd = CMD_BEACON_B_FOUND;
                     break;
-                    
+
                 case BEACON_ID_R:
-                    outgoingCmd = CMD_BEACON_L_FOUND;
+                    outgoingCmd = CMD_BEACON_R_FOUND; /* FIXED */
                     break;
-                    
+
                 case BEACON_ID_L:
                     outgoingCmd = CMD_BEACON_L_FOUND;
-                    break;                
+                    break;
+
+                default:
+                    break;
             }
             break;
         }
-            
-            
+
+        default:
+            break;
     }
   return ReturnEvent;
 }
@@ -198,7 +217,7 @@ static void InitSPIHardware(void)
     Leader SCK (RB14, pin 25) --> Follower SCK1  (RB14, pin 25)
     Leader SS (RB15, pin 26) --> Follower CS (RB15, pin 26)*/
 
-  DB_printf("Follower SPI Setup\n"); 
+  DB_printf("Follower SPI Setup\n");
   /* HAL SPI setup */
   SPISetup_BasicConfig(CG_SPI_MODULE);
   SPISetup_SetFollower(CG_SPI_MODULE);
@@ -215,14 +234,14 @@ static void InitSPIHardware(void)
   /* clock mode settings */
   SPISetup_SetClockIdleState(CG_SPI_MODULE, SPI_CLK_HI);    // CKP = 1
   SPISetup_SetActiveEdge(CG_SPI_MODULE, SPI_SECOND_EDGE);   // CKE = 0
-  
+
   SPISetEnhancedBuffer(CG_SPI_MODULE, false);
   SPISetup_SetXferWidth(CG_SPI_MODULE, SPI_8BIT);
 
   /* set SPI bit time (ns) */
   //SPISetup_SetBitTime(CG_SPI_MODULE, SPI_CLK_PERIOD_NS);
   SPISetup_EnableSPI(CG_SPI_MODULE);
-  
+
   SPISetup_ConfigureInterrupts(CG_SPI_MODULE);
   //SPI1BUF = 0xAA;
 
@@ -232,6 +251,7 @@ static void InitSPIHardware(void)
 
 static uint8_t Leader_QueryByte(uint8_t outByte)
 {
+  (void)outByte;
   /* send one byte and read back the received byte */
   return (uint8_t)SPIOperate_ReadData(CG_SPI_MODULE);
 }
@@ -269,6 +289,12 @@ static bool IsKnownCommand(uint8_t cmd)
         case CMD_END_GAME:
         case CMD_SIDE_FOUND_RIGHT:
         case CMD_SIDE_FOUND_LEFT:
+
+        case CMD_COLLECT_START:
+        case CMD_DISPENSE_START:
+        case CMD_COLLECT_DONE:
+        case CMD_DISPENSE_DONE:
+
         case CMD_NUDGE_BACK:
         case CMD_NUDGE_FWD:
             return true;
@@ -286,6 +312,30 @@ static void HandleCommandByte(uint8_t cmd)
   cmdEvent.EventParam = 0;
 
   if (cmd != prevCmd) {
+
+    /*
+      Freeze gate:
+        while leader is running collect/dispense servos, follower should ignore motion commands.
+        Allow only STOP/END_GAME/NOOP/QUERY and DONE commands through.
+    */
+    if (MotorsFrozen)
+    {
+        switch (cmd)
+        {
+            case CMD_STOP:
+            case CMD_END_GAME:
+            case CMD_QUERY:
+            case CMD_NOOP:
+            case CMD_COLLECT_DONE:
+            case CMD_DISPENSE_DONE:
+                break; /* allow */
+            default:
+                DB_printf("Ignoring cmd (motors frozen): %d\r\n", cmd);
+                prevCmd = cmd;
+                return;
+        }
+    }
+
     switch (cmd)
     {
     case CMD_END_GAME: {
@@ -302,7 +352,6 @@ static void HandleCommandByte(uint8_t cmd)
 
       case CMD_STOP: {
         DB_printf("Received STOP command\r\n");
-        //outgoingCmd = CMD_STOP;
         cmdEvent.EventType = ES_STOP;
         break;
     }
@@ -327,7 +376,6 @@ static void HandleCommandByte(uint8_t cmd)
         cmdEvent.EventParam = PackRotateParam(ROT_90, ROT_CCW);
         break;
     }
-
 
     case CMD_ROT_CW_45: {
         DB_printf("Received CW 45 rotation command\r\n");
@@ -358,20 +406,17 @@ static void HandleCommandByte(uint8_t cmd)
     case CMD_GET_BEACON_FREQ: {
         DB_printf("Received GET BEACON FREQ command\r\n");
         cmdEvent.EventType = ES_BEACON_SIGNAL;
-        //cmdEvent.EventType = ES_ALIGN_ULTRASONICS;
         break;
     }
 
     case CMD_TESTING: {
         DB_printf("Received TESTING command\r\n");
-        //outgoingCmd = CMD_TESTING;
         break;
     }
 
     case CMD_QUERY: {
         DB_printf("Received QUERY command from SPILeaderService!\r\n");
-        //outgoingCmd = CMD_TESTING;
-        DB_printf("Sending Testing Cmd to Leader!\r\n");
+        DB_printf("Sending current outgoing status to Leader: %d\r\n", outgoingCmd);
         break;
     }
 
@@ -381,9 +426,41 @@ static void HandleCommandByte(uint8_t cmd)
         DB_printf("Posting align ultrasonics command to nav service!\r\n");
         break;
     }
-    
+
+    case CMD_COLLECT_START: {
+        DB_printf("Received COLLECT_START (freeze motors)\r\n");
+        MotorsFrozen = true;
+        cmdEvent.EventType = ES_STOP;  /* immediately stop motors */
+        break;
+    }
+
+    case CMD_DISPENSE_START: {
+        DB_printf("Received DISPENSE_START (freeze motors)\r\n");
+        MotorsFrozen = true;
+        cmdEvent.EventType = ES_STOP;  /* immediately stop motors */
+        break;
+    }
+
+    case CMD_COLLECT_DONE: {
+        DB_printf("Received COLLECT_DONE (unfreeze motors)\r\n");
+        MotorsFrozen = false;
+        break;
+    }
+
+    case CMD_DISPENSE_DONE: {
+        DB_printf("Received DISPENSE_DONE (unfreeze motors)\r\n");
+        MotorsFrozen = false;
+        break;
+    }
+
     case CMD_NUDGE_BACK: {
         DB_printf("Received NUDGE BACK command\r\n");
+        /*
+          IMPORTANT:
+            This starts motion ONLY. To make it a true "nudge",
+            NavigateService must stop motors after a short MOTOR_TIMER.
+            (Implement in NavigateService: on ES_TRANSLATE w/ TRANS_HALF from nudge, start MOTOR_TIMER then StopMotors on timeout.)
+        */
         cmdEvent.EventType = ES_TRANSLATE;
         cmdEvent.EventParam = PackTranslateParam(TRANS_HALF, DIR_REV);
         break;
@@ -410,7 +487,7 @@ static void HandleCommandByte(uint8_t cmd)
         PostNavigateService(cmdEvent);
     }
     prevCmd = cmd;
-  } 
+  }
 }
 
 void __ISR(_SPI1_VECTOR, IPL7SOFT) SPI1_Handler(void) {
@@ -421,15 +498,14 @@ void __ISR(_SPI1_VECTOR, IPL7SOFT) SPI1_Handler(void) {
     }
     if (IFS1bits.SPI1RXIF) {
         incomingCmd = SPI1BUF;     // what leader sent
-        //DB_printf("%d\r\n", incomingCmd);
-        SPI1BUF = outgoingCmd;
+        SPI1BUF = outgoingCmd;     // what follower replies with
+
         if (incomingCmd != curCmd) {
            NewEvent.EventType = ES_SPI_RECEIVED;
            curCmd = incomingCmd;
            NewEvent.EventParam = curCmd;
-           bool test = PostSPIFollowerService(NewEvent);
+           (void)PostSPIFollowerService(NewEvent);
            DB_printf("%d\r\n", curCmd);
-           //DB_printf("%d\r\n", test);
         }
     }
     IFS1CLR = _IFS1_SPI1RXIF_MASK;
