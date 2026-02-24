@@ -33,7 +33,7 @@
 /****************************************************************************/
 // This macro determines that nuber of services that are *actually* used in
 // a particular application. It will vary in value from 1 to MAX_NUM_SERVICES
-#define NUM_SERVICES 2
+#define NUM_SERVICES 4
 
 /****************************************************************************/
 /* I include my service headers here so the Post*Service() prototypes exist
@@ -93,9 +93,9 @@
 // the header file with the public function prototypes
 #define SERV_3_HEADER "DispenseService.h"
 // the name of the Init function
-#define SERV_3_INIT InitDispenseSenseService
+#define SERV_3_INIT InitDispenseService
 // the name of the run function
-#define SERV_3_RUN RunDispenseSenseService
+#define SERV_3_RUN RunDispenseService
 // How big should this services Queue be?
 #define SERV_3_QUEUE_SIZE 4
 #endif
@@ -288,6 +288,10 @@ typedef enum
   ES_ALIGN_COLLECT, // param: FIRST-SECOND-OTHER
   ES_FIND_BUCKET,   // param: FIRST-MIDDLE-END
   ES_DISPENSE,       // param: FULL-SPLIT1-SPLIT2
+  ES_COLLECT_START,  // param: 0
+  ES_DISPENSE_START, // param: 0
+  ES_COLLECT_DONE,   // param: 0
+  ES_DISPENSE_DONE,  // param: 0
   ES_START_BUTTON,
   ES_INIT_GAME,
   ES_END_GAME,
@@ -336,8 +340,8 @@ typedef enum
 // priority in servicing them
 #define TIMER_UNUSED 0
 #define TIMER0_RESP_FUNC PostSPILeaderService
-#define TIMER1_RESP_FUNC TIMER_UNUSED
-#define TIMER2_RESP_FUNC TIMER_UNUSED
+#define TIMER1_RESP_FUNC PostCollectService
+#define TIMER2_RESP_FUNC PostDispenseService
 //#define TIMER1_RESP_FUNC PostCollectService
 //#define TIMER2_RESP_FUNC PostDispenseService
 #define TIMER3_RESP_FUNC PostInitService
@@ -356,6 +360,9 @@ typedef enum
 
 /****************************************************************************/
 // Give the timer numbers symbolc names to make it easier to move them
+// to different timers if the need arises. Keep these definitions close to the
+// definitions for the response functions to make it easier to check that
+// the timer number matches where the timer event will be routed
 // to different timers if the need arises. Keep these definitions close to the
 // definitions for the response functions to make it easier to check that
 // the timer number matches where the timer event will be routed

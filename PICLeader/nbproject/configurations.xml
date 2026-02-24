@@ -53,6 +53,8 @@
       <itemPath>ProjectHeaders/BeaconService.h</itemPath>
       <itemPath>ProjectHeaders/SPILeaderService.h</itemPath>
       <itemPath>ProjectHeaders/InitService.h</itemPath>
+      <itemPath>ProjectHeaders/CollectService.h</itemPath>
+      <itemPath>ProjectHeaders/DispenseService.h</itemPath>
     </logicalFolder>
     <logicalFolder name="LinkerScript"
                    displayName="Linker Files"
@@ -73,6 +75,8 @@
       <itemPath>ProjectSource/ReflectiveSenseService.c</itemPath>
       <itemPath>ProjectSource/SPILeaderService.c</itemPath>
       <itemPath>ProjectSource/InitService.c</itemPath>
+      <itemPath>ProjectSource/CollectService.c</itemPath>
+      <itemPath>ProjectSource/DispenseService.c</itemPath>
     </logicalFolder>
     <logicalFolder name="ExternalFiles"
                    displayName="Important Files"
@@ -94,7 +98,7 @@
         <targetDevice>PIC32MX170F256B</targetDevice>
         <targetHeader></targetHeader>
         <targetPluginBoard></targetPluginBoard>
-        <platformTool>snap</platformTool>
+        <platformTool>noID</platformTool>
         <languageToolchain>XC32</languageToolchain>
         <languageToolchainVersion>4.60</languageToolchainVersion>
         <platform>3</platform>

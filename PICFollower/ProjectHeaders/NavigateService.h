@@ -15,15 +15,18 @@
 #include "ES_Events.h"
 #include "ES_Types.h"     /* gets bool type for returns */
 
+/*----------------------------- Module Types ----------------------------*/
+
 /* Translate param helpers */
-typedef enum { TRANS_HALF = 0, TRANS_FULL = 1 } TransSpeed_t;
+typedef enum { TRANS_HALF = 0, TRANS_FULL = 1, TRANS_TAPE = 2} TransSpeed_t;
 typedef enum { DIR_FWD = 0, DIR_REV = 1 } TransDir_t;
 
 /* Rotate param helpers */
 typedef enum { ROT_45 = 0, ROT_90 = 1 } RotAngle_t;
 typedef enum { ROT_CW = 0, ROT_CCW = 1 } RotDir_t;
 
-// Public Function Prototypes
+/*----------------------------- Public Function Prototypes ----------------------------*/
+
 static inline uint16_t PackTranslateParam(TransSpeed_t spd, TransDir_t dir)
 {
   return (uint16_t)((spd & 0x1u) | ((dir & 0x1u) << 1));
@@ -49,6 +52,12 @@ static inline void UnpackRotateParam(uint16_t p, RotAngle_t *ang, RotDir_t *dir)
 bool InitNavigateService(uint8_t Priority);
 bool PostNavigateService(ES_Event_t ThisEvent);
 ES_Event_t RunNavigateService(ES_Event_t ThisEvent);
+
+/*----------------------------- Pin Mapping Definitions ----------------------------*/
+#define LEFT_IN1 SPI_RPB2    // Left Motor, OC4
+#define LEFT_IN2 SPI_RPB3    // Left Motor, OC1
+#define RIGHT_IN3 SPI_RPA1   // Right Motor, OC2
+#define RIGHT_IN4 SPI_RPB9   // Right Motor, OC3
 
 #endif /* ServNavigate_H */
 

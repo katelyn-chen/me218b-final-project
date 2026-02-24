@@ -337,7 +337,7 @@ typedef enum
 // priority in servicing them
 #define TIMER_UNUSED 0
 #define TIMER0_RESP_FUNC PostSPIFollowerService
-#define TIMER1_RESP_FUNC PostSPIFollowerService
+#define TIMER1_RESP_FUNC PostNavigateService
 #define TIMER2_RESP_FUNC TIMER_UNUSED
 #define TIMER3_RESP_FUNC TIMER_UNUSED
 #define TIMER4_RESP_FUNC TIMER_UNUSED

@@ -11,6 +11,7 @@
 #include "NavigateService.h"
 #include "SPIFollowerService.h"
 #include "BeaconService.h"
+#include "PIC32_SPI_HAL.h"
 
 #include <xc.h>
 #include <stdint.h>
@@ -32,10 +33,18 @@
 
 /* duty presets (percent 0..100) */
 #define DUTY_STOP           0u
+#define DUTY_TRANS_TAPE_DET 20u
 #define DUTY_TRANS_HALF     30u
 #define DUTY_TRANS_FULL     50u
 #define DUTY_ROTATE         45u
 #define DUTY_SEARCH         30u
+
+/* Timer Values */
+#define CHKPT3_FWD                5000u
+#define ROTATE_45_TIME_MS         550u
+#define ROTATE_90_TIME_MS         1100u
+#define ROTATE_FIRST_COLLECT_MS   400u
+
 
 /*---------------------------- Module Types -------------------------------*/
 typedef enum {
@@ -60,6 +69,10 @@ typedef enum {
 } InitOrientState_t;
 
 typedef enum {
+  
+} FirstCollectState_t;
+
+typedef enum {
     FIRST,
     MIDDLE,
     END
@@ -80,6 +93,7 @@ typedef enum {
 static uint8_t           MyPriority;
 static NavigateState_t   curState;
 static InitOrientState_t orientState;
+static FirstCollectState_t fcState;
 
 /* beacon sweep history (store unique transitions only) */
 #define BEACON_SEQ_MAX 8u
@@ -119,6 +133,7 @@ bool InitNavigateService(uint8_t Priority)
 
   curState = DEBUG;
   orientState = ORIENT_IDLE;
+  //fcState = 
   ResetBeaconSequence();
 
   DB_printf("Navigate Service: init done\r\n");
@@ -151,65 +166,75 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
   {
     case DEBUG:
     {
-      if (ThisEvent.EventType == ES_TRANSLATE)
+      switch (ThisEvent.EventType)
       {
-        DB_printf("Do Translate!\r\n");
-        ES_Timer_InitTimer(MOTOR_TIMER, 5000);
-        DoTranslate(ThisEvent.EventParam);
-      }
-      else if (ThisEvent.EventType == ES_ROTATE)
-      {
-        DB_printf("Do Rotate!\r\n");
-        DoRotate(ThisEvent.EventParam);
-      }
-      else if (ThisEvent.EventType == ES_TAPE_DETECT)
-      {
-        DB_printf("Start Tape Detect\r\n");
-        StartTapeDetect();
-      }
-      else if (ThisEvent.EventType == ES_ALIGN_ULTRASONICS)
-      {
-        /*
-          Reusing ES_ALIGN_ULTRASONICS as the “begin initial orientation” trigger.
-          Initial orientation is now beacon-only: rotate CCW and classify field
-          based on the beacon order.
-        */
-        DB_printf("Starting INIT_ORIENT (beacon sweep)\r\n");
-        //curState = INIT_ORIENT;
-        //orientState = ORIENT_BEACON_SWEEP;
+          case ES_TRANSLATE:
+              DB_printf("Do Translate!\r\n");
+              ES_Timer_InitTimer(MOTOR_TIMER, CHKPT3_FWD);
+              DoTranslate(ThisEvent.EventParam);
+              break;
 
-        ResetBeaconSequence();
-        StartBeaconAlignSearch();
-      } 
-      else if (ThisEvent.EventType == ES_BEACON_FOUND) {
-        /*
-          Reusing ES_ALIGN_ULTRASONICS as the “begin initial orientation” trigger.
-          Initial orientation is now beacon-only: rotate CCW and classify field
-          based on the beacon order.
-        */
-        BeaconId_t id;
-        BeaconSide_t side;
-        UnpackBeaconParam((uint16_t)ThisEvent.EventParam, &id, &side);
-        
-        DB_printf("Beacon %d found \r\n", id);
-        StopMotors();
-        ES_Event_t BeaconEvent;
-        BeaconEvent.EventType = ES_BEACON_FOUND;
-        BeaconEvent.EventParam = id;
-        PostSPIFollowerService(BeaconEvent);
-      } 
-      else if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == MOTOR_TIMER) {
-        DB_printf("Motor timer expired");  
-        StopMotors();
-      } else if (ThisEvent.EventType == ES_BEACON_SIGNAL) {
-          DB_printf("Starting Turn\r\n");  
-          ResetBeaconSequence();
-          StartBeaconAlignSearch();
-          PostBeaconService(ThisEvent);
-      }
+          case ES_ROTATE:
+              DB_printf("Do Rotate!\r\n");
+              DoRotate(ThisEvent.EventParam);
+              break;
+
+          case ES_TAPE_DETECT:
+              DB_printf("Start Tape Detect\r\n");
+              StartTapeDetect();
+              break;
+
+          case ES_ALIGN_ULTRASONICS:
+              /*
+                Reusing ES_ALIGN_ULTRASONICS as the “begin initial orientation” trigger.
+                Initial orientation is now beacon-only: rotate CCW and classify field
+                based on the beacon order.
+              */
+              DB_printf("Starting INIT_ORIENT (beacon sweep)\r\n");
+
+              //curState = INIT_ORIENT;
+              //orientState = ORIENT_BEACON_SWEEP;
+
+              ResetBeaconSequence();
+              StartBeaconAlignSearch();
+              break;
+
+          case ES_BEACON_FOUND:
+          {
+              BeaconId_t id;
+              BeaconSide_t side;
+              UnpackBeaconParam((uint16_t)ThisEvent.EventParam, &id, &side);
+
+              DB_printf("Beacon %d found \r\n", id);
+              StopMotors();
+
+              ES_Event_t BeaconEvent;
+              BeaconEvent.EventType = ES_BEACON_FOUND;
+              BeaconEvent.EventParam = id;
+              PostSPIFollowerService(BeaconEvent);
+              break;
+          }
+
+          case ES_TIMEOUT:
+              if (ThisEvent.EventParam == MOTOR_TIMER)
+              {
+                  DB_printf("Motor timer expired");
+                  StopMotors();
+              }
+              break;
+
+          case ES_BEACON_SIGNAL:
+              DB_printf("Starting Turn\r\n");
+              ResetBeaconSequence();
+              StartBeaconAlignSearch();
+              PostBeaconService(ThisEvent);
+              break;
+
+          default:
+              break;
+        }
       break;
-      
-    }
+      }
 
     case INIT_ORIENT:
     {
@@ -258,6 +283,9 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
 
                   orientState = ORIENT_DONE;
                   curState = FIRST_COLLECT;
+
+                  DB_printf("ORIENT_DONE: Rotating to find dispenser beacon based on field\r\n");
+                  StartBeaconAlignSearch();
                 }
               }
             }
@@ -266,6 +294,52 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         }
 
         case ORIENT_DONE:
+        {
+          // rotate until beacon G OR beacon B detected
+          // adjust dir by rotating based on timer
+          switch (ThisEvent.EventType)
+          {
+            case ES_BEACON_FOUND:
+            {
+              BeaconId_t id;
+              BeaconSide_t side;
+              UnpackBeaconParam((uint16_t)ThisEvent.EventParam, &id, &side);
+              (void)side;
+
+              BeaconId_t targetBeacon = BEACON_ID_NONE;
+
+              if (field == FIELD_GREEN)
+              {
+                targetBeacon = BEACON_ID_G;
+              }
+              else if (field == FIELD_BLUE)
+              {
+                targetBeacon = BEACON_ID_B;
+              }
+
+              if (id == targetBeacon)
+              {
+                DB_printf("Target beacon found: %u\r\n", (unsigned)id);
+                // small adjustment to face straight based on timer
+                DoRotate(PackRotateParam(ROT_90, ROT_CW));
+                ES_Timer_InitTimer(MOTOR_TIMER, ROTATE_FIRST_COLLECT_MS);
+              }
+              break;
+            }
+
+            case ES_TIMEOUT:
+              if (ThisEvent.EventParam == MOTOR_TIMER) {
+                StopMotors();
+                curState = FIRST_COLLECT;
+                DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_FWD));
+              }
+              break;
+
+            default:
+              break;
+          }
+          break;
+        }
         default:
           break;
       }
@@ -274,13 +348,16 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
 
     case FIRST_COLLECT:
     {
+      // drive forward until T detected
       if (ThisEvent.EventType == ES_T_DETECTED)
       {
-        ES_Event_t AlignEvent;
-        AlignEvent.EventType  = ES_ALIGN_COLLECT;
-        AlignEvent.EventParam = FIRST;
-        PostNavigateService(AlignEvent);
+        DoRotate(PackRotateParam(ROT_90, ROT_CCW)); // turn 90 to face dispenser
+        DoTranslate(PackTranslateParam(TRANS_HALF, DIR_FWD)); // move forward to dispenser
+      }
 
+      if (ThisEvent.EventType == ES_ULTRASONIC_DETECTED)
+      {
+        // need to determine which sensors we are using for dispenser alignment
         curState = COLLECT_ALIGN;
       }
       break;
@@ -372,13 +449,20 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
 static void InitPinsAndPPS(void)
 {
   /* motor pins as digital outputs (update these mappings if motor wiring changes) */
-  TRISAbits.TRISA1 = 0;  ANSELAbits.ANSA1 = 0;
+
+  PIN_MapPinOutput(LEFT_IN1);
+  PIN_MapPinOutput(LEFT_IN2);
+  PIN_MapPinOutput(RIGHT_IN3);
+  PIN_MapPinOutput(RIGHT_IN4);
+
+  /*TRISAbits.TRISA1 = 0;  ANSELAbits.ANSA1 = 0;
   TRISBbits.TRISB3 = 0;  ANSELBbits.ANSB3 = 0;
   TRISBbits.TRISB2 = 0;  ANSELBbits.ANSB2 = 0;
   TRISBbits.TRISB0 = 0;
 
-  TRISBbits.TRISB4 = 0; LATBbits.LATB4 = 0; /* LED align */
+  TRISBbits.TRISB4 = 0; LATBbits.LATB4 = 0; // LED Align */
 
+  // Selecting OC Channels
   #define PPS_FN_PWM 0b0101
   RPA1Rbits.RPA1R = PPS_FN_PWM;
   RPB9Rbits.RPB9R = PPS_FN_PWM;
@@ -472,7 +556,22 @@ static void DoTranslate(uint16_t translateParam)
   TransDir_t dir;
   UnpackTranslateParam(translateParam, &spd, &dir);
 
-  uint16_t duty = (spd == TRANS_FULL) ? DUTY_TRANS_FULL : DUTY_TRANS_HALF;
+  switch (spd)
+  {
+    case TRANS_FULL:
+      duty = DUTY_TRANS_FULL;
+      break;
+
+    case TRANS_HALF:
+      duty = DUTY_TRANS_HALF;
+      break;
+
+    case TRANS_TAPE:
+      duty = DUTY_TRANS_TAPE_DET;
+      break;
+
+  }
+
   int16_t signedDuty = (dir == DIR_FWD) ? (int16_t)duty : -(int16_t)duty;
 
   SetMotor1(signedDuty);
