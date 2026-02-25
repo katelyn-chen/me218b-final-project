@@ -387,8 +387,10 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
 
       if (ThisEvent.EventType == ES_ULTRASONIC_DETECTED)
       {
-        /* determine which sensors we are using for dispenser alignment */
+        /* determine which sensors we are using for dispenser alignment
+        OR are we using encoders? */
         curState = COLLECT_ALIGN;
+        // post an event to collect service here!
       }
       break;
     }
