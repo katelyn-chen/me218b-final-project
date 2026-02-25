@@ -3,14 +3,16 @@
     DispenseService.c
 
   Summary
-    - Dispenses balls from bucket in two stages
-      1st dispense: gate opens halfway
-      2nd dispense: gate opens fully
-    - DispenseService keeps an internal toggle to pick which stage is next
+    Dispense sequence using two arm servos and rotating bucket bottom.
 
-  Notes
-    - Uses bucket arm servo (OC5) and gate servo (OC3)
-    - Servo PWM timebase is Timer2 (50 Hz)
+    Sequence:
+      1) Lower push-down arm
+      2) Small backup delay
+      3) Move bucket from collector side → dispense side
+      4) Rotate bucket bottom +90 degrees
+      5) Wait for balls to fall
+      6) Return bucket to collector side
+      7) Raise push arm while navigating away
 ****************************************************************************/
 
 #include "DispenseService.h"
@@ -19,234 +21,231 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "ES_Configure.h"
 #include "ES_Framework.h"
 #include "ES_Timers.h"
 #include "dbprintf.h"
 
-/*============================== CONFIG ==============================*/
-#define PBCLK_HZ               20000000u
+/*============================== TIMING ==============================*/
+#define T_PUSH_ARM_DOWN_MS     500u
+#define T_BACKUP_DELAY_MS      100u   /* robot backing slightly */
+#define T_BUCKET_MOVE_MS       600u
+#define T_ROTATE_BUCKET_MS     400u
+#define T_DISPENSE_WAIT_MS     1000u
+#define T_RETURN_MS            600u
+#define T_PUSH_ARM_UP_MS       500u
 
+/*=========================== SERVO POSITIONS ============================*/
+/* OC5 : push-down arm */
+#define US_PUSH_ARM_UP        1200u
+#define US_PUSH_ARM_DOWN      2000u
+
+/* OC4 : bucket swing arm (collector <-> dispense) */
+#define US_BUCKET_COLLECT     1200u
+#define US_BUCKET_DISPENSE    2000u
+
+/* OC3 : continuous rotation bucket bottom */
+#define US_BUCKET_STOP        1500u
+#define US_BUCKET_ROTATE_CW   1700u
+
+/*============================== TIMER ==============================*/
 #ifndef DISPENSE_TIMER
-#define DISPENSE_TIMER         DISPENSE_TIMER
+#define DISPENSE_TIMER         2u
 #endif
 
-/* timing (ms) */
-#define T_ARM_DOWN_MS          500u
-#define T_GATE_OPEN_MS         250u
-#define T_DISPENSE_WAIT_MS     650u
-#define T_GATE_CLOSE_MS        250u
-#define T_ARM_UP_MS            500u
+/*============================== STATE ==============================*/
+typedef enum {
+  DISP_IDLE,
+  DISP_PUSH_ARM_DOWN,
+  DISP_BACKUP_DELAY,
+  DISP_MOVE_BUCKET,
+  DISP_ROTATE_BUCKET,
+  DISP_WAIT_DROP,
+  DISP_RETURN_BUCKET,
+  DISP_PUSH_ARM_UP,
+  DISP_DONE
+} DispState_t;
 
-/*=========================== SERVO PWM HW ============================*/
-#define SERVO_TIMER_PRESCALE_BITS   0b011u   /* 1:8 */
-#define SERVO_TIMER_PRESCALE_VAL    8u
-#define SERVO_HZ                    50u
-#define SERVO_PR2_VALUE             ((PBCLK_HZ / (SERVO_TIMER_PRESCALE_VAL * SERVO_HZ)) - 1u)
+static DispState_t CurState = DISP_IDLE;
+static uint8_t MyPriority;
 
-/* bucket arm (OC5) */
-#define US_BUCKET_ARM_UP            1200u
-#define US_BUCKET_ARM_DOWN          2000u
+/* track cumulative bucket rotation */
+static uint8_t BucketQuarterTurns = 0;
 
-/* gate servo (OC3) */
-#define US_GATE_CLOSED              1100u
-#define US_GATE_HALF_OPEN           1500u
-#define US_GATE_FULL_OPEN           1900u
-
+/*====================== PWM HELPERS =====================*/
 static bool ServoInitDone = false;
 
 static void InitServoPWM(void);
 static uint16_t UsToOCrs(uint16_t us);
-static void ServoSet_OC3_us(uint16_t us);
-static void ServoSet_OC5_us(uint16_t us);
 
-/*============================== STATE ==============================*/
-typedef enum {
-  DISP_IDLE = 0,
-  DISP_ARM_DOWN,
-  DISP_GATE_OPEN,
-  DISP_WAIT,
-  DISP_GATE_CLOSE,
-  DISP_ARM_UP,
-  DISP_DONE
-} DispState_t;
+static void Servo_OC3(uint16_t us);
+static void Servo_OC4(uint16_t us);
+static void Servo_OC5(uint16_t us);
 
-static uint8_t MyPriority;
-static DispState_t CurState = DISP_IDLE;
+/*====================== ACTION HELPERS =====================*/
+static void PushArmDown(void){ Servo_OC5(US_PUSH_ARM_DOWN); }
+static void PushArmUp(void){ Servo_OC5(US_PUSH_ARM_UP); }
 
-/* internal toggle: false -> half open next, true -> full open next */
-static bool NextIsFull = false;
+static void BucketToDispense(void){ Servo_OC4(US_BUCKET_DISPENSE); }
+static void BucketToCollect(void){ Servo_OC4(US_BUCKET_COLLECT); }
 
-/*====================== PRIVATE FUNCTION PROTOS =====================*/
-static void TransitionTo(DispState_t next, uint16_t tMs);
+static void BucketRotateStart(void){ Servo_OC3(US_BUCKET_ROTATE_CW); }
+static void BucketRotateStop(void){ Servo_OC3(US_BUCKET_STOP); }
 
-static void BucketArmDown(void);
-static void BucketArmUp(void);
-static void GateClose(void);
-static void GateOpenHalf(void);
-static void GateOpenFull(void);
-
-/*=========================== PUBLIC API =============================*/
+/*=========================== INIT ============================*/
 bool InitDispenseService(uint8_t Priority)
 {
   MyPriority = Priority;
-  CurState = DISP_IDLE;
-  NextIsFull = false;
 
   if (!ServoInitDone) InitServoPWM();
 
-  GateClose();
-  BucketArmUp();
+  BucketQuarterTurns = 0u;
+
+  BucketRotateStop();
+  PushArmUp();
+  BucketToCollect();
 
   ES_Timer_StopTimer(DISPENSE_TIMER);
 
   DB_printf("DispenseService: init done\r\n");
 
-  ES_Event_t e = { ES_INIT, 0 };
-  return ES_PostToService(MyPriority, e);
+  ES_Event_t e = { ES_INIT,0 };
+  return ES_PostToService(MyPriority,e);
 }
 
-bool PostDispenseService(ES_Event_t ThisEvent)
+bool PostDispenseService(ES_Event_t e)
 {
-  return ES_PostToService(MyPriority, ThisEvent);
+  return ES_PostToService(MyPriority,e);
 }
 
+/*=========================== STATE MACHINE ============================*/
 ES_Event_t RunDispenseService(ES_Event_t ThisEvent)
 {
-  ES_Event_t ReturnEvent = { ES_NO_EVENT, 0 };
+  ES_Event_t ReturnEvent = {ES_NO_EVENT,0};
 
-  switch (CurState)
+  switch(CurState)
   {
     case DISP_IDLE:
-      if (ThisEvent.EventType == ES_DISPENSE_START)
+      if(ThisEvent.EventType == ES_DISPENSE_START)
       {
-        DB_printf("DispenseService: start (next=%s)\r\n",
-                  NextIsFull ? "FULL" : "HALF");
-
-        TransitionTo(DISP_ARM_DOWN, T_ARM_DOWN_MS);
+        DB_printf("Dispense start\r\n");
+        PushArmDown();
+        CurState = DISP_PUSH_ARM_DOWN;
+        ES_Timer_InitTimer(DISPENSE_TIMER,T_PUSH_ARM_DOWN_MS);
       }
       break;
 
-    case DISP_ARM_DOWN:
-      if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == DISPENSE_TIMER))
+    case DISP_PUSH_ARM_DOWN:
+      if((ThisEvent.EventType==ES_TIMEOUT) && (ThisEvent.EventParam==DISPENSE_TIMER))
       {
-        TransitionTo(DISP_GATE_OPEN, T_GATE_OPEN_MS);
+        CurState = DISP_BACKUP_DELAY;
+        ES_Timer_InitTimer(DISPENSE_TIMER,T_BACKUP_DELAY_MS);
       }
       break;
 
-    case DISP_GATE_OPEN:
-      if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == DISPENSE_TIMER))
+    case DISP_BACKUP_DELAY:
+      if((ThisEvent.EventType==ES_TIMEOUT) && (ThisEvent.EventParam==DISPENSE_TIMER))
       {
-        TransitionTo(DISP_WAIT, T_DISPENSE_WAIT_MS);
+        BucketToDispense();
+        CurState = DISP_MOVE_BUCKET;
+        ES_Timer_InitTimer(DISPENSE_TIMER,T_BUCKET_MOVE_MS);
       }
       break;
 
-    case DISP_WAIT:
-      if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == DISPENSE_TIMER))
+    case DISP_MOVE_BUCKET:
+      if((ThisEvent.EventType==ES_TIMEOUT) && (ThisEvent.EventParam==DISPENSE_TIMER))
       {
-        TransitionTo(DISP_GATE_CLOSE, T_GATE_CLOSE_MS);
+        BucketRotateStart();
+        CurState = DISP_ROTATE_BUCKET;
+        ES_Timer_InitTimer(DISPENSE_TIMER,T_ROTATE_BUCKET_MS);
       }
       break;
 
-    case DISP_GATE_CLOSE:
-      if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == DISPENSE_TIMER))
+    case DISP_ROTATE_BUCKET:
+      if((ThisEvent.EventType==ES_TIMEOUT) && (ThisEvent.EventParam==DISPENSE_TIMER))
       {
-        TransitionTo(DISP_ARM_UP, T_ARM_UP_MS);
+        BucketRotateStop();
+        BucketQuarterTurns++;
+        CurState = DISP_WAIT_DROP;
+        ES_Timer_InitTimer(DISPENSE_TIMER,T_DISPENSE_WAIT_MS);
       }
       break;
 
-    case DISP_ARM_UP:
-      if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == DISPENSE_TIMER))
+    case DISP_WAIT_DROP:
+      if((ThisEvent.EventType==ES_TIMEOUT) && (ThisEvent.EventParam==DISPENSE_TIMER))
       {
-        TransitionTo(DISP_DONE, 0u);
+        BucketToCollect();
+        CurState = DISP_RETURN_BUCKET;
+        ES_Timer_InitTimer(DISPENSE_TIMER,T_RETURN_MS);
+      }
+      break;
+
+    case DISP_RETURN_BUCKET:
+      if((ThisEvent.EventType==ES_TIMEOUT) && (ThisEvent.EventParam==DISPENSE_TIMER))
+      {
+        PushArmUp();
+        CurState = DISP_PUSH_ARM_UP;
+        ES_Timer_InitTimer(DISPENSE_TIMER,T_PUSH_ARM_UP_MS);
+      }
+      break;
+
+    case DISP_PUSH_ARM_UP:
+      if((ThisEvent.EventType==ES_TIMEOUT) && (ThisEvent.EventParam==DISPENSE_TIMER))
+      {
+        CurState = DISP_DONE;
       }
       break;
 
     case DISP_DONE:
     {
-      DB_printf("DispenseService: done\r\n");
+        DB_printf("Dispense complete\r\n");
 
-      ES_Event_t doneEvt = { ES_DISPENSE_DONE, 0 };
-      ES_PostAll(doneEvt);
+        ES_Event_t done = {ES_DISPENSE_COMPLETE,0};
+        ES_PostAll(done);
 
-      /* toggle stage for next call */
-      NextIsFull = !NextIsFull;
-
-      TransitionTo(DISP_IDLE, 0u);
-      break;
+        CurState = DISP_IDLE;
+        break;
     }
 
     default:
-      TransitionTo(DISP_IDLE, 0u);
+      CurState = DISP_IDLE;
       break;
   }
 
   return ReturnEvent;
 }
 
-/*=========================== TRANSITIONS ============================*/
-static void TransitionTo(DispState_t next, uint16_t tMs)
-{
-  CurState = next;
-
-  switch (next)
-  {
-    case DISP_IDLE:
-      ES_Timer_StopTimer(DISPENSE_TIMER);
-      break;
-
-    case DISP_ARM_DOWN:
-      BucketArmDown();
-      ES_Timer_InitTimer(DISPENSE_TIMER, tMs);
-      break;
-
-    case DISP_GATE_OPEN:
-      if (NextIsFull) GateOpenFull();
-      else           GateOpenHalf();
-      ES_Timer_InitTimer(DISPENSE_TIMER, tMs);
-      break;
-
-    case DISP_WAIT:
-      ES_Timer_InitTimer(DISPENSE_TIMER, tMs);
-      break;
-
-    case DISP_GATE_CLOSE:
-      GateClose();
-      ES_Timer_InitTimer(DISPENSE_TIMER, tMs);
-      break;
-
-    case DISP_ARM_UP:
-      BucketArmUp();
-      ES_Timer_InitTimer(DISPENSE_TIMER, tMs);
-      break;
-
-    case DISP_DONE:
-    default:
-      ES_Timer_StopTimer(DISPENSE_TIMER);
-      break;
-  }
-}
-
-/*=========================== SERVO ACTIONS ============================*/
-static void BucketArmDown(void) { ServoSet_OC5_us(US_BUCKET_ARM_DOWN); }
-static void BucketArmUp(void)   { ServoSet_OC5_us(US_BUCKET_ARM_UP); }
-
-static void GateClose(void)     { ServoSet_OC3_us(US_GATE_CLOSED); }
-static void GateOpenHalf(void)  { ServoSet_OC3_us(US_GATE_HALF_OPEN); }
-static void GateOpenFull(void)  { ServoSet_OC3_us(US_GATE_FULL_OPEN); }
-
-/*=========================== SERVO PWM INIT ============================*/
+/*=========================== PWM ============================*/
 static void InitServoPWM(void)
 {
-  T2CON = 0;
-  T2CONbits.TCS = 0;
-  T2CONbits.TCKPS = SERVO_TIMER_PRESCALE_BITS;
-  TMR2 = 0;
-  PR2 = (uint16_t)SERVO_PR2_VALUE;
+  /*
+    IMPORTANT:
+      CollectService and DispenseService both use Timer2 as the 50Hz servo timebase.
+      We must NOT reinitialize Timer2 if it is already running, otherwise we can stomp
+      OC settings used by the other service.
+  */
 
-  OC3CON = 0; OC3R = 0; OC3RS = 0; OC3CONbits.OCTSEL = 0; OC3CONbits.OCM = 0b110; OC3CONbits.ON = 1;
-  OC5CON = 0; OC5R = 0; OC5RS = 0; OC5CONbits.OCTSEL = 0; OC5CONbits.OCM = 0b110; OC5CONbits.ON = 1;
+  if (T2CONbits.ON == 0u)
+  {
+    /* Timer2 as 50Hz timebase for OC PWM */
+    T2CON = 0;
+    T2CONbits.TCS = 0;
+    T2CONbits.TCKPS = 0b011;   /* 1:8 */
+    PR2 = 49999;
+    TMR2 = 0;
 
-  T2CONbits.ON = 1;
+    T2CONbits.ON = 1;
+  }
+
+  /*
+    Ensure ALL OC modules used by any servo service are in PWM mode on Timer2.
+    (OC3/OC4/OC5 used here; OC1/OC2 used by CollectService)
+  */
+  OC1CON=0; OC1R=0; OC1RS=0; OC1CONbits.OCTSEL=0; OC1CONbits.OCM=0b110; OC1CONbits.ON=1;
+  OC2CON=0; OC2R=0; OC2RS=0; OC2CONbits.OCTSEL=0; OC2CONbits.OCM=0b110; OC2CONbits.ON=1;
+  OC3CON=0; OC3R=0; OC3RS=0; OC3CONbits.OCTSEL=0; OC3CONbits.OCM=0b110; OC3CONbits.ON=1;
+  OC4CON=0; OC4R=0; OC4RS=0; OC4CONbits.OCTSEL=0; OC4CONbits.OCM=0b110; OC4CONbits.ON=1;
+  OC5CON=0; OC5R=0; OC5RS=0; OC5CONbits.OCTSEL=0; OC5CONbits.OCM=0b110; OC5CONbits.ON=1;
 
   ServoInitDone = true;
 }
@@ -258,5 +257,6 @@ static uint16_t UsToOCrs(uint16_t us)
   return (uint16_t)ticks;
 }
 
-static void ServoSet_OC3_us(uint16_t us) { OC3RS = UsToOCrs(us); }
-static void ServoSet_OC5_us(uint16_t us) { OC5RS = UsToOCrs(us); }
+static void Servo_OC3(uint16_t us){ OC3RS=UsToOCrs(us); }
+static void Servo_OC4(uint16_t us){ OC4RS=UsToOCrs(us); }
+static void Servo_OC5(uint16_t us){ OC5RS=UsToOCrs(us); }
