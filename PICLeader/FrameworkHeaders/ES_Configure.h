@@ -293,8 +293,11 @@ typedef enum
   ES_INIT_GAME,
   ES_END_GAME,
   ES_ENTER_IDLE,
+
+/* Encoder Events */
   ES_ENCODER_TARGET_REACHED,
-  ES_ENCODER_TARGET
+  ES_ENCODER_TARGET_ROT,
+  ES_ENCODER_TARGET_STRAIGHT
 } ES_EventType_t; // changed to be event type
 
 /****************************************************************************/
@@ -371,7 +374,7 @@ typedef enum
 #define COLLECT_TIMER 1
 #define DISPENSE_TIMER 2
 #define GAME_TIMER 3
-#defin ENCODER_TIMER 4
+#define ENCODER_TIMER 4
 
 /*#define SERVICE0_TIMER 15
 #define REFLECT_TIMER 1

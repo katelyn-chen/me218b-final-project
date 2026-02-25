@@ -32,6 +32,7 @@
 
 #include "PIC32_SPI_HAL.h"
 #include "EncoderService.h"
+#include "DispenseService.h"
 
 /*----------------------------- Module Defines ----------------------------*/
 /* use the symbolic timer name from ES_Configure.h */
@@ -48,6 +49,11 @@
 /* SPI clock period (ns). 500 kHz -> 2000 ns period */
 //#define SPI_CLK_PERIOD_NS    2000u
 #define SPI_CLK_PERIOD_NS      50000u
+
+/* Pulse values need to be tuned!! */
+#define ROT_90_PULSES           1000
+#define ROT_180_PULSES          ROT_90_PULSES*2
+#define INIT_ROT_ADJUST         500 
 
 /*---------------------------- Module Types -------------------------------*/
 typedef enum {
@@ -279,6 +285,8 @@ static void HandleFollowerStatus(uint8_t statusByte)
     follower status bytes are latched until CMD_QUERY
     this guard avoids re-posting if the follower ever returns the same byte twice
   */
+  ES_Event_t cmdEvent;
+
   if (statusByte == PrevFollowerStatus)
   {
     return;
@@ -292,13 +300,21 @@ static void HandleFollowerStatus(uint8_t statusByte)
 
     case CMD_SIDE_FOUND_BLUE:
     {
+      // move indicator servo to blue
       DB_printf("Side indicated: BLUE\r\n");
+      cmdEvent.EventType = ES_INDICATE_SIDE;
+      cmdEvent.EventParam = FIELD_BLUE;
+      PostDispenseService(cmdEvent);
       break;
     }
 
     case CMD_SIDE_FOUND_GREEN:
     {
+      // move indicator servo to green
       DB_printf("Side indicated: GREEN\r\n");
+      cmdEvent.EventType = ES_INDICATE_SIDE;
+      cmdEvent.EventParam = FIELD_GREEN;
+      PostDispenseService(cmdEvent);
       break;
     }
 
@@ -327,7 +343,17 @@ static void HandleFollowerStatus(uint8_t statusByte)
 
     case CMD_ROT_CCW_90:
       DB_printf("Follower status: ROTATING CCW 90\r\n");
-      PostEncoderService;
+      cmdEvent.EventType = ES_ENCODER_TARGET_ROT;
+      cmdEvent.EventParam = ROT_90_PULSES;
+      PostEncoderService(cmdEvent);
+      break;
+    
+    case CMD_ENCODER_FIRST_ALIGN:
+    /* This is when the bot is first turning to follow the tape! */
+      DB_printf("Follower status: INIT rotate adjustment\r\n");
+      cmdEvent.EventType = ES_ENCODER_TARGET_ROT;
+      cmdEvent.EventParam = INIT_ROT_ADJUST;
+      PostEncoderService(cmdEvent);
       break;
 
     default:

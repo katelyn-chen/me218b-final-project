@@ -133,6 +133,16 @@ ES_Event_t RunDispenseService(ES_Event_t ThisEvent)
         CurState = DISP_PUSH_ARM_DOWN;
         ES_Timer_InitTimer(DISPENSE_TIMER,T_PUSH_ARM_DOWN_MS);
       }
+      if(ThisEvent.EventType == ES_INDICATE_SIDE)
+      {
+        Field_t side = ThisEvent.EventParam;
+        DB_printf("Indicating side! %d\r\n", side);
+        if (side == FIELD_BLUE) {
+          PushArmDown();
+        } else if (side == FIELD_GREEN) {
+          PushArmUp();
+        }
+      }
       break;
 
     case DISP_PUSH_ARM_DOWN:

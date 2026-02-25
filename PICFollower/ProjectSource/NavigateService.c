@@ -285,7 +285,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
                 field = DetermineFieldFromSequence();
                 if (field != FIELD_UNKNOWN)
                 {
-                  // somewhere we have to turn the indicator servo!!
+                  // somewhere we have to turn the indicator servo (leader)!!
                   StopMotors();
 
                   /*
@@ -341,23 +341,21 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
               if ((targetBeacon != BEACON_ID_NONE) && (id == targetBeacon)) {
                 DB_printf("Target beacon found: %u\r\n", (unsigned)id);
                 DoRotate(PackRotateParam(ROT_90, ROT_CW));
-                //cmdEvent.EventParam = CMD_ENCODER_FIRST_ALIGN;
                 /* needs to turn slightly so it is pointing straight
-                going to try this with a timer and switch to encoder tracking
-                if timer doesn't work
+                going to try this with an encoder and switch to timer
+                if encoder doesn't work
                 */
-                ES_Timer_InitTimer(MOTOR_TIMER, ROTATE_FIRST_COLLECT_MS);
+                cmdEvent.EventParam = CMD_ENCODER_FIRST_ALIGN;
+                PostSPIFollowerService(cmdEvent);
+                //ES_Timer_InitTimer(MOTOR_TIMER, ROTATE_FIRST_COLLECT_MS);
               }
               break;
             }
 
-            case ES_TIMEOUT:
-              if (ThisEvent.EventParam == MOTOR_TIMER)
-              {
-                StopMotors();
-                curState = FIRST_COLLECT;
-                DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_FWD));
-              }
+            case ES_MOVE_DONE:
+              StopMotors();
+              curState = FIRST_COLLECT;
+              DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_FWD));
               break;
 
             default:
@@ -377,8 +375,14 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
       /* drive forward until T detected */
       if (ThisEvent.EventType == ES_T_DETECTED)
       {
+        cmdEvent.EventType = CMD_ROT_CCW_90;
+        PostSPIFollowerService(cmdEvent);
         DoRotate(PackRotateParam(ROT_90, ROT_CCW)); /* turn 90 to face dispenser */
-        DoTranslate(PackTranslateParam(TRANS_HALF, DIR_FWD)); /* move forward to dispenser */
+      }
+
+      if (ThisEvent.EventType == ES_MOVE_DONE) {
+        /* move forward to dispenser */
+        DoTranslate(PackTranslateParam(TRANS_HALF, DIR_FWD));
       }
 
       if (ThisEvent.EventType == ES_ULTRASONIC_DETECTED)
