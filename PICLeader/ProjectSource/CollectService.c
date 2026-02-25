@@ -19,6 +19,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "ES_Configure.h"
 #include "ES_Framework.h"
 #include "ES_Timers.h"
 #include "dbprintf.h"
@@ -28,7 +29,7 @@
 #define PBCLK_HZ               20000000u
 
 #ifndef COLLECT_TIMER
-#define COLLECT_TIMER          COLLECT_TIMER
+#define COLLECT_TIMER          1u
 #endif
 
 /* collect target */
@@ -329,19 +330,34 @@ static void ArmTravelPose(void)
 /*=========================== SERVO PWM INIT ============================*/
 static void InitServoPWM(void)
 {
-  /* Timer2 as 50Hz timebase for all OC servo outputs */
-  T2CON = 0;
-  T2CONbits.TCS = 0;
-  T2CONbits.TCKPS = SERVO_TIMER_PRESCALE_BITS;
-  TMR2 = 0;
-  PR2 = (uint16_t)SERVO_PR2_VALUE;
+  /*
+    IMPORTANT:
+      CollectService and DispenseService both use Timer2 as the 50Hz servo timebase.
+      We must NOT reinitialize Timer2 if it is already running, otherwise we can stomp
+      OC settings used by the other service.
+  */
 
-  /* OC modules in PWM mode using Timer2 */
+  if (T2CONbits.ON == 0u)
+  {
+    /* Timer2 as 50Hz timebase for all OC servo outputs */
+    T2CON = 0;
+    T2CONbits.TCS = 0;
+    T2CONbits.TCKPS = SERVO_TIMER_PRESCALE_BITS;
+    TMR2 = 0;
+    PR2 = (uint16_t)SERVO_PR2_VALUE;
+
+    T2CONbits.ON = 1;
+  }
+
+  /*
+    Ensure ALL OC modules used by any servo service are in PWM mode on Timer2.
+    (OC1/OC2/OC4 used here; OC3/OC5 used by DispenseService)
+  */
   OC1CON = 0; OC1R = 0; OC1RS = 0; OC1CONbits.OCTSEL = 0; OC1CONbits.OCM = 0b110; OC1CONbits.ON = 1;
   OC2CON = 0; OC2R = 0; OC2RS = 0; OC2CONbits.OCTSEL = 0; OC2CONbits.OCM = 0b110; OC2CONbits.ON = 1;
+  OC3CON = 0; OC3R = 0; OC3RS = 0; OC3CONbits.OCTSEL = 0; OC3CONbits.OCM = 0b110; OC3CONbits.ON = 1;
   OC4CON = 0; OC4R = 0; OC4RS = 0; OC4CONbits.OCTSEL = 0; OC4CONbits.OCM = 0b110; OC4CONbits.ON = 1;
-
-  T2CONbits.ON = 1;
+  OC5CON = 0; OC5R = 0; OC5RS = 0; OC5CONbits.OCTSEL = 0; OC5CONbits.OCM = 0b110; OC5CONbits.ON = 1;
 
   ServoInitDone = true;
 }
