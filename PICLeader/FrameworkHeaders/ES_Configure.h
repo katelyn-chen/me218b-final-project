@@ -33,7 +33,7 @@
 /****************************************************************************/
 // This macro determines that nuber of services that are *actually* used in
 // a particular application. It will vary in value from 1 to MAX_NUM_SERVICES
-#define NUM_SERVICES 4
+#define NUM_SERVICES 5
 
 /****************************************************************************/
 /* I include my service headers here so the Post*Service() prototypes exist
@@ -104,13 +104,13 @@
 // These are the definitions for Service 4
 #if NUM_SERVICES > 4
 // the header file with the public function prototypes
-#define SERV_4_HEADER "NavigateService.h"
+#define SERV_4_HEADER "EncoderService.h"
 // the name of the Init function
-#define SERV_4_INIT InitNavigateService
+#define SERV_4_INIT InitEncoderService
 // the name of the run function
-#define SERV_4_RUN RunNavigateService
+#define SERV_4_RUN RunEncoderService
 // How big should this services Queue be?
-#define SERV_4_QUEUE_SIZE 3
+#define SERV_4_QUEUE_SIZE 5
 #endif
 
 /****************************************************************************/
@@ -344,7 +344,7 @@ typedef enum
 //#define TIMER1_RESP_FUNC PostCollectService
 //#define TIMER2_RESP_FUNC PostDispenseService
 #define TIMER3_RESP_FUNC PostInitService
-#define TIMER4_RESP_FUNC TIMER_UNUSED
+#define TIMER4_RESP_FUNC PostEncoderService
 #define TIMER5_RESP_FUNC TIMER_UNUSED
 #define TIMER6_RESP_FUNC TIMER_UNUSED
 #define TIMER7_RESP_FUNC TIMER_UNUSED
@@ -371,6 +371,7 @@ typedef enum
 #define COLLECT_TIMER 1
 #define DISPENSE_TIMER 2
 #define GAME_TIMER 3
+#defin ENCODER_TIMER 4
 
 /*#define SERVICE0_TIMER 15
 #define REFLECT_TIMER 1

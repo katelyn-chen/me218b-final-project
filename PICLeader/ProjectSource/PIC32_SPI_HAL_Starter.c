@@ -840,7 +840,7 @@ bool PIN_MapPinOutput(SPI_PinMap_t WhichPin)
  return true;
 }
 
-uint8_t PIN_ReadDigitalPIC32Pin(SPI_PinMap_t WhichPin)
+SPI_ReadPinState_t PIN_ReadDigitalPIC32Pin(SPI_PinMap_t WhichPin)
 {
   
  if ((WhichPin < SPI_RPA0) || (WhichPin > SPI_RPB15)) {
