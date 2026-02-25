@@ -38,13 +38,12 @@
 #define KP 0.1f
 
 /*----------------------------- Module Types ----------------------------*/
+
 typedef enum {
-  MOTOR_IDLE,
-  MOTOR_FORWARD,
-  MOTOR_BACKWARD,
-  MOTOR_CW,
-  MOTOR_CCW
-} MotorState_t;
+    ENCODER_IDLE,
+    ENCODER_STRAIGHT,
+    ENCODER_TURN
+} EncoderMode_t;
 
 /*---------------------------- Module Functions ---------------------------*/
 /* prototypes for private functions for this service.They should be functions
@@ -57,6 +56,7 @@ void InitIC3();
 // with the introduction of Gen2, we need a module level Priority variable
 static uint8_t MyPriority;
 
+static EncoderMode_t encoderMode = ENCODER_IDLE;
 static volatile int32_t LeftCount = 0;
 static volatile int32_t RightCount = 0;
 
@@ -89,6 +89,7 @@ bool InitEncoderService(uint8_t Priority)
 {
   ES_Event_t ThisEvent;
   MyPriority = Priority;
+  MoveActive = false;
 
   InitPinHardware();
   InitTimer3();
@@ -150,53 +151,82 @@ ES_Event_t RunEncoderService(ES_Event_t ThisEvent)
 {
   ES_Event_t ReturnEvent;
   ReturnEvent.EventType = ES_NO_EVENT; // assume no errors
-  switch(ThisEvent.EventType)
+  switch(encoderMode)
   {
-    case ES_INIT:
-        {
-            MoveActive = false;
-        }
-        break;
-
-    case ES_ENCODER_TARGET:
+    case ENCODER_IDLE:
+      switch(ThisEvent.EventType)
       {
-          TargetDelta = (int16_t)ThisEvent.EventParam;
+        case ES_ENCODER_TARGET_STRAIGHT:
+          StartLeft  = GetLeftEncoder();
+          StartRight = GetRightEncoder();
 
-          StartLeftCount = LeftCount;
-          StartRightCount = RightCount;
-
-          MoveActive = true;
+          TargetLeft  = StartLeft  + Event.EventParam;
+          TargetRight = StartRight + Event.EventParam;
+          EncoderMode = ENCODER_STRAIGHT;
           ES_Timer_InitTimer(ENCODER_TIMER, ENCODER_CHECK_MS);
-      break;
+          break;
+
+        case ES_ENCODER_TARGET_ROT:
+          StartLeft  = GetLeftEncoder();
+          StartRight = GetRightEncoder();
+
+          TargetLeft  = StartLeft  + Event.EventParam;
+          TargetRight = StartRight - Event.EventParam;
+
+          EncoderMode = ENCODER_TURN;
+          ES_Timer_InitTimer(ENCODER_TIMER, ENCODER_CHECK_MS);
+          break;
       }
+    
+    case ENCODER_STRAIGHT:
+      if (ThisEvent.EventType == ES_TIMEOUT) {
+        if(MoveActive) {
+          int32_t leftTravel  = LeftCount  - StartLeftCount;
+          int32_t rightTravel = RightCount - StartRightCount;
+          int32_t avgTravel = (leftTravel + rightTravel) / 2;
 
-    case ES_TIMEOUT:
-      {
-          if(MoveActive) {
-              int32_t leftTravel  = LeftCount  - StartLeftCount;
-              int32_t rightTravel = RightCount - StartRightCount;
+          // Handle forward AND backward motion
+          if( ABS(avgTravel) >= ABS(TargetDelta) ) {
+              MoveActive = false;
 
-              int32_t avgTravel = (leftTravel + rightTravel) / 2;
+              ES_Event_t doneEvent;
+              doneEvent.EventType = ES_ENCODER_TARGET_REACHED;
+              doneEvent.EventParam = 0;
 
-              // Handle forward AND backward motion
-              if( ABS(avgTravel) >= ABS(TargetDelta) ) {
-                  MoveActive = false;
-
-                  ES_Event_t doneEvent;
-                  doneEvent.EventType = ES_ENCODER_TARGET_REACHED;
-                  doneEvent.EventParam = 0;
-
-                  PostSPILeaderService(doneEvent);
-                  ES_Timer_StopTimer(ENCODER_TIMER);
-              } else {
-                ES_Timer_InitTimer(ENCODER_TIMER, ENCODER_CHECK_MS);
-              }
+              PostSPILeaderService(doneEvent);
+              ES_Timer_StopTimer(ENCODER_TIMER);
+              EncoderMode = ENCODER_IDLE;
+          } else {
+            ES_Timer_InitTimer(ENCODER_TIMER, ENCODER_CHECK_MS);
           }
-      break;
+        }
       }
-    }
+      break;
+    
+    case ENCODER_TURN:
+      if (ThisEvent.EventType == ES_TIMEOUT) {
+        if (MoveActive) {
+          int32_t leftTravel  = LeftCount  - StartLeftCount;
+          int32_t rightTravel = RightCount - StartRightCount;
 
-  
+          // rotational progress
+          int32_t turnTravel = (leftTravel - rightTravel) / 2;
+
+          // Handle clockwise AND counterclockwise
+          if (ABS(turnTravel) >= ABS(TargetDelta)) {
+            MoveActive = false;
+            ES_Event_t doneEvent;
+            doneEvent.EventType = ES_ENCODER_TARGET_REACHED;
+            PostSPILeaderService(doneEvent);
+            ES_Timer_StopTimer(ENCODER_TIMER);
+            EncoderMode = ENCODER_IDLE;
+          } else {
+            ES_Timer_InitTimer(ENCODER_TIMER, ENCODER_CHECK_MS);
+          }
+        }
+      }
+      break;
+    }
 
   return ReturnEvent;
 }

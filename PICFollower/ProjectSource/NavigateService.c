@@ -164,6 +164,9 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
   ReturnEvent.EventType  = ES_NO_EVENT;
   ReturnEvent.EventParam = 0;
 
+  ES_Event_t cmdEvent;
+  cmdEvent.EventType = ES_CMD_REQ;
+
   if (ThisEvent.EventType == ES_END_GAME)
   {
     DB_printf("Stopping Motors\r\n");
@@ -282,6 +285,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
                 field = DetermineFieldFromSequence();
                 if (field != FIELD_UNKNOWN)
                 {
+                  // somewhere we have to turn the indicator servo!!
                   StopMotors();
 
                   /*
@@ -291,14 +295,14 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
                       FIELD_BLUE  -> LEFT
                     (If you decide the opposite mapping on the real field, swap these.)
                   */
-                  ES_Event_t SideEvent;
-                  SideEvent.EventType = ES_SIDE_INDICATED;
-                  SideEvent.EventParam = (field == FIELD_GREEN) ? 1u : 0u; /* 1=RIGHT, 0=LEFT */
-
-                  PostSPIFollowerService(SideEvent);
+                  if (field == FIELD_GREEN) {
+                    cmdEvent.EventParam = CMD_SIDE_FOUND_GREEN;
+                  } else {
+                    cmdEvent.EventParam = CMD_SIDE_FOUND_BLUE;
+                  }
+                  PostSPIFollowerService(cmdEvent);
 
                   DB_printf("Field determined: %u\r\n", (unsigned)field);
-
                   orientState = ORIENT_DONE;
 
                   DB_printf("ORIENT_DONE: Rotating to find dispenser beacon based on field\r\n");
@@ -327,20 +331,21 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
 
               BeaconId_t targetBeacon = BEACON_ID_NONE;
 
-              if (field == FIELD_GREEN)
-              {
+              if (field == FIELD_GREEN) {
                 targetBeacon = BEACON_ID_G;
               }
-              else if (field == FIELD_BLUE)
-              {
+              else if (field == FIELD_BLUE) {
                 targetBeacon = BEACON_ID_B;
               }
 
-              if ((targetBeacon != BEACON_ID_NONE) && (id == targetBeacon))
-              {
+              if ((targetBeacon != BEACON_ID_NONE) && (id == targetBeacon)) {
                 DB_printf("Target beacon found: %u\r\n", (unsigned)id);
-
                 DoRotate(PackRotateParam(ROT_90, ROT_CW));
+                //cmdEvent.EventParam = CMD_ENCODER_FIRST_ALIGN;
+                /* needs to turn slightly so it is pointing straight
+                going to try this with a timer and switch to encoder tracking
+                if timer doesn't work
+                */
                 ES_Timer_InitTimer(MOTOR_TIMER, ROTATE_FIRST_COLLECT_MS);
               }
               break;

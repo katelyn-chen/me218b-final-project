@@ -269,8 +269,6 @@ typedef enum
   ES_SHORT_TIMEOUT,         /* signals that a short timer has expired */
   /* User-defined events start here */
   ES_NEW_KEY,               /* signals a new key received from terminal */
-  ES_LOCK,
-  ES_UNLOCK,
   /* Motor events */
   ES_ROTATE,
   ES_TRANSLATE,
@@ -294,7 +292,9 @@ typedef enum
   ES_START_BUTTON,
   ES_INIT_GAME,
   ES_END_GAME,
-  ES_ENTER_IDLE
+  ES_ENTER_IDLE,
+  ES_ENCODER_TARGET_REACHED,
+  ES_ENCODER_TARGET
 } ES_EventType_t; // changed to be event type
 
 /****************************************************************************/

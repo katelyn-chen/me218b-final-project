@@ -268,8 +268,6 @@ typedef enum
   ES_SHORT_TIMEOUT,         /* signals that a short timer has expired */
   /* User-defined events start here */
   ES_NEW_KEY,               /* signals a new key received from terminal */
-  ES_LOCK,
-  ES_UNLOCK,
   /* Motor events */
   ES_ROTATE,
   ES_TRANSLATE,
@@ -278,7 +276,7 @@ typedef enum
   ES_STOP,
   ES_TAPE_FOUND,
   ES_BEACON_FOUND,
-  /*Command generator events*/
+  /* Command generator events */
   ES_COMMAND_RECEIVED,
   ES_BEACON_SIGNAL,
   ES_SIDE_INDICATED,
@@ -292,7 +290,8 @@ typedef enum
   ES_TAPE_DETECTED,
   ES_NEW_DIST,
   ES_END_GAME,
-  ES_ALIGN_ULTRASONICS
+  ES_ALIGN_ULTRASONICS,
+  ES_CMD_REQ          // posted to SPIFollower, requests an event to be sent to leader
 }ES_EventType_t; // changed to be event type
 
 /****************************************************************************/

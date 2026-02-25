@@ -31,6 +31,7 @@
 #include "dbprintf.h"
 
 #include "PIC32_SPI_HAL.h"
+#include "EncoderService.h"
 
 /*----------------------------- Module Defines ----------------------------*/
 /* use the symbolic timer name from ES_Configure.h */
@@ -47,46 +48,6 @@
 /* SPI clock period (ns). 500 kHz -> 2000 ns period */
 //#define SPI_CLK_PERIOD_NS    2000u
 #define SPI_CLK_PERIOD_NS      50000u
-
-/* ---------------- Command Generator bytes (Appendix A) ----------------
-   keeping these here so SPILeaderService.c is self-contained.
------------------------------------------------------------------------ */
-
-/* leader -> follower motion commands */
-#define CMD_STOP                  0x00
-#define CMD_TRANS_FWD             0x01
-#define CMD_TRANS_BWD             0x02
-#define CMD_ROT_CW_90             0x03
-#define CMD_ROT_CCW_90            0x04
-#define CMD_ROT_CCW_45            0x05
-#define CMD_ROT_CW_45             0x06
-#define CMD_TAPE_T_DETECT         0x07
-#define CMD_LINE_FOLLOW           0x08
-
-/* leader -> follower beacon/nav commands */
-#define CMD_GET_BEACON_FREQ       0x11
-#define CMD_INIT_ORIENT           0x12
-
-/* follower -> leader status bytes */
-#define CMD_SIDE_FOUND_RIGHT      0x13
-#define CMD_SIDE_FOUND_LEFT       0x14
-#define CMD_BEACON_R_FOUND        0x15
-#define CMD_BEACON_L_FOUND        0x16
-#define CMD_BEACON_G_FOUND        0x17
-#define CMD_BEACON_B_FOUND        0x18
-
-#define CMD_END_GAME              0x99
-#define CMD_QUERY                 0xAA
-#define CMD_NOOP                  0xFF
-#define CMD_TESTING               0x10  // checkpoint 2 cmd
-
-/* collect/dispense sync (leader owns servos, follower freezes motors) */
-#define CMD_COLLECT_START         0x20
-#define CMD_DISPENSE_START        0x21
-
-/* optional unfreeze hooks */
-#define CMD_COLLECT_DONE          0x24
-#define CMD_DISPENSE_DONE         0x25
 
 /*---------------------------- Module Types -------------------------------*/
 typedef enum {
@@ -190,6 +151,9 @@ ES_Event_t RunSPILeaderService(ES_Event_t ThisEvent)
       QueueCommand(cmd);
       break;
     }
+    case ES_ENCODER_TARGET_REACHED:
+      QueueCommand(CMD_MOVE_DONE);
+      break;
 
     case ES_TIMEOUT:
     {
@@ -294,12 +258,14 @@ static bool IsKnownFollowerStatus(uint8_t cmd)
   {
     case CMD_NOOP:
     case CMD_TESTING:
-    case CMD_SIDE_FOUND_RIGHT:
-    case CMD_SIDE_FOUND_LEFT:
+    case CMD_SIDE_FOUND_BLUE:
+    case CMD_SIDE_FOUND_GREEN:
     case CMD_BEACON_R_FOUND:
     case CMD_BEACON_L_FOUND:
     case CMD_BEACON_G_FOUND:
     case CMD_BEACON_B_FOUND:
+    case CMD_ENCODER_FIRST_ALIGN:
+    case CMD_ROT_CCW_90:
       return true;
 
     default:
@@ -324,25 +290,15 @@ static void HandleFollowerStatus(uint8_t statusByte)
     case CMD_NOOP:
       break;
 
-    case CMD_SIDE_FOUND_RIGHT:
+    case CMD_SIDE_FOUND_BLUE:
     {
-      ES_Event_t SideEvent;
-      SideEvent.EventType  = ES_SIDE_INDICATED;
-      SideEvent.EventParam = RIGHT;
-      ES_PostAll(SideEvent);
-
-      DB_printf("Side indicated: RIGHT\r\n");
+      DB_printf("Side indicated: BLUE\r\n");
       break;
     }
 
-    case CMD_SIDE_FOUND_LEFT:
+    case CMD_SIDE_FOUND_GREEN:
     {
-      ES_Event_t SideEvent;
-      SideEvent.EventType  = ES_SIDE_INDICATED;
-      SideEvent.EventParam = LEFT;
-      ES_PostAll(SideEvent);
-
-      DB_printf("Side indicated: LEFT\r\n");
+      DB_printf("Side indicated: GREEN\r\n");
       break;
     }
 
@@ -367,6 +323,11 @@ static void HandleFollowerStatus(uint8_t statusByte)
 
     case CMD_TESTING:
       DB_printf("Follower status: TESTING\r\n");
+      break;
+
+    case CMD_ROT_CCW_90:
+      DB_printf("Follower status: ROTATING CCW 90\r\n");
+      PostEncoderService;
       break;
 
     default:
