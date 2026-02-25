@@ -24,6 +24,7 @@
 #include "ES_Timers.h"
 #include "dbprintf.h"
 #include "PIC32_SPI_HAL.h"
+#include "SPILeaderService.h"   // header now holds CMD_NUDGE_BACK/FWD
 
 /*============================== CONFIG ==============================*/
 #define PBCLK_HZ               20000000u
