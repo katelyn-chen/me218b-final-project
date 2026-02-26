@@ -362,6 +362,18 @@ static void InitServoPWM(void)
       We must NOT reinitialize Timer2 if it is already running, otherwise we can stomp
       OC settings used by the other service.
   */
+  /* ================= PPS OUTPUT MAPPING =================
+   Map OC modules to physical pins
+   (values depend on PIC32 family — assuming PPS FN = 0b0101)
+=======================================================*/
+
+    #define PPS_FN_OC 0b0101
+
+    RPA1Rbits.RPA1R = PPS_FN_OC;   // OC2 -> RA1 (Grab Servo 1)
+    RPB4Rbits.RPB4R = PPS_FN_OC;   // OC1 -> RB4 (Grab Servo 2)
+    RPA4Rbits.RPA4R = PPS_FN_OC;   // OC4 -> RA4 (Arm Servo)
+    RPB10Rbits.RPB10R = PPS_FN_OC; // OC3 -> RB10 (Bucket)
+    RPB6Rbits.RPB6R = PPS_FN_OC;   // OC5 -> RB6 (Push Arm)
 
   if (T2CONbits.ON == 0u)
   {
