@@ -24,7 +24,7 @@
 #include "ES_Timers.h"
 #include "dbprintf.h"
 #include "PIC32_SPI_HAL.h"
-#include "SPILeaderService.h"   /* command bytes live in SPI header now */
+#include "SPILeaderService.h"   // header now holds CMD_NUDGE_BACK/FWD
 
 /*============================== CONFIG ==============================*/
 #define PBCLK_HZ               20000000u
@@ -45,12 +45,8 @@
 #define T_ARM_TRAVEL_MS        350u
 
 /* SPI bytes for follower motion nudges */
-#ifndef CMD_NUDGE_BACK
 #define CMD_NUDGE_BACK         0x22u
-#endif
-#ifndef CMD_NUDGE_FWD
 #define CMD_NUDGE_FWD          0x23u
-#endif
 
 /*=========================== SERVO PWM HW ============================*/
 /*
@@ -151,21 +147,9 @@ ES_Event_t RunCollectService(ES_Event_t ThisEvent)
   switch (CurState)
   {
     case COLLECT_IDLE:
-      /*
-        IMPORTANT FOR DEBUG:
-          Start Collect on the same capacitive button your framework posts as ES_START_BUTTON.
-          This lets you test CollectService without running the whole game.
-      */
-      if (ThisEvent.EventType == ES_START_BUTTON)
-      {
-        DB_printf("CollectService: start (ES_START_BUTTON)\r\n");
-        BallCount = 0u;
-        TransitionTo(COLLECT_ARM_DOWN, T_ARM_DOWN_MS);
-      }
-
       if (ThisEvent.EventType == ES_COLLECT_START)
       {
-        DB_printf("CollectService: start (ES_COLLECT_START)\r\n");
+        DB_printf("CollectService: start\r\n");
         BallCount = 0u;
         TransitionTo(COLLECT_ARM_DOWN, T_ARM_DOWN_MS);
       }
@@ -240,8 +224,8 @@ ES_Event_t RunCollectService(ES_Event_t ThisEvent)
       GrabOpen();
       ArmTravelPose();
 
-      ES_Event_t doneEvt = { ES_CMD_REQ, 0 };
-      ES_PostSPILeaderService(doneEvt);
+      ES_Event_t doneEvt = { ES_COLLECT_DONE, 0 };
+      ES_PostAll(doneEvt);
 
       TransitionTo(COLLECT_IDLE, 0u);
       break;
@@ -313,16 +297,7 @@ static void TransitionTo(CollectState_t next, uint16_t tMs)
 /*=========================== SPI NUDGE ============================*/
 static void RequestNudge(uint8_t cmdByte)
 {
-  /*
-    IMPORTANT:
-      Don't call SPIOperate_SPI1_Send8Wait() directly here.
-      SPILeaderService is already the owner of SPI on PIC1 and is polling.
-      We request nudges by posting ES_COMMAND_RECEIVED so it can queue+send safely.
-  */
-  ES_Event_t CmdEvent;
-  CmdEvent.EventType = ES_COMMAND_RECEIVED;
-  CmdEvent.EventParam = cmdByte;
-  ES_PostAll(CmdEvent);
+  SPIOperate_SPI1_Send8Wait(cmdByte);
 }
 
 /*=========================== SERVO POSES ============================*/
@@ -362,18 +337,6 @@ static void InitServoPWM(void)
       We must NOT reinitialize Timer2 if it is already running, otherwise we can stomp
       OC settings used by the other service.
   */
-  /* ================= PPS OUTPUT MAPPING =================
-   Map OC modules to physical pins
-   (values depend on PIC32 family — assuming PPS FN = 0b0101)
-=======================================================*/
-
-    #define PPS_FN_OC 0b0101
-
-    RPA1Rbits.RPA1R = PPS_FN_OC;   // OC2 -> RA1 (Grab Servo 1)
-    RPB4Rbits.RPB4R = PPS_FN_OC;   // OC1 -> RB4 (Grab Servo 2)
-    RPA4Rbits.RPA4R = PPS_FN_OC;   // OC4 -> RA4 (Arm Servo)
-    RPB10Rbits.RPB10R = PPS_FN_OC; // OC3 -> RB10 (Bucket)
-    RPB6Rbits.RPB6R = PPS_FN_OC;   // OC5 -> RB6 (Push Arm)
 
   if (T2CONbits.ON == 0u)
   {
@@ -396,6 +359,30 @@ static void InitServoPWM(void)
   OC3CON = 0; OC3R = 0; OC3RS = 0; OC3CONbits.OCTSEL = 0; OC3CONbits.OCM = 0b110; OC3CONbits.ON = 1;
   OC4CON = 0; OC4R = 0; OC4RS = 0; OC4CONbits.OCTSEL = 0; OC4CONbits.OCM = 0b110; OC4CONbits.ON = 1;
   OC5CON = 0; OC5R = 0; OC5RS = 0; OC5CONbits.OCTSEL = 0; OC5CONbits.OCM = 0b110; OC5CONbits.ON = 1;
+
+  /* ================= PPS + PIN CONFIG =================
+     OC modules do NOT automatically appear on pins.
+     This maps OC2->RA1, OC1->RB4, OC4->RA4 so you get PWM on the servo headers.
+  */
+  ANSELAbits.ANSA1 = 0; TRISAbits.TRISA1 = 0;   /* RA1 digital out */
+  ANSELAbits.ANSA4 = 0; TRISAbits.TRISA4 = 0;   /* RA4 digital out */
+  ANSELBbits.ANSB4 = 0; TRISBbits.TRISB4 = 0;   /* RB4 digital out */
+
+  /* Unlock PPS */
+  SYSKEY = 0x00000000;
+  SYSKEY = 0xAA996655;
+  SYSKEY = 0x556699AA;
+  CFGCONbits.IOLOCK = 0;
+
+  #define PPS_FN_OCx 0b0101
+
+  RPA1Rbits.RPA1R = PPS_FN_OCx;   /* OC2 -> RA1 */
+  RPB4Rbits.RPB4R = PPS_FN_OCx;   /* OC1 -> RB4 */
+  RPA4Rbits.RPA4R = PPS_FN_OCx;   /* OC4 -> RA4 */
+
+  /* Lock PPS */
+  CFGCONbits.IOLOCK = 1;
+  SYSKEY = 0x00000000;
 
   ServoInitDone = true;
 }
