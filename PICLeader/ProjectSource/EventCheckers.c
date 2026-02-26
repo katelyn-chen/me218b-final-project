@@ -42,6 +42,7 @@
 #include "PIC32_SPI_HAL.h"
 #include "SPILeaderService.h"
 #include "InitService.h"
+#include "CollectService.h"
 
 /*----------------------------- Module Defines ----------------------------*/
 
@@ -134,13 +135,16 @@ bool Check4Button(void)
 
   uint8_t currentButtonState = PORTAbits.RA2;
   if (currentButtonState && currentButtonState != lastButtonState) {
-      //DB_printf("Testing 1, state:\r\n");
       ES_Event_t NewEvent;
-      NewEvent.EventType = ES_START_BUTTON;
-      PostInitService(NewEvent);
+
+      /* DEBUG: trigger CollectService directly (bypass game/InitService) */
+      NewEvent.EventType = ES_COLLECT_START;
+      NewEvent.EventParam = 0;
+      PostCollectService(NewEvent);
+
       ReturnVal = true;
   }
-  
+
   lastButtonState = currentButtonState;
   return ReturnVal;
 }
