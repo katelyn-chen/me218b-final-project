@@ -59,15 +59,6 @@ typedef enum {
     LEFT
 } SideIndicate_t;
 
-typedef enum {
-    TAPE_CENTERED,
-    TAPE_OFF_CENTER_RIGHT,
-    TAPE_OFF_CENTER_LEFT,
-    FULL_T,
-    RIGHT_CORNER,
-    LEFT_CORNER,
-    NO_TAPE
-} TapeStatus_t;
 /*---------------------------- Module Variables --------------------------*/
 static uint8_t MyPriority;
 FollowerState_t curState;
@@ -237,6 +228,10 @@ static bool IsKnownCommand(uint8_t cmd)
         case CMD_SIDE_FOUND_BLUE:
         case CMD_SIDE_FOUND_GREEN:
         case CMD_MOVE_DONE:
+        case CMD_FIRST_COLLECT_DONE:
+        case CMD_SECOND_COLLECT_DONE:
+        case CMD_OTHER_COLLECT_DONE:
+        case CMD_DISPENSE_DONE:
             return true;
 
         default:
@@ -354,6 +349,27 @@ static void HandleCommandByte(uint8_t cmd)
     case CMD_MOVE_DONE: {
         DB_printf("Received MOVE DONE command from SPILeaderService!\r\n");
         cmdEvent.EventType = ES_MOVE_DONE;
+        break;
+    }
+
+    case CMD_FIRST_COLLECT_DONE: {
+        DB_printf("Received FIRST COLLECT DONE command from SPILeaderService!\r\n");
+        cmdEvent.EventType = ES_FIND_BUCKET;
+        cmdEvent.EventParam = FIRST_COLLECT;
+        break;
+    }
+
+    case CMD_SECOND_COLLECT_DONE: {
+        DB_printf("Received SECOND COLLECT DONE command from SPILeaderService!\r\n");
+        cmdEvent.EventType = ES_FIND_BUCKET;
+        cmdEvent.EventParam = SECOND_COLLECT;
+        break;
+    }
+
+    case CMD_OTHER_COLLECT_DONE: {
+        DB_printf("Received OTHER COLLECT DONE command from SPILeaderService!\r\n");
+        cmdEvent.EventType = ES_FIND_BUCKET;
+        cmdEvent.EventParam = OTHER_COLLECT;
         break;
     }
 

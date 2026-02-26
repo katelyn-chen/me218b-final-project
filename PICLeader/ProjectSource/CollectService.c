@@ -24,7 +24,7 @@
 #include "ES_Timers.h"
 #include "dbprintf.h"
 #include "PIC32_SPI_HAL.h"
-#include "SPILeaderService.h"   // header now holds CMD_NUDGE_BACK/FWD
+#include "SPILeaderService.h"   /* command bytes live in SPI header now */
 
 /*============================== CONFIG ==============================*/
 #define PBCLK_HZ               20000000u
@@ -44,11 +44,7 @@
 #define T_GRIP_OPEN_MS         250u
 #define T_ARM_TRAVEL_MS        350u
 
-/*
-  SPI bytes for follower motion nudges
-
-  If these are defined in SPILeaderService.h, these fallbacks stay unused.
-*/
+/* SPI bytes for follower motion nudges */
 #ifndef CMD_NUDGE_BACK
 #define CMD_NUDGE_BACK         0x22u
 #endif
@@ -112,6 +108,7 @@ typedef enum {
 static uint8_t MyPriority;
 static CollectState_t CurState = COLLECT_IDLE;
 static uint8_t BallCount = 0u;
+static CollectStatus_t whichCollect;
 
 /*====================== PRIVATE FUNCTION PROTOS =====================*/
 static void TransitionTo(CollectState_t next, uint16_t tMs);
@@ -165,6 +162,7 @@ ES_Event_t RunCollectService(ES_Event_t ThisEvent)
       if (ThisEvent.EventType == ES_COLLECT_START)
       {
         DB_printf("CollectService: start\r\n");
+        whichCollect = ThisEvent.EventParam;
         BallCount = 0u;
         TransitionTo(COLLECT_ARM_DOWN, T_ARM_DOWN_MS);
       }
@@ -238,10 +236,24 @@ ES_Event_t RunCollectService(ES_Event_t ThisEvent)
       DB_printf("CollectService: done\r\n");
       GrabOpen();
       ArmTravelPose();
+      ES_Event_t doneEvt;
+      doneEvt.EventType = ES_CMD_REQ;
 
-      ES_Event_t doneEvt = { ES_COLLECT_DONE, 0 };
-      ES_PostAll(doneEvt);
-
+      switch (whichCollect) {
+        case FIRST_COLLECT:
+          doneEvt.EventParam = CMD_FIRST_COLLECT_DONE;
+          break;
+        
+        case SECOND_COLLECT:
+          doneEvt.EventParam = CMD_SECOND_COLLECT_DONE;
+          break;
+        
+        case OTHER_COLLECT:
+          doneEvt.EventParam = CMD_OTHER_COLLECT_DONE;
+          break;
+      }
+      
+      ES_PostSPILeaderService(doneEvt);
       TransitionTo(COLLECT_IDLE, 0u);
       break;
     }
@@ -379,6 +391,7 @@ static void InitServoPWM(void)
   */
   OC1CON = 0; OC1R = 0; OC1RS = 0; OC1CONbits.OCTSEL = 0; OC1CONbits.OCM = 0b110; OC1CONbits.ON = 1;
   OC2CON = 0; OC2R = 0; OC2RS = 0; OC2CONbits.OCTSEL = 0; OC2CONbits.OCM = 0b110; OC2CONbits.ON = 1;
+  OC3CON = 0; OC3R = 0; OC3RS = 0; OC3CONbits.OCTSEL = 0; OC3CONbits.OCM = 0b110; OC3CONbits.ON = 1;
   OC4CON = 0; OC4R = 0; OC4RS = 0; OC4CONbits.OCTSEL = 0; OC4CONbits.OCM = 0b110; OC4CONbits.ON = 1;
 
   /* ================= PPS + PIN CONFIG =================

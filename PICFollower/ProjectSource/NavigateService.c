@@ -138,7 +138,7 @@ bool InitNavigateService(uint8_t Priority)
   InitTimer2ForPWM();
   InitOCsForPWM();
 
-  curState = DEBUG;
+  curState = INIT_ORIENT;
   orientState = ORIENT_IDLE;
   field = FIELD_UNKNOWN;
   duty = DUTY_STOP;
@@ -373,42 +373,60 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
     case FIRST_COLLECT:
     {
       /* drive forward and line follow until T detected */
-      LineFollow(ThisEvent);
+      if (ThisEvent.EventType == ES_TAPE_DETECT)
+      {
+        LineFollow(ThisEvent);
+      }
+
       if (ThisEvent.EventType == ES_T_DETECTED)
       {
-        cmdEvent.EventType = CMD_ROT_CCW_90;
+        cmdEvent.EventParam = CMD_ROT_CCW_90;
         PostSPIFollowerService(cmdEvent);
         DoRotate(PackRotateParam(ROT_90, ROT_CCW)); /* turn 90 to face dispenser */
       }
 
       if (ThisEvent.EventType == ES_MOVE_DONE) {
         /* move forward to dispenser */
+        cmdEvent.EventParam = CMD_ALIGN_COLLECT;
+        PostSPIFollowerService(cmdEvent);
         DoTranslate(PackTranslateParam(TRANS_HALF, DIR_FWD));
-      }
-
-      if (ThisEvent.EventType == ES_ULTRASONIC_DETECTED)
-      {
-        /* determine which sensors we are using for dispenser alignment
-        OR are we using encoders? */
-        curState = COLLECT_ALIGN;
-        // post an event to collect service here!
+        curState = FIRST_COLLECT;
       }
       break;
     }
 
     case COLLECT_ALIGN:
     {
+      if (ThisEvent.EventType == ES_MOVE_DONE) {
+        StopMotors();
+        cmdEvent.EventParam = CMD_COLLECT_START;
+        PostSPIFollowerService(cmdEvent);
+      }
       if (ThisEvent.EventType == ES_FIND_BUCKET)
       {
-        if (ThisEvent.EventParam == FIRST)       curState = FIRST_DISPENSE;
-        else if (ThisEvent.EventParam == MIDDLE) curState = INIT_FIND_MIDDLE;
-        else if (ThisEvent.EventParam == END)    curState = INIT_FIND_END;
+        if (ThisEvent.EventParam == FIRST_COLLECT) {
+          curState = FIRST_DISPENSE;
+          DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_REV));
+        }
+        else if (ThisEvent.EventParam == SECOND_COLLECT) curState = INIT_FIND_MIDDLE;
+        else if (ThisEvent.EventParam == OTHER_COLLECT)    curState = INIT_FIND_END;
       }
       break;
     }
 
     case FIRST_DISPENSE:
     {
+      /* drive backwards and line follow until T detected */
+      if (ThisEvent.EventType == ES_TAPE_DETECT)
+      {
+        LineFollow(ThisEvent);
+      }
+      if (ThisEvent.EventType == ES_T_DETECTED)
+      {
+        StopMotors();
+        DB_printf("T detected! Ready to start dispensing\r\n");
+        //Post to dispense service!
+      }
       if (ThisEvent.EventType == ES_DISPENSE_COMPLETE)
       {
         curState = INIT_FIND_MIDDLE;

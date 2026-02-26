@@ -11,11 +11,23 @@
 /*----------------------------- DEFINING PINS FOR EVENT CHECKERS -----------------------------*/
 #define InitButton  SPI_RPA2
 
+/*----------------------------- TypeDefs For Use Elsewhere -----------------------------*/
+/*
+  Field identification:
+    FIELD_GREEN means beacons appear CCW in the BLRG cycle (with rotation offset).
+    FIELD_BLUE  means beacons appear CCW in the GRLB cycle (with rotation offset).
+*/
 typedef enum {
   FIELD_UNKNOWN = 0,
   FIELD_GREEN   = 1,
   FIELD_BLUE    = 2
 } Field_t;
+
+typedef enum {
+  FIRST_COLLECT,
+  SECOND_COLLECT,
+  OTHER_COLLECT
+} CollectStatus_t;
 
 /*----------------------------- Translate param helpers -----------------------------*/
 typedef enum { TRANS_HALF = 0, TRANS_FULL = 1 } TransSpeed_t;
@@ -82,7 +94,7 @@ static inline void UnpackRotateParam(uint16_t p, RotAngle_t *ang, RotDir_t *dir)
 #define CMD_ENCODER_ALIGN_DISPENSE 0x20
 #define CMD_ENCODER_FIRST_ALIGN   0x21
 #define CMD_MOVE_DONE             0x22
-
+#define CMD_ALIGN_COLLECT         0x23
 
 
 #define CMD_END_GAME              0x99
@@ -91,11 +103,11 @@ static inline void UnpackRotateParam(uint16_t p, RotAngle_t *ang, RotDir_t *dir)
 #define CMD_TESTING               0x10
 
 /* collect/dispense sync (leader owns servos, follower freezes motors) */
-#define CMD_COLLECT_START         0x30
+#define CMD_FIRST_COLLECT_START   0x30
 #define CMD_DISPENSE_START        0x31
 
 /* optional unfreeze hooks */
-#define CMD_COLLECT_DONE          0x34
+#define CMD_FIRST_COLLECT_DONE    0x34
 #define CMD_DISPENSE_DONE         0x35
 
 #endif /* SPI_LEADER_SERVICE_H */

@@ -41,6 +41,12 @@ typedef enum {
     NO_TAPE
 } TapeStatus_t;
 
+typedef enum {
+  FIRST_COLLECT,
+  SECOND_COLLECT,
+  OTHER_COLLECT
+} CollectStatus_t;
+
 /*----------------------------- SPI Commands -----------------------------*/
 
 /* leader -> follower motion commands */
@@ -71,6 +77,7 @@ typedef enum {
 #define CMD_ENCODER_ALIGN_DISPENSE 0x20
 #define CMD_ENCODER_FIRST_ALIGN   0x21
 #define CMD_MOVE_DONE             0x22
+#define CMD_ALIGN_COLLECT         0x23
 
 #define CMD_END_GAME              0x99
 #define CMD_QUERY                 0xAA
@@ -78,11 +85,14 @@ typedef enum {
 #define CMD_TESTING               0x10
 
 /* collect/dispense sync (leader owns servos, follower freezes motors) */
-#define CMD_COLLECT_START         0x30
+#define CMD_FIRST_COLLECT_START   0x30
 #define CMD_DISPENSE_START        0x31
 
 /* optional unfreeze hooks */
-#define CMD_COLLECT_DONE          0x34
+#define CMD_FIRST_COLLECT_DONE    0x34
 #define CMD_DISPENSE_DONE         0x35
+#define CMD_SECOND_COLLECT_DONE   0x36
+#define CMD_OTHER_COLLECT_DONE    0x37
+
 
 #endif /* SPI_FOLLOWER_SERVICE_H */
