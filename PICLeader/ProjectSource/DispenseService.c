@@ -16,6 +16,7 @@
 ****************************************************************************/
 
 #include "DispenseService.h"
+#include "SPILeaderService.h"
 
 #include <xc.h>
 #include <stdint.h>

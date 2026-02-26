@@ -290,7 +290,10 @@ typedef enum
   ES_TAPE_DETECTED,
   ES_NEW_DIST,
   ES_END_GAME,
+  /* Events for navigateService */
+  ES_MOVE_DONE,
   ES_ALIGN_ULTRASONICS,
+  ES_ULTRASONIC_DETECTED,
   ES_CMD_REQ          // posted to SPIFollower, requests an event to be sent to leader
 }ES_EventType_t; // changed to be event type
 

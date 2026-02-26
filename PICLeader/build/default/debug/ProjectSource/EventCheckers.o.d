@@ -9,8 +9,9 @@ build/default/debug/ProjectSource/EventCheckers.o: \
  FrameworkHeaders/ES_PostList.h FrameworkHeaders/ES_ServiceHeaders.h \
  ProjectHeaders/SPILeaderService.h FrameworkHeaders/ES_Types.h \
  ProjectHeaders/InitService.h ProjectHeaders/CollectService.h \
- ProjectHeaders/DispenseService.h FrameworkHeaders/ES_Port.h \
- ProjectHeaders/EventCheckers.h ProjectHeaders/PIC32_SPI_HAL.h
+ ProjectHeaders/DispenseService.h ProjectHeaders/EncoderService.h \
+ FrameworkHeaders/ES_Port.h ProjectHeaders/EventCheckers.h \
+ ProjectHeaders/PIC32_SPI_HAL.h
 
 FrameworkHeaders/ES_Configure.h:
 
@@ -51,6 +52,8 @@ ProjectHeaders/InitService.h:
 ProjectHeaders/CollectService.h:
 
 ProjectHeaders/DispenseService.h:
+
+ProjectHeaders/EncoderService.h:
 
 FrameworkHeaders/ES_Port.h:
 

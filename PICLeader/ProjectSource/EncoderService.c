@@ -52,6 +52,9 @@ typedef enum {
 void InitPinHardware();
 void InitTimer3();
 void InitIC3();
+void InitIC1();
+void GetLeftEncoder();
+void GetRightEncoder();
 /*---------------------------- Module Variables ---------------------------*/
 // with the introduction of Gen2, we need a module level Priority variable
 static uint8_t MyPriority;
@@ -64,6 +67,9 @@ static int32_t StartLeftCount = 0;
 static int32_t StartRightCount = 0;
 
 static int32_t TargetDelta = 0;
+static int32_t TargetLeft = 0;
+static int32_t TargetRight = 0;
+
 
 static bool MoveActive = false;
 /*------------------------------ Module Code ------------------------------*/
@@ -157,23 +163,23 @@ ES_Event_t RunEncoderService(ES_Event_t ThisEvent)
       switch(ThisEvent.EventType)
       {
         case ES_ENCODER_TARGET_STRAIGHT:
-          StartLeft  = GetLeftEncoder();
-          StartRight = GetRightEncoder();
+          GetLeftEncoder();
+          GetRightEncoder();
 
-          TargetLeft  = StartLeft  + Event.EventParam;
-          TargetRight = StartRight + Event.EventParam;
-          EncoderMode = ENCODER_STRAIGHT;
+          TargetLeft  = StartLeftCount  + ThisEvent.EventParam;
+          TargetRight = StartRightCount + ThisEvent.EventParam;
+          encoderMode = ENCODER_STRAIGHT;
           ES_Timer_InitTimer(ENCODER_TIMER, ENCODER_CHECK_MS);
           break;
 
         case ES_ENCODER_TARGET_ROT:
-          StartLeft  = GetLeftEncoder();
-          StartRight = GetRightEncoder();
+          GetLeftEncoder();
+          GetRightEncoder();
 
-          TargetLeft  = StartLeft  + Event.EventParam;
-          TargetRight = StartRight - Event.EventParam;
+          TargetLeft  = StartLeftCount  + ThisEvent.EventParam;
+          TargetRight = StartRightCount - ThisEvent.EventParam;
 
-          EncoderMode = ENCODER_TURN;
+          encoderMode = ENCODER_TURN;
           ES_Timer_InitTimer(ENCODER_TIMER, ENCODER_CHECK_MS);
           break;
       }
@@ -186,7 +192,7 @@ ES_Event_t RunEncoderService(ES_Event_t ThisEvent)
           int32_t avgTravel = (leftTravel + rightTravel) / 2;
 
           // Handle forward AND backward motion
-          if( ABS(avgTravel) >= ABS(TargetDelta) ) {
+          if( abs(avgTravel) >= abs(TargetDelta) ) {
               MoveActive = false;
 
               ES_Event_t doneEvent;
@@ -195,7 +201,7 @@ ES_Event_t RunEncoderService(ES_Event_t ThisEvent)
 
               PostSPILeaderService(doneEvent);
               ES_Timer_StopTimer(ENCODER_TIMER);
-              EncoderMode = ENCODER_IDLE;
+              encoderMode = ENCODER_IDLE;
           } else {
             ES_Timer_InitTimer(ENCODER_TIMER, ENCODER_CHECK_MS);
           }
@@ -213,13 +219,13 @@ ES_Event_t RunEncoderService(ES_Event_t ThisEvent)
           int32_t turnTravel = (leftTravel - rightTravel) / 2;
 
           // Handle clockwise AND counterclockwise
-          if (ABS(turnTravel) >= ABS(TargetDelta)) {
+          if (abs(turnTravel) >= abs(TargetDelta)) {
             MoveActive = false;
             ES_Event_t doneEvent;
             doneEvent.EventType = ES_ENCODER_TARGET_REACHED;
             PostSPILeaderService(doneEvent);
             ES_Timer_StopTimer(ENCODER_TIMER);
-            EncoderMode = ENCODER_IDLE;
+            encoderMode = ENCODER_IDLE;
           } else {
             ES_Timer_InitTimer(ENCODER_TIMER, ENCODER_CHECK_MS);
           }
@@ -300,6 +306,19 @@ void InitIC3() {
   IPC3bits.IC3IS = 0;          // sub-priority
   IC3CONbits.ON = 1;           // enable module
 }
+
+void GetLeftEncoder() {
+    __builtin_disable_interrupts();
+     StartLeftCount = LeftCount;
+    __builtin_enable_interrupts();
+}
+
+void GetRightEncoder() {
+    __builtin_disable_interrupts();
+     StartRightCount = RightCount;
+    __builtin_enable_interrupts();
+}
+
 
  // Left Motor ISR
  void __ISR(_INPUT_CAPTURE_3_VECTOR, IPL7SOFT) IC3_ISR(void)

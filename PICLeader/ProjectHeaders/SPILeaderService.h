@@ -11,6 +11,12 @@
 /*----------------------------- DEFINING PINS FOR EVENT CHECKERS -----------------------------*/
 #define InitButton  SPI_RPA2
 
+typedef enum {
+  FIELD_UNKNOWN = 0,
+  FIELD_GREEN   = 1,
+  FIELD_BLUE    = 2
+} Field_t;
+
 /*----------------------------- Translate param helpers -----------------------------*/
 typedef enum { TRANS_HALF = 0, TRANS_FULL = 1 } TransSpeed_t;
 typedef enum { DIR_FWD = 0, DIR_REV = 1 } TransDir_t;
@@ -75,6 +81,8 @@ static inline void UnpackRotateParam(uint16_t p, RotAngle_t *ang, RotDir_t *dir)
 #define CMD_ENCODER_ALIGN_COLLECT 0x19
 #define CMD_ENCODER_ALIGN_DISPENSE 0x20
 #define CMD_ENCODER_FIRST_ALIGN   0x21
+#define CMD_MOVE_DONE             0x22
+
 
 
 #define CMD_END_GAME              0x99

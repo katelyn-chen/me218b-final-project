@@ -22,8 +22,8 @@ build/default/debug/FrameworkSource/ES_Framework.o: \
  FrameworkHeaders/ES_Framework.h FrameworkHeaders/ES_Events.h \
  FrameworkHeaders/ES_Types.h ProjectHeaders/InitService.h \
  ProjectHeaders/CollectService.h ProjectHeaders/DispenseService.h \
- ProjectHeaders/EventCheckWrapper.h ProjectHeaders/EventCheckers.h \
- FrameworkHeaders/ES_Port.h
+ ProjectHeaders/EncoderService.h ProjectHeaders/EventCheckWrapper.h \
+ ProjectHeaders/EventCheckers.h FrameworkHeaders/ES_Port.h
 
 FrameworkSource/../FrameworkHeaders/ES_Configure.h:
 
@@ -78,6 +78,8 @@ ProjectHeaders/InitService.h:
 ProjectHeaders/CollectService.h:
 
 ProjectHeaders/DispenseService.h:
+
+ProjectHeaders/EncoderService.h:
 
 ProjectHeaders/EventCheckWrapper.h:
 

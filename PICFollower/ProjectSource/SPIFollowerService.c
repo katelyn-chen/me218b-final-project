@@ -224,7 +224,7 @@ static bool IsKnownCommand(uint8_t cmd)
         case CMD_TESTING:
         case CMD_INIT_ORIENT:
         case CMD_END_GAME:
-        case CMD_SIDE_FOUND_BLUE
+        case CMD_SIDE_FOUND_BLUE:
         case CMD_SIDE_FOUND_GREEN:
         case CMD_MOVE_DONE:
             return true;
@@ -341,7 +341,7 @@ static void HandleCommandByte(uint8_t cmd)
         break;
     }
 
-    case CMD_MOVE_DONE {
+    case CMD_MOVE_DONE: {
         DB_printf("Received MOVE DONE command from SPILeaderService!\r\n");
         cmdEvent.EventType = ES_MOVE_DONE;
         break;

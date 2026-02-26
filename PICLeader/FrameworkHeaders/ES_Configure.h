@@ -282,7 +282,7 @@ typedef enum
   ES_BEACON_SIGNAL,
           
   /*Dispense and collect events*/
-  ES_SIDE_INDICATED, // param: LEFT-RIGHT
+  ES_INDICATE_SIDE, // param: blue-GREEN
   ES_ALIGN_COLLECT, // param: FIRST-SECOND-OTHER
   ES_FIND_BUCKET,   // param: FIRST-MIDDLE-END
   ES_COLLECT_START,  // param: 0

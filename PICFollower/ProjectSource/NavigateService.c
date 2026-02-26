@@ -73,10 +73,6 @@ typedef enum {
 } InitOrientState_t;
 
 typedef enum {
-
-} FirstCollectState_t;
-
-typedef enum {
     FIRST,
     MIDDLE,
     END
@@ -97,7 +93,6 @@ typedef enum {
 static uint8_t             MyPriority;
 static NavigateState_t     curState;
 static InitOrientState_t   orientState;
-static FirstCollectState_t fcState;
 static Field_t             field = FIELD_UNKNOWN;
 static uint16_t            duty = DUTY_STOP;
 
@@ -139,7 +134,6 @@ bool InitNavigateService(uint8_t Priority)
 
   curState = DEBUG;
   orientState = ORIENT_IDLE;
-  (void)fcState;
   field = FIELD_UNKNOWN;
   duty = DUTY_STOP;
 
