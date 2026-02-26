@@ -156,43 +156,34 @@ bool Check4Wall(void){
     return ReturnVal;
 }
 
+
+/*
+#define TapeSensor1 SPI_RPB4
+#define TapeSensor2 SPI_RPB5
+#define TapeSensor3  SPI_RPB11
+#define TapeSensor4 SPI_RPB12
+#define TapeSensor5 SPI_RPB13
+*/
 bool Check4Tape(void)
 {
   bool tapeDetected = false;
-  if (PIN_ReadDigitalPIC32Pin(TapeSensor1) == 0) {
+  static uint8_t lastTapeState = 0;
+  uint8_t currentTapeState = 0;
+
+  currentTapeState |= (PORTBbits.RB4 == 0) << 0;
+  currentTapeState |= (PORTBbits.RB5 == 0) << 1;
+  currentTapeState |= (PORTBbits.RB11 == 0) << 2;
+  currentTapeState |= (PORTBbits.RB12 == 0) << 3;
+  currentTapeState |= (PORTBbits.RB13 == 0) << 4;
+
+  if (currentTapeState != lastTapeState && currentTapeState != 0) {
     ES_Event_t ThisEvent;
-    ThisEvent.EventType = ES_TAPE_DETECTED;
-    ThisEvent.EventParam = 1;
-    ES_PostAll(ThisEvent);
+    ThisEvent.EventType = ES_TAPE_CHANGE;
+    ThisEvent.EventParam = currentTapeState; // bitfield of all sensors
+    PostReflectiveSenseService(ThisEvent);
     tapeDetected = true;
   }
-  if (PIN_ReadDigitalPIC32Pin(TapeSensor2) == 0) {
-    ES_Event_t ThisEvent;
-    ThisEvent.EventType = ES_TAPE_DETECTED;
-    ThisEvent.EventParam = 2;
-    ES_PostAll(ThisEvent);
-    tapeDetected = true;
-  }
-  if (PIN_ReadDigitalPIC32Pin(TapeSensor3) == 0) {
-    ES_Event_t ThisEvent;
-    ThisEvent.EventType = ES_TAPE_DETECTED;
-    ThisEvent.EventParam = 3;
-    ES_PostAll(ThisEvent);
-    tapeDetected = true;
-  }
-  if (PIN_ReadDigitalPIC32Pin(TapeSensor4) == 0) {
-    ES_Event_t ThisEvent;
-    ThisEvent.EventType = ES_TAPE_DETECTED;
-    ThisEvent.EventParam = 4;
-    ES_PostAll(ThisEvent);
-    tapeDetected = true;
-  }
-  if (PIN_ReadDigitalPIC32Pin(TapeSensor5) == 0) {
-    ES_Event_t ThisEvent;
-    ThisEvent.EventType = ES_TAPE_DETECTED;
-    ThisEvent.EventParam = 5;
-    ES_PostAll(ThisEvent);
-    tapeDetected = true;
-  }
+
+  lastTapeState = currentTapeState; 
   return tapeDetected;
 }

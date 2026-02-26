@@ -3,10 +3,8 @@
     ReflectiveSenseService.c  (Lab 8)
 
   Summary
-    - Configure ADC for reflective sensor
-    - Periodically sample sensor voltage
-    - Apply threshold + confidence logic
-    - Post ES_TAPE_FOUND when black tape is detected
+    - Receives ES_TAPE_CHANGE event from event checker when tape sensor state changes
+    - Determine what tape change means
 ****************************************************************************/
 
 #include "ReflectiveSenseService.h"
@@ -19,40 +17,36 @@
 #include "ES_Framework.h"
 #include "dbprintf.h"
 
-#include "MotorService.h"
+#include "NavigateService.h"
+#include "SPIFollowerService.h"
 
 /*============================== CONFIG ==============================*/
-/* pick an ES timer ID that is free in your ES_Configure.c */
-#ifndef REFLECT_TIMER
-#define REFLECT_TIMER      3u
-#endif
 
-#define REFLECT_SAMPLE_MS  10u
-#define REFLECT_PORT   PORTAbits.RA2
-#define REFLECT_TRIS   TRISAbits.TRISA2
-#define REFLECT_ACTIVE_HIGH   0
-#define TAPE_CONFIRM_N        2u
+// Tape left to right from robot's perspective (1-5): RB4, RB5, RB11, RB12, RB13
+// add fuzzy checking for corners? verify with hardware to see accuracy
+#define CENTER_BITFIELD           0b00100
+#define OFFCENTER_RIGHT_BITFIELD  0b00110 // middle + right
+#define OFFCENTER_LEFT_BITFIELD   0b01100 // middle + left
+#define ALL_TAPE_BITFIELD         0b11111
+#define RIGHT_CORNER_BITFIELD     0b00111
+#define LEFT_CORNER_BITFIELD      0b11100
+
+#define TAPE_CONFIRM_COUNT       5
 
 /*============================== STATE ==============================*/
 static uint8_t MyPriority;
-static uint8_t TapeCount = 0;
-static bool TapeLatched = false;
+static uint8_t lastConfirmedState;
+static uint8_t debounceCounter;
 
 /*====================== PRIVATE FUNCTION PROTOS =====================*/
 static void InitReflectiveHardware(void);
-static uint16_t ReadReflectDigital(void);
 
 /*=========================== PUBLIC API =============================*/
 bool InitReflectiveSenseService(uint8_t Priority)
 {
   MyPriority = Priority;
-
   InitReflectiveHardware();
-
-  ES_Timer_InitTimer(REFLECT_TIMER, REFLECT_SAMPLE_MS);
-
   DB_printf("ReflectiveSenseService: init done\r\n");
-
   ES_Event_t ThisEvent = { ES_INIT, 0 };
   return ES_PostToService(MyPriority, ThisEvent);
 }
@@ -66,47 +60,76 @@ ES_Event_t RunReflectiveSenseService(ES_Event_t ThisEvent)
 {
   ES_Event_t ReturnEvent = { ES_NO_EVENT, 0 };
 
-  if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == REFLECT_TIMER))
-  {
-      // start here
-      bool tapeDetected = ReadReflectDigital();
-
-      if (tapeDetected)
-      {
-        TapeCount++;
-        //DB_printf("Y");
-      }
-      else
-      {
-        TapeCount = 0;
-        //DB_printf("N");
-        TapeLatched = false;
-      }
-
-      if (!TapeLatched && (TapeCount >= TAPE_CONFIRM_N))
-      {
-        TapeLatched = true;
-        ES_Event_t e = { ES_TAPE_FOUND, 1 };
-        DB_printf("Tape found!!!!");
-        PostMotorService(e);
+  switch (ThisEvent.EventType)
+  {    
+    case ES_INIT:
+    {
+        DB_printf("ReflectiveSenseService received ES_INIT\r\n");
+        break;
     }
+    case ES_TAPE_CHANGE:
+    {
+        DB_printf("Tape change detected! Sensor bitfield: %d\r\n", ThisEvent.EventParam);
+        uint8_t tapeState = (uint8_t)ThisEvent.EventParam;
+        static uint8_t pendingState = 0;
 
-    ES_Timer_InitTimer(REFLECT_TIMER, REFLECT_SAMPLE_MS);
+        if (tapeState == pendingState) {
+            debounceCounter++;
+        } else {
+            pendingState = tapeState;
+            debounceCounter = 1;
+        }
+
+        if (debounceCounter >= TAPE_CONFIRM_COUNT && tapeState != lastConfirmedState) {
+          lastConfirmedState = tapeState;
+          if (tapeState == ALL_TAPE_BITFIELD) { 
+              ES_Event_t NewEvent;
+              NewEvent.EventType = ES_T_DETECTED;
+              NewEvent.EventParam = FULL_T;
+              PostSPIFollowerService(NewEvent);
+          } else if (tapeState == RIGHT_CORNER_BITFIELD) {
+              ES_Event_t NewEvent;
+              NewEvent.EventType = ES_T_DETECTED;
+              NewEvent.EventParam = RIGHT_CORNER;
+              PostSPIFollowerService(NewEvent);
+          } else if (tapeState == LEFT_CORNER_BITFIELD) {
+              ES_Event_t NewEvent;
+              NewEvent.EventType = ES_T_DETECTED;
+              NewEvent.EventParam = LEFT_CORNER;
+              PostSPIFollowerService(NewEvent);
+          } else if (tapeState == CENTER_BITFIELD) { 
+              ES_Event_t NewEvent;
+              NewEvent.EventType = ES_TAPE_DETECT;
+              NewEvent.EventParam = TAPE_CENTERED; 
+              PostSPIFollowerService(NewEvent);
+          } else if (tapeState == OFFCENTER_RIGHT_BITFIELD) {
+              ES_Event_t NewEvent;
+              NewEvent.EventType = ES_TAPE_DETECT;
+              NewEvent.EventParam = TAPE_OFF_CENTER_RIGHT; 
+              PostSPIFollowerService(NewEvent);
+          } else if (tapeState == OFFCENTER_LEFT_BITFIELD) {
+              ES_Event_t NewEvent;
+              NewEvent.EventType = ES_TAPE_DETECT;
+              NewEvent.EventParam = TAPE_OFF_CENTER_LEFT; 
+              PostSPIFollowerService(NewEvent);
+          } else if (tapeState == 0) { // do we need know no tape??
+              ES_Event_t NewEvent;
+              NewEvent.EventType = ES_TAPE_DETECT;
+              NewEvent.EventParam = NO_TAPE;
+              PostSPIFollowerService(NewEvent);
+          }
+      }
+      break;
+    }
   }
-
   return ReturnEvent;
 }
 
 static void InitReflectiveHardware(void)
 {
-  REFLECT_TRIS = 1; // make an input
-}
-
-static uint16_t ReadReflectDigital(void)
-{
-#if REFLECT_ACTIVE_HIGH
-  return (REFLECT_PORT != 0);
-#else
-  return (REFLECT_PORT == 0);
-#endif
+    PIN_MapPinInput(TapeSensor1);
+    PIN_MapPinInput(TapeSensor2);
+    PIN_MapPinInput(TapeSensor3);
+    PIN_MapPinInput(TapeSensor4);
+    PIN_MapPinInput(TapeSensor5);
 }

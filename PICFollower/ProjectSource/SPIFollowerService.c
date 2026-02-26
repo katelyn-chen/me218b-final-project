@@ -58,6 +58,16 @@ typedef enum {
     RIGHT,
     LEFT
 } SideIndicate_t;
+
+typedef enum {
+    TAPE_CENTERED,
+    TAPE_OFF_CENTER_RIGHT,
+    TAPE_OFF_CENTER_LEFT,
+    FULL_T,
+    RIGHT_CORNER,
+    LEFT_CORNER,
+    NO_TAPE
+} TapeStatus_t;
 /*---------------------------- Module Variables --------------------------*/
 static uint8_t MyPriority;
 FollowerState_t curState;
