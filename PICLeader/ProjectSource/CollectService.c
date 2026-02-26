@@ -24,6 +24,7 @@
 #include "ES_Timers.h"
 #include "dbprintf.h"
 #include "PIC32_SPI_HAL.h"
+#include "SPILeaderService.h"   /* command bytes live in SPI header now */
 
 /*============================== CONFIG ==============================*/
 #define PBCLK_HZ               20000000u
@@ -42,10 +43,6 @@
 #define T_ARM_UP_DROP_MS       450u
 #define T_GRIP_OPEN_MS         250u
 #define T_ARM_TRAVEL_MS        350u
-
-/* SPI bytes for follower motion nudges */
-#define CMD_NUDGE_BACK         0x22u
-#define CMD_NUDGE_FWD          0x23u
 
 /*=========================== SERVO PWM HW ============================*/
 /*
@@ -296,7 +293,16 @@ static void TransitionTo(CollectState_t next, uint16_t tMs)
 /*=========================== SPI NUDGE ============================*/
 static void RequestNudge(uint8_t cmdByte)
 {
-  SPIOperate_SPI1_Send8Wait(cmdByte);
+  /*
+    IMPORTANT:
+      Don't call SPIOperate_SPI1_Send8Wait() directly here.
+      SPILeaderService is already the owner of SPI on PIC1 and is polling.
+      We request nudges by posting ES_COMMAND_RECEIVED so it can queue+send safely.
+  */
+  ES_Event_t CmdEvent;
+  CmdEvent.EventType = ES_COMMAND_RECEIVED;
+  CmdEvent.EventParam = cmdByte;
+  ES_PostAll(CmdEvent);
 }
 
 /*=========================== SERVO POSES ============================*/
@@ -330,19 +336,34 @@ static void ArmTravelPose(void)
 /*=========================== SERVO PWM INIT ============================*/
 static void InitServoPWM(void)
 {
-  /* Timer2 as 50Hz timebase for all OC servo outputs */
-  T2CON = 0;
-  T2CONbits.TCS = 0;
-  T2CONbits.TCKPS = SERVO_TIMER_PRESCALE_BITS;
-  TMR2 = 0;
-  PR2 = (uint16_t)SERVO_PR2_VALUE;
+  /*
+    IMPORTANT:
+      CollectService and DispenseService both use Timer2 as the 50Hz servo timebase.
+      We must NOT reinitialize Timer2 if it is already running, otherwise we can stomp
+      OC settings used by the other service.
+  */
 
-  /* OC modules in PWM mode using Timer2 */
+  if (T2CONbits.ON == 0u)
+  {
+    /* Timer2 as 50Hz timebase for all OC servo outputs */
+    T2CON = 0;
+    T2CONbits.TCS = 0;
+    T2CONbits.TCKPS = SERVO_TIMER_PRESCALE_BITS;
+    TMR2 = 0;
+    PR2 = (uint16_t)SERVO_PR2_VALUE;
+
+    T2CONbits.ON = 1;
+  }
+
+  /*
+    Ensure ALL OC modules used by any servo service are in PWM mode on Timer2.
+    (OC1/OC2/OC4 used here; OC3/OC5 used by DispenseService)
+  */
   OC1CON = 0; OC1R = 0; OC1RS = 0; OC1CONbits.OCTSEL = 0; OC1CONbits.OCM = 0b110; OC1CONbits.ON = 1;
   OC2CON = 0; OC2R = 0; OC2RS = 0; OC2CONbits.OCTSEL = 0; OC2CONbits.OCM = 0b110; OC2CONbits.ON = 1;
+  OC3CON = 0; OC3R = 0; OC3RS = 0; OC3CONbits.OCTSEL = 0; OC3CONbits.OCM = 0b110; OC3CONbits.ON = 1;
   OC4CON = 0; OC4R = 0; OC4RS = 0; OC4CONbits.OCTSEL = 0; OC4CONbits.OCM = 0b110; OC4CONbits.ON = 1;
-
-  T2CONbits.ON = 1;
+  OC5CON = 0; OC5R = 0; OC5RS = 0; OC5CONbits.OCTSEL = 0; OC5CONbits.OCM = 0b110; OC5CONbits.ON = 1;
 
   ServoInitDone = true;
 }
