@@ -93,6 +93,15 @@ static void BucketToCollect(void){ Servo_OC4(US_BUCKET_COLLECT); }
 static void BucketRotateStart(void){ Servo_OC3(US_BUCKET_ROTATE_CW); }
 static void BucketRotateStop(void){ Servo_OC3(US_BUCKET_STOP); }
 
+/*====================== SPI HELPERS =====================*/
+static void RequestCmd(uint8_t cmdByte)
+{
+  ES_Event_t CmdEvent;
+  CmdEvent.EventType  = ES_CMD_REQ;
+  CmdEvent.EventParam = cmdByte;
+  PostSPILeaderService(CmdEvent);
+}
+
 /*=========================== INIT ============================*/
 bool InitDispenseService(uint8_t Priority)
 {
@@ -131,6 +140,16 @@ ES_Event_t RunDispenseService(ES_Event_t ThisEvent)
       {
         DB_printf("Dispense start\r\n");
         PushArmDown();
+
+        /*
+          Optional hook:
+            request follower-side behavior at start of dispense if a command exists.
+            Define CMD_DISPENSE_START in the SPI header if desired.
+        */
+#ifdef CMD_DISPENSE_START
+        RequestCmd(CMD_DISPENSE_START);
+#endif
+
         CurState = DISP_PUSH_ARM_DOWN;
         ES_Timer_InitTimer(DISPENSE_TIMER,T_PUSH_ARM_DOWN_MS);
       }
@@ -210,6 +229,15 @@ ES_Event_t RunDispenseService(ES_Event_t ThisEvent)
     case DISP_DONE:
     {
         DB_printf("Dispense complete\r\n");
+
+        /*
+          Optional hook:
+            request follower-side behavior at end of dispense if a command exists.
+            Define CMD_DISPENSE_DONE in the SPI header if desired.
+        */
+#ifdef CMD_DISPENSE_DONE
+        RequestCmd(CMD_DISPENSE_DONE);
+#endif
 
         ES_Event_t done = {ES_DISPENSE_COMPLETE,0};
         ES_PostAll(done);
