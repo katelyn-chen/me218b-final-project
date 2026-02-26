@@ -8,6 +8,7 @@ build/default/production/ProjectSource/NavigateService.o: \
  FrameworkHeaders/ES_General.h FrameworkHeaders/ES_Timers.h \
  FrameworkHeaders/ES_Events.h FrameworkHeaders/ES_Types.h \
  ProjectHeaders/SPIFollowerService.h ProjectHeaders/BeaconService.h \
+ ProjectHeaders/PIC32_SPI_HAL.h FrameworkHeaders/ES_Timers.h \
  FrameworkHeaders/dbprintf.h
 
 ProjectHeaders/NavigateService.h:
@@ -43,5 +44,9 @@ FrameworkHeaders/ES_Types.h:
 ProjectHeaders/SPIFollowerService.h:
 
 ProjectHeaders/BeaconService.h:
+
+ProjectHeaders/PIC32_SPI_HAL.h:
+
+FrameworkHeaders/ES_Timers.h:
 
 FrameworkHeaders/dbprintf.h:
