@@ -33,6 +33,7 @@
 #include "PIC32_SPI_HAL.h"
 #include "EncoderService.h"
 #include "DispenseService.h"
+#include "CollectService.h"
 
 /*----------------------------- Module Defines ----------------------------*/
 /* use the symbolic timer name from ES_Configure.h */
@@ -146,19 +147,28 @@ ES_Event_t RunSPILeaderService(ES_Event_t ThisEvent)
 
     /*
       Optional “freeze motors while servos run” hooks:
-        call ES_PostAll({ES_COMMAND_RECEIVED, CMD_COLLECT_START}) from CollectService
-        call ES_PostAll({ES_COMMAND_RECEIVED, CMD_DISPENSE_START}) from DispenseService
+        post {ES_CMD_REQ, CMD_COLLECT_START} from CollectService
+        post {ES_CMD_REQ, CMD_DISPENSE_START} from DispenseService
 
       also optional for now:
-        call ES_PostAll({ES_COMMAND_RECEIVED, CMD_COLLECT_DONE}) when CollectService finishes
-        call ES_PostAll({ES_COMMAND_RECEIVED, CMD_DISPENSE_DONE}) when DispenseService finishes
+        post {ES_CMD_REQ, CMD_COLLECT_DONE} when CollectService finishes
+        post {ES_CMD_REQ, CMD_DISPENSE_DONE} when DispenseService finishes
     */
+
     case ES_COMMAND_RECEIVED:
     {
       uint8_t cmd = (uint8_t)ThisEvent.EventParam;
       QueueCommand(cmd);
       break;
     }
+
+    case ES_CMD_REQ:
+    {
+      uint8_t cmd = (uint8_t)ThisEvent.EventParam;
+      QueueCommand(cmd);
+      break;
+    }
+
     case ES_ENCODER_TARGET_REACHED:
       QueueCommand(CMD_MOVE_DONE);
       break;
@@ -274,6 +284,8 @@ static bool IsKnownFollowerStatus(uint8_t cmd)
     case CMD_BEACON_B_FOUND:
     case CMD_ENCODER_FIRST_ALIGN:
     case CMD_ROT_CCW_90:
+    case CMD_ALIGN_COLLECT:
+    case CMD_COLLECT_START:
       return true;
 
     default:
@@ -371,7 +383,6 @@ static void HandleFollowerStatus(uint8_t statusByte)
       cmdEvent.EventType = ES_COLLECT_START;
       PostCollectService(cmdEvent);
       break;
-
 
     default:
       break;
