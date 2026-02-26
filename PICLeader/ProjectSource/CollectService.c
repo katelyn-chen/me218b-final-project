@@ -143,9 +143,21 @@ ES_Event_t RunCollectService(ES_Event_t ThisEvent)
   switch (CurState)
   {
     case COLLECT_IDLE:
+      /*
+        IMPORTANT FOR DEBUG:
+          Start Collect on the same capacitive button your framework posts as ES_START_BUTTON.
+          This lets you test CollectService without running the whole game.
+      */
+      if (ThisEvent.EventType == ES_START_BUTTON)
+      {
+        DB_printf("CollectService: start (ES_START_BUTTON)\r\n");
+        BallCount = 0u;
+        TransitionTo(COLLECT_ARM_DOWN, T_ARM_DOWN_MS);
+      }
+
       if (ThisEvent.EventType == ES_COLLECT_START)
       {
-        DB_printf("CollectService: start\r\n");
+        DB_printf("CollectService: start (ES_COLLECT_START)\r\n");
         BallCount = 0u;
         TransitionTo(COLLECT_ARM_DOWN, T_ARM_DOWN_MS);
       }
