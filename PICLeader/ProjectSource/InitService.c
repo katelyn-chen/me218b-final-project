@@ -14,6 +14,7 @@
 #include "ES_Framework.h"
 #include "InitService.h"
 #include "SPILeaderService.h"
+#include "CollectService.h"
 #include "dbprintf.h"
 
 /*---------------------------- Module Types -------------------------------*/
@@ -28,6 +29,8 @@ typedef enum {
 static uint8_t MyPriority;
 static InitState_t curState;
 static uint16_t SecondsElapsed;   // counter for game duration
+
+static bool CollectDebugStarted = false;
 
 /*---------------------------- Module Defines --------------------------*/
 #define   GAME_TIME_MS    1000    // 1 second timer
@@ -96,6 +99,21 @@ ES_Event_t RunInitService(ES_Event_t ThisEvent)
     case IDLE:
       if (ThisEvent.EventType == ES_INIT) {
             DB_printf("InitService received ES_INIT\r\n");
+
+            /*
+              DEBUG: start CollectService immediately on boot.
+              This is only for bench testing. Remove when integrating full game logic.
+            */
+            if (CollectDebugStarted == false) {
+              CollectDebugStarted = true;
+
+              ES_Event_t StartCollect;
+              StartCollect.EventType = ES_COLLECT_START;
+              StartCollect.EventParam = 0;
+              PostCollectService(StartCollect);
+
+              DB_printf("InitService: posted ES_COLLECT_START (debug)\r\n");
+            }
       }
 
       if (ThisEvent.EventType == ES_ENTER_IDLE) {
