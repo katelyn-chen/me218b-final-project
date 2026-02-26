@@ -44,6 +44,14 @@
 #define T_GRIP_OPEN_MS         250u
 #define T_ARM_TRAVEL_MS        350u
 
+/* SPI bytes for follower motion nudges */
+#ifndef CMD_NUDGE_BACK
+#define CMD_NUDGE_BACK         0x22u
+#endif
+#ifndef CMD_NUDGE_FWD
+#define CMD_NUDGE_FWD          0x23u
+#endif
+
 /*=========================== SERVO PWM HW ============================*/
 /*
   Servo outputs (PIC1 pins):
