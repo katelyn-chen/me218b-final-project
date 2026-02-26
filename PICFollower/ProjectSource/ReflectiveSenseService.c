@@ -19,7 +19,7 @@
 
 #include "NavigateService.h"
 #include "SPIFollowerService.h"
-
+#include "NavigateService.h"
 /*============================== CONFIG ==============================*/
 
 // Tape left to right from robot's perspective (1-5): RB4, RB5, RB11, RB12, RB13
@@ -82,41 +82,35 @@ ES_Event_t RunReflectiveSenseService(ES_Event_t ThisEvent)
 
         if (debounceCounter >= TAPE_CONFIRM_COUNT && tapeState != lastConfirmedState) {
           lastConfirmedState = tapeState;
+          ES_Event_t NewEvent;
           if (tapeState == ALL_TAPE_BITFIELD) { 
-              ES_Event_t NewEvent;
               NewEvent.EventType = ES_T_DETECTED;
               NewEvent.EventParam = FULL_T;
-              PostSPIFollowerService(NewEvent);
+              PostNavigateService(NewEvent);
           } else if (tapeState == RIGHT_CORNER_BITFIELD) {
-              ES_Event_t NewEvent;
               NewEvent.EventType = ES_T_DETECTED;
               NewEvent.EventParam = RIGHT_CORNER;
-              PostSPIFollowerService(NewEvent);
+              PostNavigateService(NewEvent);
           } else if (tapeState == LEFT_CORNER_BITFIELD) {
-              ES_Event_t NewEvent;
               NewEvent.EventType = ES_T_DETECTED;
               NewEvent.EventParam = LEFT_CORNER;
-              PostSPIFollowerService(NewEvent);
+              PostNavigateService(NewEvent);
           } else if (tapeState == CENTER_BITFIELD) { 
-              ES_Event_t NewEvent;
               NewEvent.EventType = ES_TAPE_DETECT;
               NewEvent.EventParam = TAPE_CENTERED; 
-              PostSPIFollowerService(NewEvent);
+              PostNavigateService(NewEvent);
           } else if (tapeState == OFFCENTER_RIGHT_BITFIELD) {
-              ES_Event_t NewEvent;
               NewEvent.EventType = ES_TAPE_DETECT;
               NewEvent.EventParam = TAPE_OFF_CENTER_RIGHT; 
-              PostSPIFollowerService(NewEvent);
+              PostNavigateService(NewEvent);
           } else if (tapeState == OFFCENTER_LEFT_BITFIELD) {
-              ES_Event_t NewEvent;
               NewEvent.EventType = ES_TAPE_DETECT;
               NewEvent.EventParam = TAPE_OFF_CENTER_LEFT; 
-              PostSPIFollowerService(NewEvent);
+              PostNavigateService(NewEvent);
           } else if (tapeState == 0) { // do we need know no tape??
-              ES_Event_t NewEvent;
               NewEvent.EventType = ES_TAPE_DETECT;
               NewEvent.EventParam = NO_TAPE;
-              PostSPIFollowerService(NewEvent);
+              PostNavigateService(NewEvent);
           }
       }
       break;

@@ -54,6 +54,8 @@
 #define ROT_90_PULSES           1000
 #define ROT_180_PULSES          ROT_90_PULSES*2
 #define INIT_ROT_ADJUST         500 
+#define COLLECT_FWD_ALIGN       500 
+
 
 /*---------------------------- Module Types -------------------------------*/
 typedef enum {
@@ -355,6 +357,21 @@ static void HandleFollowerStatus(uint8_t statusByte)
       cmdEvent.EventParam = INIT_ROT_ADJUST;
       PostEncoderService(cmdEvent);
       break;
+
+    case CMD_ALIGN_COLLECT:
+    /* This is when the bot is facing the coal dispenser and needs to drive fwd */
+      DB_printf("Follower status: Facing dispenser, aligning by moving fwd\r\n");
+      cmdEvent.EventType = ES_ENCODER_TARGET_STRAIGHT;
+      cmdEvent.EventParam = COLLECT_FWD_ALIGN;
+      PostEncoderService(cmdEvent);
+      break;
+
+    case CMD_COLLECT_START:
+      DB_printf("Initiating collection process and posting to CollectService! \r\n");
+      cmdEvent.EventType = ES_COLLECT_START;
+      PostCollectService(cmdEvent);
+      break;
+
 
     default:
       break;

@@ -240,8 +240,8 @@ ES_Event_t RunCollectService(ES_Event_t ThisEvent)
       GrabOpen();
       ArmTravelPose();
 
-      ES_Event_t doneEvt = { ES_COLLECT_DONE, 0 };
-      ES_PostAll(doneEvt);
+      ES_Event_t doneEvt = { ES_CMD_REQ, 0 };
+      ES_PostSPILeaderService(doneEvt);
 
       TransitionTo(COLLECT_IDLE, 0u);
       break;

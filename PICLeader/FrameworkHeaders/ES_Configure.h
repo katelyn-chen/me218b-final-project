@@ -280,9 +280,11 @@ typedef enum
   /*Command generator events*/
   ES_COMMAND_RECEIVED,
   ES_BEACON_SIGNAL,
+  /* SPI Leader Events */
+  ES_CMD_REQ,
           
   /*Dispense and collect events*/
-  ES_INDICATE_SIDE, // param: blue-GREEN
+  ES_INDICATE_SIDE, // param: BLUE-GREEN
   ES_ALIGN_COLLECT, // param: FIRST-SECOND-OTHER
   ES_FIND_BUCKET,   // param: FIRST-MIDDLE-END
   ES_COLLECT_START,  // param: 0

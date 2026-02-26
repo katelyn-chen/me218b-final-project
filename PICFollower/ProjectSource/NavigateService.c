@@ -39,6 +39,9 @@
 #define DUTY_TRANS_FULL     50u
 #define DUTY_ROTATE         45u
 #define DUTY_SEARCH         30u
+#define TAPE_BASE_DUTY      DUTY_TRANS_TAPE_DET
+#define TAPE_CORR_DUTY      10u   // steering correction amount
+#define TAPE_LOST_DUTY      15u   // slow search when tape lost
 
 /* Timer Values */
 #define CHKPT3_FWD                5000u
@@ -120,6 +123,9 @@ static void StartBeaconAlignSearch(void);
 static void ResetBeaconSequence(void);
 static bool PushBeaconIfNew(BeaconId_t id);
 static Field_t DetermineFieldFromSequence(void);
+
+/* Tape functions */
+static void LineFollow(ES_Event_t ThisEvent);
 
 /*------------------------------ Module Code ------------------------------*/
 
@@ -366,7 +372,8 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
 
     case FIRST_COLLECT:
     {
-      /* drive forward until T detected */
+      /* drive forward and line follow until T detected */
+      LineFollow(ThisEvent);
       if (ThisEvent.EventType == ES_T_DETECTED)
       {
         cmdEvent.EventType = CMD_ROT_CCW_90;
@@ -624,6 +631,53 @@ static void StartTapeDetect(void)
 {
   SetMotor1((int16_t)DUTY_TRANS_HALF);
   SetMotor2((int16_t)DUTY_TRANS_HALF);
+}
+
+static void LineFollow(ES_Event_t ThisEvent)
+{
+    int16_t leftDuty  = 0;
+    int16_t rightDuty = 0;
+
+    switch (ThisEvent.EventType)
+    {
+        case ES_TAPE_DETECT:
+        {
+            switch (ThisEvent.EventParam)
+            {
+                case TAPE_CENTERED:
+                    leftDuty  =  TAPE_BASE_DUTY;
+                    rightDuty =  TAPE_BASE_DUTY;
+                    break;
+
+                case TAPE_OFF_CENTER_LEFT:
+                    // robot is drifting LEFT → steer RIGHT
+                    leftDuty  =  TAPE_BASE_DUTY + TAPE_CORR_DUTY;
+                    rightDuty =  TAPE_BASE_DUTY - TAPE_CORR_DUTY;
+                    break;
+
+                case TAPE_OFF_CENTER_RIGHT:
+                    // robot is drifting RIGHT → steer LEFT
+                    leftDuty  =  TAPE_BASE_DUTY - TAPE_CORR_DUTY;
+                    rightDuty =  TAPE_BASE_DUTY + TAPE_CORR_DUTY;
+                    break;
+
+                case NO_TAPE:
+                    // lost tape — slow spin to reacquire
+                    leftDuty  =  TAPE_LOST_DUTY;
+                    rightDuty = -TAPE_LOST_DUTY;
+                    break;
+
+                default:
+                    break;
+            }
+
+            SetMotor1(leftDuty);
+            SetMotor2(rightDuty);
+            break;
+        }
+        default:
+            break;
+    }
 }
 
 static void StartBeaconAlignSearch(void)

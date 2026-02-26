@@ -29,6 +29,17 @@ ES_Event_t RunSPIFollowerService(ES_Event_t ThisEvent);
 #define SCKPin SPI_RPB14
 #define SSPin SPI_RPB15
 
+/*----------------------------- Typedefs ----------------------------*/
+
+typedef enum {
+    TAPE_CENTERED,
+    TAPE_OFF_CENTER_RIGHT,
+    TAPE_OFF_CENTER_LEFT,
+    FULL_T,
+    RIGHT_CORNER,
+    LEFT_CORNER,
+    NO_TAPE
+} TapeStatus_t;
 
 /*----------------------------- SPI Commands -----------------------------*/
 
