@@ -425,8 +425,8 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
     {
       if (ThisEvent.EventType == ES_MOVE_DONE) {
         StopMotors();
-        cmdEvent.EventParam = CMD_FIRST_COLLECT_START;
-        PostSPIFollowerService(cmdEvent);
+        //cmdEvent.EventParam = CMD_FIRST_COLLECT_START;
+        //PostSPIFollowerService(cmdEvent);
       }
       if (ThisEvent.EventType == ES_FIND_BUCKET)
       {
@@ -568,6 +568,7 @@ static uint16_t DutyPercentToOCrs(uint16_t dutyPercent)
 
 static void StopMotors(void)
 {
+  DB_printf("Stopping motors\r\n");
   OC2RS = 0;
   OC3RS = 0;
   OC1RS = 0;
