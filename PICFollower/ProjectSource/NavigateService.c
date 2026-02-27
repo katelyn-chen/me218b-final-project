@@ -25,7 +25,7 @@
 /*---------------------------- Module Defines -------------------------------*/
 
 #define PBCLK_HZ            20000000u
-#define PWM_FREQ_HZ         10000u
+#define PWM_FREQ_HZ         7000u
 
 /* Timer2 @ 10kHz PWM with prescale 1:1 -> PR2 = 1999 */
 #define T2_PRESCALE_BITS    (0b000u) /* 1:1 */
@@ -38,7 +38,7 @@
 #define DUTY_TRANS_HALF     30u
 #define DUTY_TRANS_FULL     50u
 #define DUTY_ROTATE         45u
-#define DUTY_SEARCH         30u
+#define DUTY_SEARCH         5u
 #define TAPE_BASE_DUTY      DUTY_TRANS_TAPE_DET
 #define TAPE_CORR_DUTY      10u   // steering correction amount
 #define TAPE_LOST_DUTY      15u   // slow search when tape lost
@@ -379,8 +379,9 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
 
             case ES_MOVE_DONE:
               StopMotors();
-              curState = INIT_COAL_DISP_SEARCH;
-              DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_FWD));
+              DB_printf("Stopping! This is where we would begin tape detect\r\n");
+              //curState = INIT_COAL_DISP_SEARCH;
+              //DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_FWD));
               break;
 
             default:
