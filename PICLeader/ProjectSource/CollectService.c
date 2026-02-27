@@ -399,20 +399,8 @@ static void InitServoPWM(void)
      This maps OC1->RB4 so PWM actually reaches the servo header.
   */
   TRISBbits.TRISB4 = 0;
-
-  /* Unlock PPS */
-  SYSKEY = 0x00000000;
-  SYSKEY = 0xAA996655;
-  SYSKEY = 0x556699AA;
-  CFGCONbits.IOLOCK = 0;
-
   /* OC1 function code on PPS output select */
   RPB4Rbits.RPB4R = 0b0101;   /* OC1 -> RB4 */
-
-  /* Lock PPS */
-  CFGCONbits.IOLOCK = 1;
-  SYSKEY = 0x00000000;
-
   ServoInitDone = true;
 }
 

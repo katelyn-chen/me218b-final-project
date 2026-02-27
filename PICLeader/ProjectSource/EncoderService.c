@@ -104,7 +104,6 @@ bool InitEncoderService(uint8_t Priority)
   InitTimer3();
   InitIC1();
   InitIC3();
-  T3CONbits.ON = 1;          // enable timers
   IC5CONbits.ON = 1;           // enable module
 
   __builtin_enable_interrupts();
@@ -221,16 +220,8 @@ ES_Event_t RunEncoderService(ES_Event_t ThisEvent)
       break;
     
     case ENCODER_TURN:
-      //DB_printf("encoder turn entered\r\n");
+//      DB_printf("encoder turn entered\r\n");
       if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == ENCODER_TIMER) {
-          uint8_t pinState = PORTBbits.RB5;
-          DB_printf("ic1buf: %d\r\n", IC3BUF);
-          DB_printf("pin state: %d\r\n", pinState);
-//          DB_printf("icbne: %d\r\n", IC5CONbits.ICBNE);
-//            DB_printf("IEC0: %d\r\n", IEC0);
-//            DB_printf("IFS0: %d\r\n", IFS0);
-//            DB_printf("IPC5: %d\r\n", IPC5);
-//            DB_printf("IC5CON: %d\r\n", IC5CON);
           ES_Timer_InitTimer(ENCODER_TIMER, ENCODER_CHECK_MS);
       }
       if (ThisEvent.EventType == ES_ENCODER_PULSE) {
@@ -283,7 +274,7 @@ void InitPinHardware(void)
   PIN_MapPinInput(LeftEncoderB);
   PIN_MapPinInput(RightEncoderA);
   PIN_MapPinInput(RightEncoderB);
-  TRISBbits.TRISB5 = 1;
+//  TRISBbits.TRISB5 = 1;
 
   // PPS Mapping
   //IC3R = 0b0011;
@@ -297,63 +288,62 @@ void InitPinHardware(void)
 void InitTimer3() {
     T3CON = 0;            // disable timer
     T3CONbits.TCS = 0;           // clear to select internal PBCLK source
-    T3CONbits.TCKPS = 0b010;    // choosing 1:8 prescale value
+    T3CONbits.TCKPS = 0b0011;    // choosing 1:8 prescale value
     TMR3 = 0;                    // clearing timer register
     PR3 = 0xFFFF;
-    IPC3bits.T3IP = 5;
+//    IPC3bits.T3IP = 5;
     IFS0CLR = _IFS0_T3IF_MASK;  // clearing interrupt flag
 //    IEC0SET = _IEC0_T3IE_MASK;
+    T3CONbits.ON = 1;          // enable timers
+
 }
 
 /* This function sets up interrupt capture 1
  */
 void InitIC1() {
-//      __builtin_disable_interrupts();
-//      DB_printf("init ic1\r\n");
   INTCONbits.MVEC = 1;
-  IC5CONbits.ON = 0;           // disable module
-  IC5CONbits.SIDL = 0;         // keep operating in idle mode
-  IC5CONbits.C32 = 0;          // use 16 bit timer
-  IC5CONbits.ICTMR = 0;        // use Timer3
-  IC5CONbits.ICI = 0b000;     // Interrupt on every capture event
-  IC5CONbits.ICM = 0b010;     // capture every rising edge
-  IFS0CLR = _IFS0_IC5IF_MASK;  // clear flag
-  IEC0SET = _IEC0_IC5IE_MASK;  // enable interrupt
-  IC5R = 0b0011;
-  IPC5bits.IC5IP = 6;          // priority (must match IPL6)
-//  IPC5bits.IC5IS = 0;          // sub-priority
-//      __builtin_enable_interrupts();
-
+  IC1CONbits.ON = 0;           // disable module
+  IC1CONbits.SIDL = 0;         // keep operating in idle mode
+  IC1CONbits.C32 = 0;          // use 16 bit timer
+  IC1CONbits.ICTMR = 0;        // use Timer3
+  IC1CONbits.ICI = 0b000;     // Interrupt on every capture event
+  IC1CONbits.ICM = 0b010;     // capture every rising edge
+  IFS0CLR = _IFS0_IC1IF_MASK;  // clear flag
+  IEC0SET = _IEC0_IC1IE_MASK;  // enable interrupt
+  IC1R = 0b0100;               //RB2
+  IPC1bits.IC1IP = 6;          // priority (must match IPL6)
+  IPC1bits.IC1IS = 0;          // sub-priority
 }
 
 /* This function sets up interrupt capture 3
  */
 void InitIC3() {
   IC3CONbits.ON = 0;           // disable module
-//  IC3CONbits.SIDL = 0;         // keep operating in idle mode
+  IC3CONbits.SIDL = 0;         // keep operating in idle mode
   IC3CONbits.C32 = 0;          // use 16 bit timer
   IC3CONbits.ICTMR = 0;        // use Timer3
-  IC3CONbits.ICI = 0b000;     // Interrupt on every capture event
-  IC3CONbits.ICM = 0b010;     // capture every rising edge
+  IC3CONbits.ICI = 0b0000;     // Interrupt on every capture event
+  IC3CONbits.ICM = 0b0010;     // capture every falling edge
   IFS0CLR = _IFS0_IC3IF_MASK;  // clear flag
   IEC0SET = _IEC0_IC3IE_MASK;  // enable interrupt
 //  IC3R = 0b0011; // RB11
-  IC3R = 0b0001; // RB5
   IPC3bits.IC3IP = 7;          // priority (must match IPL7)
-//  IPC3bits.IC3IS = 0;          // sub-priority
+  IPC3bits.IC3IS = 0;          // sub-priority
+  TRISBbits.TRISB13 = 1;
+  IC3R = 0b0011; // RB11
   IC3CONbits.ON = 1;           // enable module
 }
 
 void GetLeftEncoder() {
-    __builtin_disable_interrupts();
+//    __builtin_disable_interrupts();
      StartLeftCount = LeftCount;
-    __builtin_enable_interrupts();
+//    __builtin_enable_interrupts();
 }
 
 void GetRightEncoder() {
-    __builtin_disable_interrupts();
+//    __builtin_disable_interrupts();
      StartRightCount = RightCount;
-    __builtin_enable_interrupts();
+//    __builtin_enable_interrupts();
 }
 
 
@@ -361,7 +351,6 @@ void GetRightEncoder() {
  void __ISR(_INPUT_CAPTURE_3_VECTOR, IPL7SOFT) IC3_ISR(void)
 {
     uint16_t capture = IC3BUF;
-    IFS0CLR = _IFS0_IC3IF_MASK;
 
     while(IC3CONbits.ICBNE) {
         capture = IC3BUF;
@@ -377,7 +366,8 @@ void GetRightEncoder() {
     } else {
         LeftCount--;    // Reverse
     }
-    DB_printf(" %d \r\n", LeftCount);
+//    DB_printf(" %d \r\n", capture);
+    IFS0CLR = _IFS0_IC3IF_MASK;
 
     ES_Event_t encoderEvent;
     encoderEvent.EventType = ES_ENCODER_PULSE;
@@ -385,26 +375,27 @@ void GetRightEncoder() {
 }
 
  // Right Motor ISR
- void __ISR(_INPUT_CAPTURE_5_VECTOR, IPL6SOFT) IC5_ISR(void)
+ void __ISR(_INPUT_CAPTURE_1_VECTOR, IPL6SOFT) IC1_ISR(void)
 {
-    uint16_t capture = IC5BUF;
-    IFS0CLR = _IFS0_IC5IF_MASK;
+    uint16_t capture = IC1BUF;
+    IFS0CLR = _IFS0_IC1IF_MASK;
 
-    while(IC5CONbits.ICBNE) {
-        capture = IC5BUF;
+    while(IC1CONbits.ICBNE) {
+        capture = IC1BUF;
     }
     if (IFS0bits.T3IF && (capture < 0x8000u))
      {
        IFS0CLR = _IFS0_T3IF_MASK;
      }
+        DB_printf(" %d \r\n", capture);
+
     
     // Read B channel
-    //if(PORTBbits.RB3 == 1) {
+    if(PORTBbits.RB3 == 1) {
         RightCount++;
-//    } else {
-//        RightCount--;
-//    }
-//    DB_printf("%d \r\n", RightCount);
+    } else {
+        RightCount--;
+    }
     
     ES_Event_t encoderEvent;
     encoderEvent.EventType = ES_ENCODER_PULSE;

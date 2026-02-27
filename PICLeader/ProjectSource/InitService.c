@@ -31,6 +31,7 @@ static InitState_t curState;
 static uint16_t SecondsElapsed;   // counter for game duration
 
 static bool CollectDebugStarted = false;
+static bool EncoderDebugStart = true;
 
 /*---------------------------- Module Defines --------------------------*/
 #define   GAME_TIME_MS    1000    // 1 second timer
@@ -114,6 +115,16 @@ ES_Event_t RunInitService(ES_Event_t ThisEvent)
 
               //DB_printf("InitService: posted ES_COLLECT_START (debug)\r\n");
             }
+            
+            /*
+             Debug encoder service*/
+//            if (EncoderDebugStart) {
+//                DB_printf("entering encoder\r\n");
+//
+//                ES_Event_t encoder;
+//                encoder.EventType = ES_ENCODER_TARGET_ROT;
+//                PostEncoderService(encoder);
+//            }
       }
 
       if (ThisEvent.EventType == ES_ENTER_IDLE) {
