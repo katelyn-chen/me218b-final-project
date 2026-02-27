@@ -93,6 +93,8 @@ typedef enum {
 #define CMD_DISPENSE_DONE         0x35
 #define CMD_SECOND_COLLECT_DONE   0x36
 #define CMD_OTHER_COLLECT_DONE    0x37
+#define CMD_SECOND_COLLECT_START  0x38
+#define CMD_OTHER_COLLECT_START   0x39
 
 
 #endif /* SPI_FOLLOWER_SERVICE_H */

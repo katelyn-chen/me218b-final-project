@@ -20,6 +20,7 @@
 #include "NavigateService.h"
 #include "SPIFollowerService.h"
 #include "NavigateService.h"
+#include "PIC32_SPI_HAL.h"
 /*============================== CONFIG ==============================*/
 
 // Tape left to right from robot's perspective (1-5): RB4, RB5, RB11, RB12, RB13
@@ -69,7 +70,7 @@ ES_Event_t RunReflectiveSenseService(ES_Event_t ThisEvent)
     }
     case ES_TAPE_CHANGE:
     {
-        DB_printf("Tape change detected! Sensor bitfield: %d\r\n", ThisEvent.EventParam);
+        //DB_printf("Tape change detected! Sensor bitfield: %d\r\n", ThisEvent.EventParam);
         uint8_t tapeState = (uint8_t)ThisEvent.EventParam;
         static uint8_t pendingState = 0;
 

@@ -253,7 +253,7 @@ ES_Event_t RunCollectService(ES_Event_t ThisEvent)
           break;
       }
       
-      ES_PostSPILeaderService(doneEvt);
+      PostSPILeaderService(doneEvt);
       TransitionTo(COLLECT_IDLE, 0u);
       break;
     }
@@ -398,7 +398,6 @@ static void InitServoPWM(void)
      OC modules do NOT automatically appear on pins.
      This maps OC1->RB4 so PWM actually reaches the servo header.
   */
-  ANSELBbits.ANSB4 = 0;
   TRISBbits.TRISB4 = 0;
 
   /* Unlock PPS */

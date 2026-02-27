@@ -70,6 +70,8 @@ static int32_t TargetDelta = 0;
 static int32_t TargetLeft = 0;
 static int32_t TargetRight = 0;
 
+static volatile uint32_t RolloverCount = 0u;
+
 
 static bool MoveActive = false;
 /*------------------------------ Module Code ------------------------------*/
@@ -103,6 +105,7 @@ bool InitEncoderService(uint8_t Priority)
   InitIC3();
   __builtin_enable_interrupts();
   // post the initial transition event
+  DB_printf("EncoderService: init done\r\n");
   ThisEvent.EventType = ES_INIT;
   if (ES_PostToService(MyPriority, ThisEvent) == true)
   {
@@ -170,14 +173,17 @@ ES_Event_t RunEncoderService(ES_Event_t ThisEvent)
           TargetRight = StartRightCount + ThisEvent.EventParam;
           encoderMode = ENCODER_STRAIGHT;
           ES_Timer_InitTimer(ENCODER_TIMER, ENCODER_CHECK_MS);
+          MoveActive = true;
           break;
 
         case ES_ENCODER_TARGET_ROT:
+          //DB_printf("Encoder rotation measure request\r\n");
           GetLeftEncoder();
           GetRightEncoder();
 
           TargetLeft  = StartLeftCount  + ThisEvent.EventParam;
           TargetRight = StartRightCount - ThisEvent.EventParam;
+          MoveActive = true;
 
           encoderMode = ENCODER_TURN;
           ES_Timer_InitTimer(ENCODER_TIMER, ENCODER_CHECK_MS);
@@ -185,7 +191,7 @@ ES_Event_t RunEncoderService(ES_Event_t ThisEvent)
       }
     
     case ENCODER_STRAIGHT:
-      if (ThisEvent.EventType == ES_TIMEOUT) {
+      if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == ENCODER_TIMER) {
         if(MoveActive) {
           int32_t leftTravel  = LeftCount  - StartLeftCount;
           int32_t rightTravel = RightCount - StartRightCount;
@@ -210,26 +216,31 @@ ES_Event_t RunEncoderService(ES_Event_t ThisEvent)
       break;
     
     case ENCODER_TURN:
-      if (ThisEvent.EventType == ES_TIMEOUT) {
-        if (MoveActive) {
-          int32_t leftTravel  = LeftCount  - StartLeftCount;
-          int32_t rightTravel = RightCount - StartRightCount;
+      if (ThisEvent.EventType == ES_ENCODER_PULSE) {
+         DB_printf("TESTING\r\n");
+         
+        //if (MoveActive) {
+        int32_t leftTravel  = LeftCount  - StartLeftCount;
+        int32_t rightTravel = RightCount - StartRightCount;
+        DB_printf("Left Encoder val, %d\r\n", RightCount);
 
-          // rotational progress
-          int32_t turnTravel = (leftTravel - rightTravel) / 2;
+        // rotational progress
+        int32_t turnTravel = (leftTravel - rightTravel) / 2;
 
-          // Handle clockwise AND counterclockwise
-          if (abs(turnTravel) >= abs(TargetDelta)) {
-            MoveActive = false;
-            ES_Event_t doneEvent;
-            doneEvent.EventType = ES_ENCODER_TARGET_REACHED;
-            PostSPILeaderService(doneEvent);
-            ES_Timer_StopTimer(ENCODER_TIMER);
-            encoderMode = ENCODER_IDLE;
-          } else {
-            ES_Timer_InitTimer(ENCODER_TIMER, ENCODER_CHECK_MS);
-          }
-        }
+        // Handle clockwise AND counterclockwise
+        if (abs(turnTravel) >= abs(TargetDelta)) {
+          DB_printf("MOVE DONE \r\n");
+          MoveActive = false;
+          ES_Event_t doneEvent;
+          doneEvent.EventType = ES_ENCODER_TARGET_REACHED;
+          PostSPILeaderService(doneEvent);
+          ES_Timer_StopTimer(ENCODER_TIMER);
+          encoderMode = ENCODER_IDLE;
+        } //else {
+          //DB_printf("Starting timer \r\n");
+         // ES_Timer_InitTimer(ENCODER_TIMER, ENCODER_CHECK_MS);
+        //}
+       // }
       }
       break;
     }
@@ -256,23 +267,26 @@ void InitPinHardware(void)
   PIN_MapPinInput(LeftEncoderB);
   PIN_MapPinInput(RightEncoderA);
   PIN_MapPinInput(RightEncoderB);
+  INTCONbits.MVEC = 1;
 
   // PPS Mapping
-  IC3R = 0b0011;
-  IC1R = 0b0011;
+  //IC3R = 0b0011;
+  //IC1R = 0b0011;
 }
 
 /* This function sets up timer 3 for interrupts to be used as input control
  * timer
  */
 void InitTimer3() {
-    T3CONbits.ON = 0;            // disable timer
+    T3CON = 0;            // disable timer
     T3CONbits.TCS = 0;           // clear to select internal PBCLK source
     T3CONbits.TCKPS = 0b0011;    // choosing 1:8 prescale value
     TMR3 = 0;                    // clearing timer register
     PR3 = 0xFFFF;
+    IPC3bits.T3IP = 5;
     IFS0CLR = _IFS0_T3IF_MASK;  // clearing interrupt flag
-    T3CONbits.ON = 1;          // enable timer
+    IEC0SET = _IEC0_T3IE_MASK;
+    T3CONbits.ON = 1;          // enable timers
 }
 
 /* This function sets up interrupt capture 1
@@ -282,11 +296,12 @@ void InitIC1() {
   IC1CONbits.SIDL = 0;         // keep operating in idle mode
   IC1CONbits.C32 = 0;          // use 16 bit timer
   IC1CONbits.ICTMR = 0;        // use Timer3
-  IC1CONbits.ICI = 0b0000;     // Interrupt on every capture event
-  IC1CONbits.ICM = 0b0011;     // capture every rising edge
+  IC1CONbits.ICI = 0b000;     // Interrupt on every capture event
+  IC1CONbits.ICM = 0b011;     // capture every rising edge
   IFS0CLR = _IFS0_IC1IF_MASK;  // clear flag
   IEC0SET = _IEC0_IC1IE_MASK;  // enable interrupt
-  IPC1bits.IC1IP = 7;          // priority (must match IPL7)
+  IC1R = 0b0011;
+  IPC1bits.IC1IP = 6;          // priority (must match IPL7)
   IPC1bits.IC1IS = 0;          // sub-priority
   IC1CONbits.ON = 1;           // enable module
 }
@@ -298,10 +313,11 @@ void InitIC3() {
   IC3CONbits.SIDL = 0;         // keep operating in idle mode
   IC3CONbits.C32 = 0;          // use 16 bit timer
   IC3CONbits.ICTMR = 0;        // use Timer3
-  IC3CONbits.ICI = 0b0000;     // Interrupt on every capture event
-  IC3CONbits.ICM = 0b0011;     // capture every rising edge
+  IC3CONbits.ICI = 0b000;     // Interrupt on every capture event
+  IC3CONbits.ICM = 0b011;     // capture every rising edge
   IFS0CLR = _IFS0_IC3IF_MASK;  // clear flag
   IEC0SET = _IEC0_IC3IE_MASK;  // enable interrupt
+  IC3R = 0b0011;
   IPC3bits.IC3IP = 7;          // priority (must match IPL7)
   IPC3bits.IC3IS = 0;          // sub-priority
   IC3CONbits.ON = 1;           // enable module
@@ -321,41 +337,61 @@ void GetRightEncoder() {
 
 
  // Left Motor ISR
- void __ISR(_INPUT_CAPTURE_3_VECTOR, IPL7SOFT) IC3_ISR(void)
-{
-    uint16_t capture = IC3BUF;
-
-    while(IC3CONbits.ICBNE) {
-        capture = IC3BUF;
-    }
-
-    // Read B channel to determine direction
-    if(PORTBbits.RB9 == 1) {
-        LeftCount++;    // Forward
-    } else {
-        LeftCount--;    // Reverse
-    }
-
-    IFS0CLR = _IFS0_IC3IF_MASK;
-}
+// void __ISR(_INPUT_CAPTURE_3_VECTOR, IPL7SOFT) IC3_ISR(void)
+//{
+//    uint16_t capture = IC3BUF;
+//
+//    while(IC3CONbits.ICBNE) {
+//        capture = IC3BUF;
+//    }
+//
+//    // Read B channel to determine direction
+//    if(PORTBbits.RB9 == 1) {
+//        LeftCount++;    // Forward
+//    } else {
+//        LeftCount--;    // Reverse
+//    }
+//    DB_printf("%d \r\n", LeftCount);
+//
+//    IFS0CLR = _IFS0_IC3IF_MASK;
+//}
 
  // Right Motor ISR
- void __ISR(_INPUT_CAPTURE_1_VECTOR, IPL7SOFT) IC1_ISR(void)
+ void __ISR(_INPUT_CAPTURE_1_VECTOR, IPL6SOFT) IC1_ISR(void)
 {
     uint16_t capture = IC1BUF;
+    IFS0CLR = _IFS0_IC1IF_MASK;
 
-    while(IC1CONbits.ICBNE) {
-        capture = IC1BUF;
-    }
-
+//    while(IC1CONbits.ICBNE) {
+//        capture = IC1BUF;
+//    }
+    if (IFS0bits.T3IF && (capture < 0x8000u))
+     {
+       IFS0CLR = _IFS0_T3IF_MASK;
+     }
+    
     // Read B channel
     if(PORTBbits.RB3 == 1) {
         RightCount++;
     } else {
         RightCount--;
     }
-
-    IFS0CLR = _IFS0_IC1IF_MASK;
+    DB_printf("%d \r\n", RightCount);
+    
+    ES_Event_t encoderEvent;
+    encoderEvent.EventType = ES_ENCODER_PULSE;
+    PostEncoderService(encoderEvent);
+}
+ 
+ void __ISR(_TIMER_3_VECTOR, IPL5SOFT) T3Handler(void)
+{
+  __builtin_disable_interrupts();
+  if (IFS0bits.T3IF)
+  {
+    RolloverCount++;
+    IFS0CLR = _IFS0_T3IF_MASK;
+  }
+  __builtin_enable_interrupts();
 }
 /*------------------------------- Footnotes -------------------------------*/
 /*------------------------------ End of file ------------------------------*/

@@ -8,7 +8,8 @@ build/default/debug/ProjectSource/SPILeaderService.o: \
  FrameworkHeaders/ES_General.h FrameworkHeaders/ES_Timers.h \
  FrameworkHeaders/ES_Events.h FrameworkHeaders/ES_Types.h \
  FrameworkHeaders/dbprintf.h ProjectHeaders/PIC32_SPI_HAL.h \
- ProjectHeaders/EncoderService.h ProjectHeaders/DispenseService.h
+ ProjectHeaders/EncoderService.h ProjectHeaders/DispenseService.h \
+ ProjectHeaders/CollectService.h
 
 ProjectHeaders/SPILeaderService.h:
 
@@ -47,3 +48,5 @@ ProjectHeaders/PIC32_SPI_HAL.h:
 ProjectHeaders/EncoderService.h:
 
 ProjectHeaders/DispenseService.h:
+
+ProjectHeaders/CollectService.h:

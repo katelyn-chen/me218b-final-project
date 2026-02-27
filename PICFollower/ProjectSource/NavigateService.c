@@ -58,7 +58,7 @@ typedef enum {
   DEBUG,
   INIT_ORIENT,
   WAITING_FOR_SIDE,
-  FIRST_COLLECT,
+  INIT_COAL_DISP_SEARCH,
   COLLECT_ALIGN,
   FIRST_DISPENSE,
   INIT_FIND_MIDDLE,
@@ -144,6 +144,7 @@ bool InitNavigateService(uint8_t Priority)
   duty = DUTY_STOP;
 
   ResetBeaconSequence();
+  StopMotors();
 
   DB_printf("Navigate Service: init done\r\n");
 
@@ -166,6 +167,9 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
 
   ES_Event_t cmdEvent;
   cmdEvent.EventType = ES_CMD_REQ;
+  
+  ES_Event_t startBeaconSearch;
+  startBeaconSearch.EventType = ES_BEACON_SIGNAL;
 
   if (ThisEvent.EventType == ES_END_GAME)
   {
@@ -207,7 +211,6 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
               curState = INIT_ORIENT;
               orientState = ORIENT_BEACON_SWEEP;
               field = FIELD_UNKNOWN;
-
               ResetBeaconSequence();
               StartBeaconAlignSearch();
               break;
@@ -240,7 +243,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
               DB_printf("Starting Turn\r\n");
               ResetBeaconSequence();
               StartBeaconAlignSearch();
-              PostBeaconService(ThisEvent);
+              PostBeaconService(startBeaconSearch);
               break;
 
           default:
@@ -255,18 +258,30 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
       {
         case ORIENT_IDLE:
         {
+            if (ThisEvent.EventType == ES_INIT) {
+                StopMotors();
+            }
           if (ThisEvent.EventType == ES_ALIGN_ULTRASONICS)
           {
+            DB_printf("Starting search for beacons to determine side\r\n");
             orientState = ORIENT_BEACON_SWEEP;
             field = FIELD_UNKNOWN;
             ResetBeaconSequence();
             StartBeaconAlignSearch();
+            PostBeaconService(startBeaconSearch);
           }
           break;
         }
 
         case ORIENT_BEACON_SWEEP:
         {
+            if (ThisEvent.EventType == ES_NEW_KEY && ThisEvent.EventParam == '1') {
+                orientState = ORIENT_DONE;
+                DB_printf("Moving to orient done state because key pressed\r\n");
+                StartBeaconAlignSearch();
+                PostBeaconService(startBeaconSearch);
+                field = FIELD_BLUE;
+            }
           if (ThisEvent.EventType == ES_BEACON_FOUND)
           {
             BeaconId_t id;
@@ -307,6 +322,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
 
                   DB_printf("ORIENT_DONE: Rotating to find dispenser beacon based on field\r\n");
                   StartBeaconAlignSearch();
+                  PostBeaconService(startBeaconSearch);
                 }
               }
             }
@@ -322,8 +338,17 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
           */
           switch (ThisEvent.EventType)
           {
+            case ES_NEW_KEY:
+              if (ThisEvent.EventParam == '2') {
+                orientState = ORIENT_DONE;
+                DB_printf("posing to encoder service because key pressed\r\n");
+                cmdEvent.EventParam = CMD_ENCODER_FIRST_ALIGN;
+                PostSPIFollowerService(cmdEvent);
+            }
+              
             case ES_BEACON_FOUND:
             {
+              DB_printf("Beacon found from ORIENT_DONE case\r\n");
               BeaconId_t id;
               BeaconSide_t side;
               UnpackBeaconParam((uint16_t)ThisEvent.EventParam, &id, &side);
@@ -354,7 +379,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
 
             case ES_MOVE_DONE:
               StopMotors();
-              curState = FIRST_COLLECT;
+              curState = INIT_COAL_DISP_SEARCH;
               DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_FWD));
               break;
 
@@ -370,7 +395,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
       break;
     }
 
-    case FIRST_COLLECT:
+    case INIT_COAL_DISP_SEARCH:
     {
       /* drive forward and line follow until T detected */
       if (ThisEvent.EventType == ES_TAPE_DETECT)
@@ -390,7 +415,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         cmdEvent.EventParam = CMD_ALIGN_COLLECT;
         PostSPIFollowerService(cmdEvent);
         DoTranslate(PackTranslateParam(TRANS_HALF, DIR_FWD));
-        curState = FIRST_COLLECT;
+        curState = COLLECT_ALIGN;
       }
       break;
     }
@@ -399,7 +424,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
     {
       if (ThisEvent.EventType == ES_MOVE_DONE) {
         StopMotors();
-        cmdEvent.EventParam = CMD_COLLECT_START;
+        cmdEvent.EventParam = CMD_FIRST_COLLECT_START;
         PostSPIFollowerService(cmdEvent);
       }
       if (ThisEvent.EventType == ES_FIND_BUCKET)

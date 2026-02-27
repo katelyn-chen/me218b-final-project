@@ -1,3 +1,4 @@
+
 /****************************************************************************
   Module
     SPIFollowerService.c
@@ -181,8 +182,8 @@ static void InitSPIHardware(void)
   //SPISetup_SetBitTime(CG_SPI_MODULE, SPI_CLK_PERIOD_NS);
   SPISetup_EnableSPI(CG_SPI_MODULE);
   
+  SPI1BUF = CMD_NOOP;   // preload first response
   SPISetup_ConfigureInterrupts(CG_SPI_MODULE);
-  //SPI1BUF = 0xAA;
 
   /* clear any stale data */
   SPIOperate_ReadData(CG_SPI_MODULE);
@@ -397,7 +398,7 @@ void __ISR(_SPI1_VECTOR, IPL7SOFT) SPI1_Handler(void) {
            curCmd = incomingCmd;
            NewEvent.EventParam = curCmd;
            bool test = PostSPIFollowerService(NewEvent);
-           DB_printf("%d\r\n", curCmd);
+           //DB_printf("%d\r\n", curCmd);
            //DB_printf("%d\r\n", test);
         }
     }

@@ -19,7 +19,7 @@ build/default/production/FrameworkSource/ES_PostList.o: \
  FrameworkHeaders/ES_PostList.h FrameworkHeaders/ES_General.h \
  FrameworkHeaders/ES_Timers.h FrameworkHeaders/ES_Events.h \
  FrameworkHeaders/ES_Types.h ProjectHeaders/NavigateService.h \
- ProjectHeaders/BeaconService.h
+ ProjectHeaders/BeaconService.h ProjectHeaders/ReflectiveSenseService.h
 
 FrameworkSource/../FrameworkHeaders/ES_Port.h:
 
@@ -72,3 +72,5 @@ FrameworkHeaders/ES_Types.h:
 ProjectHeaders/NavigateService.h:
 
 ProjectHeaders/BeaconService.h:
+
+ProjectHeaders/ReflectiveSenseService.h:

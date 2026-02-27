@@ -109,5 +109,9 @@ static inline void UnpackRotateParam(uint16_t p, RotAngle_t *ang, RotDir_t *dir)
 /* optional unfreeze hooks */
 #define CMD_FIRST_COLLECT_DONE    0x34
 #define CMD_DISPENSE_DONE         0x35
+#define CMD_SECOND_COLLECT_DONE   0x36
+#define CMD_OTHER_COLLECT_DONE    0x37
+#define CMD_SECOND_COLLECT_START  0x38
+#define CMD_OTHER_COLLECT_START   0x39
 
 #endif /* SPI_LEADER_SERVICE_H */

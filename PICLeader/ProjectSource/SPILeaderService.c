@@ -129,6 +129,7 @@ ES_Event_t RunSPILeaderService(ES_Event_t ThisEvent)
         start-of-game hook
         follower NavigateService can run initial orientation when CMD_INIT_ORIENT arrives
       */
+      DB_printf("Queueing command CMD INIT ORIENT\r\n");
       QueueCommand(CMD_INIT_ORIENT);
       ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
       break;
@@ -167,6 +168,8 @@ ES_Event_t RunSPILeaderService(ES_Event_t ThisEvent)
       if (HasPendingCmd)
       {
         curState = LEADER_SEND_PENDING;
+        DB_printf("Has pending cmd\r\n");
+        
       }
       else
       {
@@ -175,7 +178,9 @@ ES_Event_t RunSPILeaderService(ES_Event_t ThisEvent)
 
       if (curState == LEADER_SEND_PENDING)
       {
-        uint8_t status = XferByte(PendingCmd);
+        uint8_t status;
+        status = XferByte(PendingCmd);
+        DB_printf("Has pending cmd, pending cmd status: %d\r\n", status);
         HasPendingCmd = false;
         PendingCmd = CMD_NOOP;
 
@@ -237,6 +242,9 @@ static void InitSPIHardware(void)
 
 static uint8_t XferByte(uint8_t outByte)
 {
+    if (outByte!= CMD_QUERY) {
+        DB_printf("SPILeaderService sending byte: %d\r\n", outByte);
+    }
   SPIOperate_SPI1_Send8Wait(outByte);
   return (uint8_t)SPIOperate_ReadData(CG_SPI_MODULE);
 }

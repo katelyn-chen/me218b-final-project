@@ -170,11 +170,11 @@ bool Check4Tape(void)
   static uint8_t lastTapeState = 0;
   uint8_t currentTapeState = 0;
 
-  currentTapeState |= (PORTBbits.RB4 == 0) << 0;
-  currentTapeState |= (PORTBbits.RB5 == 0) << 1;
-  currentTapeState |= (PORTBbits.RB11 == 0) << 2;
-  currentTapeState |= (PORTBbits.RB12 == 0) << 3;
-  currentTapeState |= (PORTBbits.RB13 == 0) << 4;
+  currentTapeState |= (PORTBbits.RB4 == 1) << 0; // active high
+  currentTapeState |= (PORTBbits.RB5 == 1) << 1;
+  currentTapeState |= (PORTBbits.RB11 == 1) << 2;
+  currentTapeState |= (PORTBbits.RB12 == 1) << 3;
+  currentTapeState |= (PORTBbits.RB13 == 1) << 4;
 
   if (currentTapeState != lastTapeState && currentTapeState != 0) {
     ES_Event_t ThisEvent;

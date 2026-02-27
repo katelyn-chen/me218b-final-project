@@ -107,12 +107,12 @@ ES_Event_t RunInitService(ES_Event_t ThisEvent)
             if (CollectDebugStarted == false) {
               CollectDebugStarted = true;
 
-              ES_Event_t StartCollect;
-              StartCollect.EventType = ES_COLLECT_START;
-              StartCollect.EventParam = 0;
-              PostCollectService(StartCollect);
+              //ES_Event_t StartCollect;
+              //StartCollect.EventType = ES_COLLECT_START;
+              //StartCollect.EventParam = 0;
+              //PostCollectService(StartCollect);
 
-              DB_printf("InitService: posted ES_COLLECT_START (debug)\r\n");
+              //DB_printf("InitService: posted ES_COLLECT_START (debug)\r\n");
             }
       }
 

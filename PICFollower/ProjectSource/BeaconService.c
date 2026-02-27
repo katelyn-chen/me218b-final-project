@@ -106,6 +106,7 @@ ES_Event_t RunBeaconService(ES_Event_t ThisEvent)
 
   if (ThisEvent.EventType == ES_BEACON_SIGNAL)
   {
+    //DB_printf("BeaconService received request to detect a signal\r\n");
     if (NewPeriod)
     {
       NewPeriod = false;

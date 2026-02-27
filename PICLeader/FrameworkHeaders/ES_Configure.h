@@ -299,7 +299,8 @@ typedef enum
 /* Encoder Events */
   ES_ENCODER_TARGET_REACHED,
   ES_ENCODER_TARGET_ROT,
-  ES_ENCODER_TARGET_STRAIGHT
+  ES_ENCODER_TARGET_STRAIGHT,
+  ES_ENCODER_PULSE
 } ES_EventType_t; // changed to be event type
 
 /****************************************************************************/

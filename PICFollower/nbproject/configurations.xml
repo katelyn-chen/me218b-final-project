@@ -55,6 +55,7 @@
       <itemPath>ProjectHeaders/InitService.h</itemPath>
       <itemPath>ProjectHeaders/SPIFollowerService.h</itemPath>
       <itemPath>ProjectHeaders/BeaconService.h</itemPath>
+      <itemPath>ProjectHeaders/ReflectiveSenseService.h</itemPath>
     </logicalFolder>
     <logicalFolder name="LinkerScript"
                    displayName="Linker Files"
@@ -399,7 +400,7 @@
         </C32Global>
       </item>
       <item path="ProjectSource/ReflectiveSenseService.c"
-            ex="true"
+            ex="false"
             overriding="false">
         <C32>
         </C32>
