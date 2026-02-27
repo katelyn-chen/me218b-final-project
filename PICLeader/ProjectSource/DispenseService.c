@@ -105,11 +105,11 @@ static void RequestCmd(uint8_t cmdByte)
 
 /*======================================================================
   FLAG SERVO (RB3) — SOFTWARE SERVO OUTPUT (50 Hz) HOLD POSITION
-  - Uses hardware Timer4 ISR to generate continuous pulses on RB3
-  - Only reacts to ES_INDICATE_SIDE by changing pulse width
+  - Uses Timer4 ISR to generate continuous pulses on RB3
+  - Reacts to ES_INDICATE_SIDE by changing pulse width
 ======================================================================*/
 
-/* servo pulse widths (tune as needed) */
+/* pulse widths (tune as needed after testing angles) */
 #define US_FLAG_BLUE          2000u  /* +90 */
 #define US_FLAG_GREEN         1000u  /* -90 */
 #define US_FLAG_CENTER        1500u
@@ -120,11 +120,9 @@ static void RequestCmd(uint8_t cmdByte)
 #define FLAG_LAT              LATBbits.LATB3
 #define FLAG_ANSEL            ANSELBbits.ANSB3
 
-/* Timer4 tick: PBCLK=20MHz, prescale 1:8 => 2.5MHz => 0.4us per tick */
-#define PBCLK_HZ              20000000u
-#define T4_PRESCALE_BITS      0b01u   /* 1:8 */
-#define T4_PRESCALE_VAL       8u
-#define TICKS_FOR_US(us)      ((uint16_t)(((uint32_t)(us) * (PBCLK_HZ / T4_PRESCALE_VAL)) / 1000000u))
+/* PBCLK = 20MHz, Timer4 prescale 1:8 => 2.5MHz => 2.5 ticks/us */
+#define T4_PRESCALE_BITS      0b11u   /* 1:8 (PIC32: 11=1:8) */
+#define TICKS_FOR_US(us)      ((uint16_t)(((uint32_t)(us) * 25u) / 10u)) /* us * 2.5 */
 
 typedef enum { FLAG_PHASE_START = 0, FLAG_PHASE_END = 1 } FlagPhase_t;
 static volatile FlagPhase_t FlagPhase = FLAG_PHASE_START;
@@ -138,17 +136,22 @@ static void InitFlagServoRB3(void)
 {
   if (FlagInitDone) return;
 
-  /* RB3 digital output */
+  /* Make sure RB3 is digital GPIO */
   FLAG_ANSEL = 0;
   FLAG_TRIS  = 0;
   FLAG_LAT   = 0;
+
+  /* IMPORTANT: ensure RB3 isn't driven by PPS output (OC/etc.) */
+#ifdef RPB3Rbits
+  RPB3Rbits.RPB3R = 0;   /* detach PPS output from RB3 */
+#endif
 
   /* enable multi-vector interrupts (safe even if already enabled) */
   INTCONbits.MVEC = 1;
 
   /* Timer4 setup */
   T4CON = 0;
-  T4CONbits.TCS = 0;
+  T4CONbits.TCS   = 0;
   T4CONbits.TCKPS = T4_PRESCALE_BITS;
   TMR4 = 0;
 
@@ -162,6 +165,7 @@ static void InitFlagServoRB3(void)
   /* schedule first interrupt quickly */
   FlagPhase = FLAG_PHASE_START;
   PR4 = 1;
+  TMR4 = 0;
 
   T4CONbits.ON = 1;
 
@@ -173,7 +177,11 @@ static void FlagSetPulseUs(uint16_t us)
   /* clamp */
   if (us < 800u)  us = 800u;
   if (us > 2200u) us = 2200u;
+
+  /* avoid ISR reading mid-update */
+  __builtin_disable_interrupts();
   FlagPulseUs = us;
+  __builtin_enable_interrupts();
 }
 
 /* Timer4 ISR: toggles RB3 to generate servo pulses continuously */
@@ -197,7 +205,7 @@ void __ISR(_TIMER_4_VECTOR, IPL6SOFT) T4Handler(void)
     FlagPhase = FLAG_PHASE_START;
 
     uint16_t remainUs = (FlagPulseUs >= SERVO_PERIOD_US) ? 1u
-                        : (uint16_t)(SERVO_PERIOD_US - FlagPulseUs);
+                      : (uint16_t)(SERVO_PERIOD_US - FlagPulseUs);
 
     TMR4 = 0;
     PR4  = TICKS_FOR_US(remainUs);
