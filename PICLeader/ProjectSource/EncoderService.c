@@ -104,7 +104,6 @@ bool InitEncoderService(uint8_t Priority)
   InitTimer3();
   InitIC1();
   InitIC3();
-  IC5CONbits.ON = 1;           // enable module
 
   __builtin_enable_interrupts();
   // post the initial transition event
@@ -313,6 +312,8 @@ void InitIC1() {
   IC1R = 0b0100;               //RB2
   IPC1bits.IC1IP = 6;          // priority (must match IPL6)
   IPC1bits.IC1IS = 0;          // sub-priority
+  IC1CONbits.ON = 1;           // enable module
+
 }
 
 /* This function sets up interrupt capture 3
@@ -335,15 +336,15 @@ void InitIC3() {
 }
 
 void GetLeftEncoder() {
-//    __builtin_disable_interrupts();
+    __builtin_disable_interrupts();
      StartLeftCount = LeftCount;
-//    __builtin_enable_interrupts();
+    __builtin_enable_interrupts();
 }
 
 void GetRightEncoder() {
-//    __builtin_disable_interrupts();
+    __builtin_disable_interrupts();
      StartRightCount = RightCount;
-//    __builtin_enable_interrupts();
+    __builtin_enable_interrupts();
 }
 
 
@@ -387,7 +388,7 @@ void GetRightEncoder() {
      {
        IFS0CLR = _IFS0_T3IF_MASK;
      }
-        DB_printf(" %d \r\n", capture);
+//        DB_printf(" %d \r\n", capture);
 
     
     // Read B channel
