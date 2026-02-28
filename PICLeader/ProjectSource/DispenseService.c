@@ -336,6 +336,11 @@ static void InitServoPWM(void)
     T2CONbits.ON = 1;
   }
 
+  #ifdef RPB3Rbits
+  RPB3Rbits.RPB3R = 0;   /* RB3 must stay GPIO */
+#endif
+ANSELBbits.ANSB3 = 0;
+TRISBbits.TRISB3 = 0;
 
   ANSELBbits.ANSB3 = 0;
   TRISBbits.TRISB3 = 0;
