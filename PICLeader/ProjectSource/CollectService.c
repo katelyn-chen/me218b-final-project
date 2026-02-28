@@ -165,11 +165,20 @@ ES_Event_t RunCollectService(ES_Event_t ThisEvent)
         DB_printf("CollectService: start\r\n");
         whichCollect = ThisEvent.EventParam;
         BallCount = 0u;
+        ES_Event_t NewEvent;
+        NewEvent.EventType = ES_WAIT_BALL;
+        bool posted = PostDispenseService(NewEvent);
+        DB_printf("post? \n", posted);
+      }
+      if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == BUCKET_MOVE_TIMER)) {
         TransitionTo(COLLECT_ARM_DOWN, T_ARM_DOWN_MS);
+        ES_Timer_StopTimer(BUCKET_MOVE_TIMER);
+        DB_printf("bucket move timeout \n");
       }
       break;
 
     case COLLECT_ARM_DOWN:
+        DB_printf("collect arm move \n");
       if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == COLLECT_TIMER))
       {
         TransitionTo(COLLECT_GRIP_CLOSE, T_GRIP_CLOSE_MS);

@@ -43,7 +43,7 @@
 #define US_PUSH_ARM_DOWN      2000u
 
 /* OC4 : bucket swing arm (collector <-> dispense) */
-#define US_BUCKET_COLLECT     1200u
+#define US_BUCKET_COLLECT     1700u
 #define US_BUCKET_DISPENSE    2000u
 
 /* OC3 : continuous rotation bucket bottom */
@@ -227,13 +227,12 @@ bool InitDispenseService(uint8_t Priority)
 
   BucketRotateStop();
   PushArmUp();
-  BucketToCollect();
-
+  
   ES_Timer_StopTimer(DISPENSE_TIMER);
 
   DB_printf("DispenseService: init done\r\n");
 
-  ES_Event_t e = { ES_INIT,0 };
+  ES_Event_t e = { DISP_IDLE,0 };
   return ES_PostToService(MyPriority,e);
 }
 
@@ -250,6 +249,7 @@ ES_Event_t RunDispenseService(ES_Event_t ThisEvent)
   switch(CurState)
   {
     case DISP_IDLE:
+        DB_printf("display idle state \n");
       if(ThisEvent.EventType == ES_DISPENSE_START)
       {
         DB_printf("Dispense start\r\n");
@@ -277,7 +277,13 @@ ES_Event_t RunDispenseService(ES_Event_t ThisEvent)
           FlagSetPulseUs(US_FLAG_CENTER);
         }
       }
-      break;
+      
+      if(ThisEvent.EventType == ES_WAIT_BALL) {
+        BucketToCollect(); // move bucket to collect position and stop there
+        ES_Timer_InitTimer(BUCKET_MOVE_TIMER, 500);
+        DB_printf("bucket moved to collect \n");
+      }
+      break; 
 
     case DISP_PUSH_ARM_DOWN:
       if((ThisEvent.EventType==ES_TIMEOUT) && (ThisEvent.EventParam==DISPENSE_TIMER))

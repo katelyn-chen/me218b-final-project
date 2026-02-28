@@ -295,6 +295,7 @@ typedef enum
   ES_INIT_GAME,
   ES_END_GAME,
   ES_ENTER_IDLE,
+  ES_WAIT_BALL, // collect position for bucket
 
 /* Encoder Events */
   ES_ENCODER_TARGET_REACHED,
@@ -351,7 +352,7 @@ typedef enum
 //#define TIMER2_RESP_FUNC PostDispenseService
 #define TIMER3_RESP_FUNC PostInitService
 #define TIMER4_RESP_FUNC PostEncoderService
-#define TIMER5_RESP_FUNC TIMER_UNUSED
+#define TIMER5_RESP_FUNC PostCollectService
 #define TIMER6_RESP_FUNC TIMER_UNUSED
 #define TIMER7_RESP_FUNC TIMER_UNUSED
 #define TIMER8_RESP_FUNC TIMER_UNUSED
@@ -378,6 +379,7 @@ typedef enum
 #define DISPENSE_TIMER 2
 #define GAME_TIMER 3
 #define ENCODER_TIMER 4
+#define BUCKET_MOVE_TIMER 5
 
 /*#define SERVICE0_TIMER 15
 #define REFLECT_TIMER 1
