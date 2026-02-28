@@ -58,6 +58,9 @@
 #define ARM_DOWN_TICKS         3400u
 // 1540, 3300 is 90 degree 
 
+#define BUCKET_ARM_DISPENSE_TICKS    3000u // tested!!! DONT CHANGE VALUES
+#define BUCKET_ARM_COLLECT_TICKS     9000u
+
 /* Safety clamp for arm motion */
 #define ARM_MIN_TICKS          1400u
 #define ARM_MAX_TICKS          3400u
@@ -184,7 +187,7 @@ ES_Event_t RunCollectService(ES_Event_t ThisEvent)
         }
       if (ThisEvent.EventType == ES_BUCKET_READY)
         {
-          SetBucketArm(ARM_UP_TICKS);
+          SetBucketArm(BUCKET_ARM_COLLECT_TICKS);
           DB_printf("bucket ready cmd received\r\n");
         }
         if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == COLLECT_TIMER))
