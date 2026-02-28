@@ -69,7 +69,7 @@
 
 /*=========================== SERVO PULSEWIDTHS ============================*/
 /* OC5: bucket swing arm (collector side <-> dispense side) */
-#define US_SWING_READY         2000u   /* collector side / ready to receive balls (TUNE) */
+#define US_SWING_READY         1500u   /* collector side / ready to receive balls (TUNE) */
 #define US_SWING_DISPENSE      1500u   /* dispense side (TUNE) */
 
 /* OC3: bucket bottom (continuous rotation style) */
