@@ -173,7 +173,7 @@ ES_Event_t RunCollectService(ES_Event_t ThisEvent)
 
     case COLLECT_ARM_DOWN:
     {
-        if (BallCount == 1 && post == true) {
+        if (BallCount == 0 && post == true) {
             ES_Event_t BucketLowerEvent;
             BucketLowerEvent.EventType = ES_WAIT_BALL;
             PostDispenseService(BucketLowerEvent);
