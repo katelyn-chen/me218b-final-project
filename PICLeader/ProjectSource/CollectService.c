@@ -79,7 +79,8 @@
 #define US_GRIP_OPEN_2              1800u
 #define US_GRIP_CLOSE_2             1200u
 
-#define US_ARM_PICK                 2000u   /* down to dispenser */
+/* Arm (270° servo): allow a little more down travel than before */
+#define US_ARM_PICK                 2150u   /* down to dispenser (tune: 2050..2300) */
 #define US_ARM_DROP                 1100u   /* up to bucket */
 #define US_ARM_TRAVEL               1500u   /* safe mid pose */
 
@@ -243,16 +244,16 @@ ES_Event_t RunCollectService(ES_Event_t ThisEvent)
         case FIRST_COLLECT:
           doneEvt.EventParam = CMD_FIRST_COLLECT_DONE;
           break;
-        
+
         case SECOND_COLLECT:
           doneEvt.EventParam = CMD_SECOND_COLLECT_DONE;
           break;
-        
+
         case OTHER_COLLECT:
           doneEvt.EventParam = CMD_OTHER_COLLECT_DONE;
           break;
       }
-      
+
       PostSPILeaderService(doneEvt);
       TransitionTo(COLLECT_IDLE, 0u);
       break;
@@ -396,11 +397,25 @@ static void InitServoPWM(void)
 
   /* ================= PPS + PIN CONFIG =================
      OC modules do NOT automatically appear on pins.
-     This maps OC1->RB4 so PWM actually reaches the servo header.
+     You MUST map them via PPS or the servo will not move.
+
+     OC2 -> RA1 (rack/pinion grab)
+     OC4 -> RA4 (arm)
+     OC1 -> RB4 (rotation grab)
   */
+  ANSELAbits.ANSA1 = 0;   /* RA1 digital */
+  ANSELAbits.ANSA4 = 0;   /* RA4 digital (safe) */
+  ANSELBbits.ANSB4 = 0;   /* RB4 digital */
+
+  TRISAbits.TRISA1 = 0;
+  TRISAbits.TRISA4 = 0;
   TRISBbits.TRISB4 = 0;
-  /* OC1 function code on PPS output select */
+
+  /* OC function code on PPS output select */
+  RPA1Rbits.RPA1R = 0b0101;   /* OC2 -> RA1 */
+  RPA4Rbits.RPA4R = 0b0101;   /* OC4 -> RA4 */
   RPB4Rbits.RPB4R = 0b0101;   /* OC1 -> RB4 */
+
   ServoInitDone = true;
 }
 
