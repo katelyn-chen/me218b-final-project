@@ -8,7 +8,7 @@ build/default/production/ProjectSource/CollectService.o: \
  FrameworkHeaders/ES_Events.h FrameworkHeaders/ES_PostList.h \
  FrameworkHeaders/ES_General.h FrameworkHeaders/ES_Timers.h \
  FrameworkHeaders/ES_Timers.h FrameworkHeaders/dbprintf.h \
- ProjectHeaders/PIC32_SPI_HAL.h ProjectHeaders/SPILeaderService.h
+ ProjectHeaders/SPILeaderService.h
 
 ProjectHeaders/CollectService.h:
 
@@ -43,7 +43,5 @@ FrameworkHeaders/ES_Timers.h:
 FrameworkHeaders/ES_Timers.h:
 
 FrameworkHeaders/dbprintf.h:
-
-ProjectHeaders/PIC32_SPI_HAL.h:
 
 ProjectHeaders/SPILeaderService.h:
