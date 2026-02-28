@@ -180,78 +180,6 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
 
   switch (curState)
   {
-    case DEBUG:
-    {
-      switch (ThisEvent.EventType)
-      {
-          case ES_TRANSLATE:
-              DB_printf("Do Translate!\r\n");
-              ES_Timer_InitTimer(MOTOR_TIMER, CHKPT3_FWD);
-              DoTranslate(ThisEvent.EventParam);
-              break;
-
-          case ES_ROTATE:
-              DB_printf("Do Rotate!\r\n");
-              DoRotate(ThisEvent.EventParam);
-              break;
-
-          case ES_TAPE_DETECT:
-              DB_printf("Start Tape Detect\r\n");
-              StartTapeDetect();
-              break;
-
-          case ES_ALIGN_ULTRASONICS:
-              /*
-                Reusing ES_ALIGN_ULTRASONICS as the “begin initial orientation” trigger.
-                Initial orientation is beacon-only: rotate CCW and classify field
-                based on the beacon order.
-              */
-              DB_printf("Starting INIT_ORIENT (beacon sweep)\r\n");
-
-              curState = INIT_ORIENT;
-              orientState = ORIENT_BEACON_SWEEP;
-              field = FIELD_UNKNOWN;
-              ResetBeaconSequence();
-              StartBeaconAlignSearch();
-              break;
-
-          case ES_BEACON_FOUND:
-          {
-              BeaconId_t id;
-              BeaconSide_t side;
-              UnpackBeaconParam((uint16_t)ThisEvent.EventParam, &id, &side);
-
-              DB_printf("Beacon %d found \r\n", id);
-              StopMotors();
-
-              ES_Event_t BeaconEvent;
-              BeaconEvent.EventType = ES_BEACON_FOUND;
-              BeaconEvent.EventParam = id;
-              PostSPIFollowerService(BeaconEvent);
-              break;
-          }
-
-          case ES_TIMEOUT:
-              if (ThisEvent.EventParam == MOTOR_TIMER)
-              {
-                  DB_printf("Motor timer expired\r\n");
-                  StopMotors();
-              }
-              break;
-
-          case ES_BEACON_SIGNAL:
-              DB_printf("Starting Turn\r\n");
-              ResetBeaconSequence();
-              StartBeaconAlignSearch();
-              PostBeaconService(startBeaconSearch);
-              break;
-
-          default:
-              break;
-      }
-      break;
-    }
-
     case INIT_ORIENT:
     {
       switch (orientState)
@@ -288,20 +216,42 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
             BeaconSide_t side;
             UnpackBeaconParam((uint16_t)ThisEvent.EventParam, &id, &side);
             (void)side;
+            DB_printf("Beacon found event posted from nav service, id: %d\r\n", id);
+
 
             if (id != BEACON_ID_NONE)
             {
-              bool pushed = PushBeaconIfNew(id);
-              if (pushed)
-              {
-                DB_printf("Beacon seq add: id=%u (len=%u)\r\n",
-                          (unsigned)id, (unsigned)SeqLen);
-
-                field = DetermineFieldFromSequence();
+                /*Trying a new side id strategy because we aren't seeing all the beacons*/
+//              bool pushed = PushBeaconIfNew(id);
+//              if (pushed)
+//              {
+//                DB_printf("Beacon seq add: id=%u (len=%u)\r\n",
+//                          (unsigned)id, (unsigned)SeqLen);
+//
+//                field = DetermineFieldFromSequence();
+                if (id == BEACON_ID_L) {
+                    DB_printf("L detected! We are on GREEN field\r\n");
+                    field = FIELD_GREEN;
+                } else if (id == BEACON_ID_R) {
+                    DB_printf("R detected! We are on BLUE field\r\n");
+                    field = FIELD_BLUE;
+                } else {
+                    DB_printf("Other beacon detected. Unknown field.\r\n");
+                    StopMotors();
+                }
                 if (field != FIELD_UNKNOWN)
                 {
                   // somewhere we have to turn the indicator servo (leader)!!
-                  StopMotors();
+                    DB_printf("Moving towards L/R beacon\r\n");
+                    DoTranslate(PackTranslateParam(DUTY_TRANS_HALF, DIR_FWD));
+                    cmdEvent.EventParam = CMD_ENCODER_FIRST_FWD;
+                    PostSPIFollowerService(cmdEvent);
+                }
+            }
+          }
+            
+          if (ThisEvent.EventType == ES_MOVE_DONE)
+          {
 
                   /*
                     Convert field classification into a LEFT/RIGHT indication that the
@@ -323,10 +273,8 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
                   DB_printf("ORIENT_DONE: Rotating to find dispenser beacon based on field\r\n");
                   StartBeaconAlignSearch();
                   PostBeaconService(startBeaconSearch);
-                }
-              }
             }
-          }
+//            }
           break;
         }
 
@@ -344,6 +292,8 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
                 DB_printf("posing to encoder service because key pressed\r\n");
                 cmdEvent.EventParam = CMD_ENCODER_FIRST_ALIGN;
                 PostSPIFollowerService(cmdEvent);
+                StopMotors();
+                DoRotate(PackRotateParam(ROT_90, ROT_CW));
             }
               
             case ES_BEACON_FOUND:
@@ -602,6 +552,7 @@ static void SetMotor2(int16_t dutySignedPercent)
   uint16_t mag = (dutySignedPercent < 0) ? (uint16_t)(-dutySignedPercent) : (uint16_t)dutySignedPercent;
   uint16_t ocrs = DutyPercentToOCrs(mag);
   DB_printf("Duty*PR2: %d\r\n", ocrs);
+  DB_printf("Duty: %d\r\n", dutySignedPercent);
 
   if (dutySignedPercent > 0)
   {

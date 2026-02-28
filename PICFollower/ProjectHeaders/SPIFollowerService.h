@@ -78,6 +78,7 @@ typedef enum {
 #define CMD_ENCODER_FIRST_ALIGN   0x21
 #define CMD_MOVE_DONE             0x22
 #define CMD_ALIGN_COLLECT         0x23
+#define CMD_ENCODER_FIRST_FWD     0x24
 
 #define CMD_END_GAME              0x99
 #define CMD_QUERY                 0xAA

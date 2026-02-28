@@ -181,6 +181,7 @@ ES_Event_t RunEncoderService(ES_Event_t ThisEvent)
         case ES_ENCODER_TARGET_ROT:
           GetLeftEncoder();
           GetRightEncoder();
+          
           DB_printf("Start left value: %d\r\n", StartLeftCount);
           DB_printf("Start right value: %d\r\n", StartRightCount);
 
@@ -200,10 +201,10 @@ ES_Event_t RunEncoderService(ES_Event_t ThisEvent)
         if(MoveActive) {
           int32_t leftTravel  = LeftCount  - StartLeftCount;
           int32_t rightTravel = RightCount - StartRightCount;
-          int32_t avgTravel = (leftTravel + rightTravel) / 2;
+//          int32_t avgTravel = (leftTravel + rightTravel) / 2;
 
           // Handle forward AND backward motion
-          if( abs(avgTravel) >= abs(TargetDelta) ) {
+          if( abs(leftTravel) >= abs(TargetLeft) ) {
               MoveActive = false;
 
               ES_Event_t doneEvent;

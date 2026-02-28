@@ -137,12 +137,12 @@ bool Check4Button(void)
   uint8_t currentButtonState = PORTAbits.RA2;
   if (currentButtonState && currentButtonState != lastButtonState) {
       ES_Event_t NewEvent;
-      NewEvent.EventType = ES_COLLECT_START;
-      NewEvent.EventParam = 0;
-      PostCollectService(NewEvent);
-      //NewEvent.EventType = ES_START_BUTTON;
-      //PostInitService(NewEvent);
-      //ReturnVal = true;
+//      NewEvent.EventType = ES_COLLECT_START;
+//      NewEvent.EventParam = 0;
+//      PostCollectService(NewEvent);
+      NewEvent.EventType = ES_START_BUTTON;
+      PostInitService(NewEvent);
+      ReturnVal = true;
   }
 
   lastButtonState = currentButtonState;

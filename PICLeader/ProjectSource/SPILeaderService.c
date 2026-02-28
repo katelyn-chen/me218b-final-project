@@ -54,8 +54,10 @@
 /* Pulse values need to be tuned!! */
 #define ROT_90_PULSES           1000
 #define ROT_180_PULSES          ROT_90_PULSES*2
-#define INIT_ROT_ADJUST        55 
+#define INIT_ROT_ADJUST         30 
 #define COLLECT_FWD_ALIGN       500 
+#define RIGHT_FULL_ROTATE       60      // tuned! one full wheel rotation
+#define SIDE_INDICATE_FIRST_FWD 60
 
 
 /*---------------------------- Module Types -------------------------------*/
@@ -187,6 +189,8 @@ ES_Event_t RunSPILeaderService(ES_Event_t ThisEvent)
         if (IsKnownFollowerStatus(status))
         {
           HandleFollowerStatus(status);
+        } else {
+            DB_printf("Unknown command\r\n");
         }
       }
       else
@@ -278,6 +282,7 @@ static bool IsKnownFollowerStatus(uint8_t cmd)
     case CMD_SECOND_COLLECT_START:
     case CMD_OTHER_COLLECT_START:
     case CMD_DISPENSE_START:
+    case CMD_ENCODER_FIRST_FWD:
       return true;
 
     default:
@@ -390,6 +395,15 @@ static void HandleFollowerStatus(uint8_t statusByte)
       cmdEvent.EventParam = OTHER_COLLECT;
       PostCollectService(cmdEvent);
       break;
+      
+    case CMD_ENCODER_FIRST_FWD:
+        DB_printf("Moving towards L/R beacon! \r\n");
+        cmdEvent.EventType = ES_ENCODER_TARGET_STRAIGHT;
+        cmdEvent.EventParam = SIDE_INDICATE_FIRST_FWD;
+        PostEncoderService(cmdEvent);
+        break;
+        
+          
 
 
     default:

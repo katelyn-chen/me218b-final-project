@@ -3,8 +3,13 @@
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
+            <file>file:/U:/_ME218bTeams/TEAM9/FinalProjectNEW/PICFollower/ProjectSource/BeaconService.c</file>
             <file>file:/U:/_ME218bTeams/TEAM9/FinalProjectNEW/PICFollower/ProjectSource/NavigateService.c</file>
+            <file>file:/U:/_ME218bTeams/TEAM9/FinalProjectNEW/PICFollower/ProjectSource/ReflectiveSenseService.c</file>
             <file>file:/U:/_ME218bTeams/TEAM9/FinalProjectNEW/PICFollower/ProjectSource/SPIFollowerService.c</file>
+            <file>file:/U:/_ME218bTeams/TEAM9/FinalProjectNEW/PICFollower/ProjectHeaders/BeaconService.h</file>
+            <file>file:/U:/_ME218bTeams/TEAM9/FinalProjectNEW/PICFollower/ProjectHeaders/SPIFollowerService.h</file>
+            <file>file:/U:/_ME218bTeams/TEAM9/FinalProjectNEW/PICFollower/ProjectSource/PIC32_SPI_HAL_Starter.c</file>
         </group>
     </open-files>
 </project-private>

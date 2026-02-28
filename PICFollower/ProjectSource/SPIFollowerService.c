@@ -82,7 +82,6 @@ bool InitSPIFollowerService(uint8_t Priority)
   curState = RECEIVE;
   InitSPIHardware();
   InitPinHardware();
-  //ES_Timer_InitTimer(SPI_TIMER, SPI_POLL_MS);
   DB_printf("SPIFollowerService initialized\r\n");
 
   ES_Event_t ThisEvent;
@@ -141,6 +140,9 @@ ES_Event_t RunSPIFollowerService(ES_Event_t ThisEvent)
         case ES_CMD_REQ:
         {
             outgoingCmd = ThisEvent.EventParam;
+//            if (outgoingCmd == CMD_ENCODER_FIRST_FWD) {
+//                 DB_printf("TEST CONFIRM\r\n");
+//            }
         }
             
             

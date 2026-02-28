@@ -106,7 +106,7 @@ ES_Event_t RunBeaconService(ES_Event_t ThisEvent)
 
   if (ThisEvent.EventType == ES_BEACON_SIGNAL)
   {
-    //DB_printf("BeaconService received request to detect a signal\r\n");
+//    DB_printf("BeaconService received request to detect a signal\r\n");
     if (NewPeriod)
     {
       NewPeriod = false;
@@ -115,7 +115,7 @@ ES_Event_t RunBeaconService(ES_Event_t ThisEvent)
       {
         uint32_t f = ComputeFreqHz(PeriodTicks);
         BeaconId_t id = ClassifyBeacon(f);
-        //DB_printf("freq detected, %d\r\n", f);
+//        DB_printf("freq detected, %d\r\n", f);
 
         if (id != BEACON_ID_NONE)
         {
@@ -139,8 +139,8 @@ ES_Event_t RunBeaconService(ES_Event_t ThisEvent)
             BeaconSide_t side = ClassifySide(id);
             uint16_t packed = PackBeaconParam(id, side);
 
-            DB_printf("Beacon latched: id=%u f=%u Hz side=%u\r\n",
-                      (unsigned)id, (unsigned long)f, (unsigned)side);
+//            DB_printf("Beacon latched: id=%u f=%u Hz side=%u\r\n",
+//                      (unsigned)id, (unsigned long)f, (unsigned)side);
 
             ES_Event_t e = { ES_BEACON_FOUND, packed };
             PostNavigateService(e);
