@@ -35,6 +35,16 @@
 #include "ES_Timers.h"
 #include "dbprintf.h"
 
+#define PBCLK_HZ               20000000u
+
+#define SERVO_TIMER_PRESCALE_BITS   0b011u   /* 1:8 */
+#define SERVO_TIMER_PRESCALE_VAL    8u
+
+/* 50 Hz: 20ms period */
+#define SERVO_HZ                    2500u
+#define SERVO_PR2_VALUE             ((PBCLK_HZ / (SERVO_TIMER_PRESCALE_VAL * SERVO_HZ)) - 1u)
+
+
 /*============================== TIMING ==============================*/
 #define T_PUSH_ARM_DOWN_MS     500u
 #define T_BACKUP_DELAY_MS      100u   /* robot backing slightly */
@@ -50,8 +60,8 @@
 #define US_PUSH_ARM_DOWN      2000u
 
 /* OC4 : bucket swing arm (collector <-> dispense) */
-#define US_BUCKET_COLLECT     1700u
-#define US_BUCKET_DISPENSE    2000u
+#define US_BUCKET_COLLECT     2000u
+#define US_BUCKET_DISPENSE    1500u
 
 /* OC3 : continuous rotation bucket bottom */
 #define US_BUCKET_STOP        1500u
@@ -224,8 +234,8 @@ void __ISR(_TIMER_4_VECTOR, IPL6SOFT) T4Handler(void)
       #define TIMER14_RESP_FUNC PostDispenseService
 ======================================================================*/
 #define BUCKET_RAMP_TIMER       14u
-#define BUCKET_RAMP_TICK_MS     20u   /* 50 Hz-ish update */
-#define BUCKET_RAMP_STEP_US     10u   /* try 5..20 (smaller = slower) */
+#define BUCKET_RAMP_TICK_MS     900u   /* 50 Hz-ish update */
+#define BUCKET_RAMP_STEP_US     2u   /* try 5..20 (smaller = slower) */
 
 static uint16_t BucketCurUs    = US_BUCKET_COLLECT;
 static uint16_t BucketTargetUs = US_BUCKET_COLLECT;
@@ -456,16 +466,21 @@ ES_Event_t RunDispenseService(ES_Event_t ThisEvent)
 static void InitServoPWM(void)
 {
   /* Timer2 as 50Hz timebase for OC3/OC4/OC5 PWM */
-  T2CON = 0;
-  T2CONbits.TCS = 0;
-  T2CONbits.TCKPS = 0b011;   /* 1:8 */
-  PR2 = 49999;
-  TMR2 = 0;
+//  T2CON = 0;
+//  T2CONbits.TCS = 0;
+//  T2CONbits.TCKPS = SERVO_TIMER_PRESCALE_BITS;   /* 1:8 */
+//  PR2 = SERVO_PR2_VALUE;
+//  TMR2 = 0;
+  
+  TRISBbits.TRISB6 = 0;
+  TRISBbits.TRISB10 = 0;
 
   /* ensure OCs use Timer2 */
   OC3CON=0; OC3R=0; OC3RS=0; OC3CONbits.OCTSEL=0; OC3CONbits.OCM=0b110; OC3CONbits.ON=1;
-  OC4CON=0; OC4R=0; OC4RS=0; OC4CONbits.OCTSEL=0; OC4CONbits.OCM=0b110; OC4CONbits.ON=1;
   OC5CON=0; OC5R=0; OC5RS=0; OC5CONbits.OCTSEL=0; OC5CONbits.OCM=0b110; OC5CONbits.ON=1;
+
+  RPB6Rbits.RPB6R = 0b0110; /* OC5 -> RB6 */
+  RPB10Rbits.RPB10R = 0b0101; /* OC3 -> RB10 */
 
   T2CONbits.ON = 1;
 
@@ -477,6 +492,12 @@ static uint16_t UsToOCrs(uint16_t us)
   return (uint16_t)((us*25u)/10u);
 }
 
-static void Servo_OC3(uint16_t us){ OC3RS=UsToOCrs(us); }
-static void Servo_OC4(uint16_t us){ OC4RS=UsToOCrs(us); }
-static void Servo_OC5(uint16_t us){ OC5RS=UsToOCrs(us); }
+static void Servo_OC3(uint16_t us){ 
+    OC3RS=UsToOCrs(us); }
+static void Servo_OC4(uint16_t us){ 
+    OC4RS=UsToOCrs(us); 
+    DB_printf("us oc4 dispense: %d\r\n", us);
+    DB_printf("ocrs oc4 dispense: %d\r\n", OC4RS);
+}
+static void Servo_OC5(uint16_t us){ 
+    OC5RS=UsToOCrs(us); }

@@ -4,13 +4,13 @@
 
   Summary
     - 6-ball collection routine at the dispenser
-    - Now with SLOW SERVO RAMPING + full 0¬∞->270¬∞ sweep for grabber rotation servo
+    - Now with SLOW SERVO RAMPING + full 0∞->270∞ sweep for grabber rotation servo
     - Sequence per ball:
         1) Arm down (more down)
-        2) Ensure grabber rotation at 0¬∞
-        3) Rotate grabber CW to 270¬∞ to grab
+        2) Ensure grabber rotation at 0∞
+        3) Rotate grabber CW to 270∞ to grab
         4) Arm up to bucket
-        5) Rotate grabber CCW back to 0¬∞ to release
+        5) Rotate grabber CCW back to 0∞ to release
         6) Optional nudge FWD/BACK (kept)
         7) Repeat until 6 balls
 
@@ -66,18 +66,18 @@
 #define SERVO_PR2_VALUE             ((PBCLK_HZ / (SERVO_TIMER_PRESCALE_VAL * SERVO_HZ)) - 1u)
 
 /* ========= PULSE WIDTHS (TUNE THESE ON ROBOT) =========
-   IMPORTANT: ‚Äú270¬∞ servo‚Äù still expects ~50Hz pulses.
-   The 0¬∞/270¬∞ endpoints are NOT universal; you must tune.
+   IMPORTANT: ?270∞ servo? still expects ~50Hz pulses.
+   The 0∞/270∞ endpoints are NOT universal; you must tune.
 
    Start with safe range 900..2100 and expand only if needed.
 */
-#define US_ROT_0_DEG                900u    /* rotation servo: 0¬∞ (open)  (tune) */
-#define US_ROT_270_DEG              2100u   /* rotation servo: 270¬∞ (closed/grab) (tune) */
+#define US_ROT_0_DEG                900u    /* rotation servo: 0∞ (open)  (tune) */
+#define US_ROT_270_DEG              2100u   /* rotation servo: 270∞ (closed/grab) (tune) */
 
 #define US_RACK_OPEN                1900u   /* OC2 (rack/pinion) if you still use it */
 #define US_RACK_CLOSE               1100u
 
-/* Arm (lever arm) ‚Äî you wanted ‚Äúmore down‚Äù */
+/* Arm (lever arm) ? you wanted ?more down? */
 #define US_ARM_DOWN_MORE            2300u   /* DOWN to ground (tune: 2050..2400) */
 #define US_ARM_UP_BUCKET            1100u   /* UP to bucket */
 #define US_ARM_TRAVEL               1500u   /* safe mid pose */
@@ -387,7 +387,7 @@ static void TransitionTo(CollectState_t next, uint16_t tMs)
       break;
 
     case COLLECT_GRABBER_TO_270:
-      /* Sweep CW to 270¬∞ to grab */
+      /* Sweep CW to 270∞ to grab */
       GrabberRotTo270();
       /* optional: tighten rack too if you want */
       RackClose();
@@ -405,7 +405,7 @@ static void TransitionTo(CollectState_t next, uint16_t tMs)
       break;
 
     case COLLECT_RELEASE_TO_0:
-      /* Release by rotating back CCW to 0¬∞ */
+      /* Release by rotating back CCW to 0∞ */
       GrabberRotTo0();
       RackOpen();
       ES_Timer_InitTimer(COLLECT_TIMER, T_RELEASE_SETTLE_MS);
@@ -549,6 +549,12 @@ static uint16_t UsToOCrs(uint16_t us)
   return (uint16_t)ticks;
 }
 
-static void ServoSet_OC1_us(uint16_t us) { OC1RS = UsToOCrs(us); }
-static void ServoSet_OC2_us(uint16_t us) { OC2RS = UsToOCrs(us); }
-static void ServoSet_OC4_us(uint16_t us) { OC4RS = UsToOCrs(us); }
+static void ServoSet_OC1_us(uint16_t us) { OC1RS = UsToOCrs(us); 
+    DB_printf("us oc1: %d\r\n", us);
+    DB_printf("ocrs oc1: %d\r\n", OC1RS);}
+static void ServoSet_OC2_us(uint16_t us) { OC2RS = UsToOCrs(us); 
+    DB_printf("us oc2: %d\r\n", us);
+    DB_printf("ocrs oc2: %d\r\n", OC2RS);}
+static void ServoSet_OC4_us(uint16_t us) { OC4RS = UsToOCrs(us); 
+    DB_printf("us oc4 collect: %d\r\n", us);
+    DB_printf("ocrs oc4 collect: %d\r\n", OC4RS);}
