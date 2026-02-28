@@ -137,54 +137,14 @@ bool Check4Button(void)
   uint8_t currentButtonState = PORTAbits.RA2;
   if (currentButtonState && currentButtonState != lastButtonState) {
       ES_Event_t NewEvent;
-//      NewEvent.EventType = ES_COLLECT_START;
-//      NewEvent.EventParam = 0;
-//      PostCollectService(NewEvent);
-      NewEvent.EventType = ES_START_BUTTON;
-      PostInitService(NewEvent);
-      ReturnVal = true;
+      NewEvent.EventType = ES_COLLECT_START;
+      NewEvent.EventParam = 0;
+      PostCollectService(NewEvent);
+      //NewEvent.EventType = ES_START_BUTTON;
+      //PostInitService(NewEvent);
+      //ReturnVal = true;
   }
 
   lastButtonState = currentButtonState;
   return ReturnVal;
 }
-
-bool Check4Beacon(void)
-{
-  // read from beacon sensor input pin
-  // if beacon detected, post ES_BEACON_DETECTED event
-//    uint32_t ADValue[1];
-//    ADC_MultiRead(ADValue);
-//    uint32_t IRValue = ADValue[0];
-//    if (IRValue < currPeak) {
-//        maxPeak = IRValue;
-//        return false;
-//    } elif (IRValue >= maxPeak - 10) {
-//        ES_Event_t ThisEvent;
-//        ThisEvent.EventType   = ES_BEACON_FOUND;
-//        ThisEvent.EventParam  = 0;
-//        ES_PostMotorService(ThisEvent);
-//    }
-    return true;
-}
-
-bool Check4Command(void)
-{
-  // send query byte to Command generator (OxAA)
-  // if OxFF command received:
-    // read next byte for command value
-    // create ES_COMMAND_RECEIVED event
-    // set EventParam to command value
-    // post ES_COMMAND_RECEIVED event
-}
-
-//bool Check4Switch(void) {
-//    if (LATBbits.LATB12 == 0) {
-//        ES_Event_t NewEvent;
-//        NewEvent.EventType = ES_STOP;
-//        NewEvent.EventParam = 0;
-//        PostMotorService(NewEvent);
-//        return true;
-//    }
-//    return false;
-//}

@@ -79,7 +79,7 @@
 #define US_GRIP_OPEN_2              1800u
 #define US_GRIP_CLOSE_2             1200u
 
-#define US_ARM_PICK                 2000u   /* down to dispenser */
+#define US_ARM_PICK                 2100u   /* down to dispenser */
 #define US_ARM_DROP                 1100u   /* up to bucket */
 #define US_ARM_TRAVEL               1500u   /* safe mid pose */
 

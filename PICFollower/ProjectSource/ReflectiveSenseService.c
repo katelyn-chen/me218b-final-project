@@ -72,21 +72,22 @@ ES_Event_t RunReflectiveSenseService(ES_Event_t ThisEvent)
     {
         //DB_printf("Tape change detected! Sensor bitfield: %d\r\n", ThisEvent.EventParam);
         uint8_t tapeState = (uint8_t)ThisEvent.EventParam;
-        static uint8_t pendingState = 0;
-
-        if (tapeState == pendingState) {
-            debounceCounter++;
-        } else {
-            pendingState = tapeState;
-            debounceCounter = 1;
-        }
-
-        if (debounceCounter >= TAPE_CONFIRM_COUNT && tapeState != lastConfirmedState) {
-          lastConfirmedState = tapeState;
+//        static uint8_t pendingState = 0;
+//
+//        if (tapeState == pendingState) {
+//            debounceCounter++;
+//        } else {
+//            pendingState = tapeState;
+//            debounceCounter = 1;
+//        }
+//
+//        if (debounceCounter >= TAPE_CONFIRM_COUNT && tapeState != lastConfirmedState) {
+//          lastConfirmedState = tapeState;
           ES_Event_t NewEvent;
           if (tapeState == ALL_TAPE_BITFIELD) { 
               NewEvent.EventType = ES_T_DETECTED;
               NewEvent.EventParam = FULL_T;
+              DB_printf("all tape detected, full T \n");
               PostNavigateService(NewEvent);
           } else if (tapeState == RIGHT_CORNER_BITFIELD) {
               NewEvent.EventType = ES_T_DETECTED;
@@ -99,6 +100,7 @@ ES_Event_t RunReflectiveSenseService(ES_Event_t ThisEvent)
           } else if (tapeState == CENTER_BITFIELD) { 
               NewEvent.EventType = ES_TAPE_DETECT;
               NewEvent.EventParam = TAPE_CENTERED; 
+              DB_printf("center tape detect \n");
               PostNavigateService(NewEvent);
           } else if (tapeState == OFFCENTER_RIGHT_BITFIELD) {
               NewEvent.EventType = ES_TAPE_DETECT;
@@ -113,7 +115,7 @@ ES_Event_t RunReflectiveSenseService(ES_Event_t ThisEvent)
               NewEvent.EventParam = NO_TAPE;
               PostNavigateService(NewEvent);
           }
-      }
+//      }
       break;
     }
   }
