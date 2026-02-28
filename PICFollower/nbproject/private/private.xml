@@ -3,17 +3,8 @@
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
-            <file>file:/U:/_ME218bTeams/TEAM9/FinalProjectNEW/PICFollower/ProjectSource/PWM_PIC32.c</file>
-            <file>file:/U:/_ME218bTeams/TEAM9/FinalProjectNEW/PICFollower/ProjectHeaders/PIC32_SPI_HAL.h</file>
-            <file>file:/U:/_ME218bTeams/TEAM9/FinalProjectNEW/PICFollower/ProjectSource/BeaconService.c</file>
             <file>file:/U:/_ME218bTeams/TEAM9/FinalProjectNEW/PICFollower/ProjectSource/NavigateService.c</file>
-            <file>file:/U:/_ME218bTeams/TEAM9/FinalProjectNEW/PICFollower/ProjectSource/EventCheckers.c</file>
-            <file>file:/U:/_ME218bTeams/TEAM9/FinalProjectNEW/PICFollower/ProjectSource/TemplateFSM.c</file>
-            <file>file:/U:/_ME218bTeams/TEAM9/FinalProjectNEW/PICFollower/ProjectSource/ReflectiveSenseService.c</file>
             <file>file:/U:/_ME218bTeams/TEAM9/FinalProjectNEW/PICFollower/ProjectSource/SPIFollowerService.c</file>
-            <file>file:/U:/_ME218bTeams/TEAM9/FinalProjectNEW/PICFollower/ProjectHeaders/EventCheckers.h</file>
-            <file>file:/U:/_ME218bTeams/TEAM9/FinalProjectNEW/PICFollower/FrameworkHeaders/ES_Configure.h</file>
-            <file>file:/U:/_ME218bTeams/TEAM9/FinalProjectNEW/PICFollower/ProjectHeaders/SPIFollowerService.h</file>
         </group>
     </open-files>
 </project-private>
