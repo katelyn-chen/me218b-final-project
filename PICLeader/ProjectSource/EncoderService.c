@@ -171,20 +171,22 @@ ES_Event_t RunEncoderService(ES_Event_t ThisEvent)
           GetLeftEncoder();
           GetRightEncoder();
 
-          TargetLeft  = StartLeftCount  + ThisEvent.EventParam;
-          TargetRight = StartRightCount + ThisEvent.EventParam;
+          TargetLeft  =  ThisEvent.EventParam;
+//          TargetRight = StartRightCount + ThisEvent.EventParam;
           encoderMode = ENCODER_STRAIGHT;
           ES_Timer_InitTimer(ENCODER_TIMER, ENCODER_CHECK_MS);
           MoveActive = true;
           break;
 
         case ES_ENCODER_TARGET_ROT:
-          DB_printf("Encoder rotation measure request\r\n");
           GetLeftEncoder();
           GetRightEncoder();
+          DB_printf("Start left value: %d\r\n", StartLeftCount);
+          DB_printf("Start right value: %d\r\n", StartRightCount);
 
-          TargetLeft  = StartLeftCount  + ThisEvent.EventParam;
-          TargetRight = StartRightCount - ThisEvent.EventParam;
+          TargetLeft  =  ThisEvent.EventParam;
+          DB_printf("Target Left: %d\r\n", TargetLeft);
+//          TargetRight = StartRightCount - ThisEvent.EventParam;
           MoveActive = true;
 
           encoderMode = ENCODER_TURN;
@@ -224,19 +226,23 @@ ES_Event_t RunEncoderService(ES_Event_t ThisEvent)
           ES_Timer_InitTimer(ENCODER_TIMER, ENCODER_CHECK_MS);
       }
       if (ThisEvent.EventType == ES_ENCODER_PULSE) {
-         DB_printf("TESTING\r\n");
          
         //if (MoveActive) {
         int32_t leftTravel  = LeftCount  - StartLeftCount;
         int32_t rightTravel = RightCount - StartRightCount;
-        DB_printf("Left Encoder val, %d\r\n", RightCount);
 
         // rotational progress
         int32_t turnTravel = (leftTravel - rightTravel) / 2;
+        DB_printf("Left Encoder val, %d\r\n", LeftCount);
+        DB_printf("Right Encoder val, %d\r\n", RightCount);
+        DB_printf("left travel, %d\r\n", leftTravel);
+        DB_printf("right travel, %d\r\n", rightTravel);
 
         // Handle clockwise AND counterclockwise
-        if (abs(turnTravel) >= abs(TargetDelta)) {
-          DB_printf("MOVE DONE \r\n");
+        if (abs(leftTravel) >= abs(TargetLeft)) {
+          DB_printf("MOVE DONE, target left: %d \r\n", TargetLeft);
+          DB_printf("Left Encoder start, %d\r\n", StartLeftCount);
+          DB_printf("Right Encoder start, %d\r\n", StartRightCount);
           MoveActive = false;
           ES_Event_t doneEvent;
           doneEvent.EventType = ES_ENCODER_TARGET_REACHED;
@@ -362,11 +368,11 @@ void GetRightEncoder() {
      }
 
     // Read B channel to determine direction
-    if(PORTBbits.RB9 == 1) {
+//    if(PORTBbits.RB9 == 1) {
         LeftCount++;    // Forward
-    } else {
-        LeftCount--;    // Reverse
-    }
+//    } else {
+//        LeftCount--;    // Reverse
+//    }
 //    DB_printf(" %d \r\n", capture);
     IFS0CLR = _IFS0_IC3IF_MASK;
 
@@ -392,11 +398,11 @@ void GetRightEncoder() {
 
     
     // Read B channel
-    if(PORTBbits.RB3 == 1) {
+//    if(PORTBbits.RB3 == 1) {
         RightCount++;
-    } else {
-        RightCount--;
-    }
+//    } else {
+//        RightCount--;
+//    }
     
     ES_Event_t encoderEvent;
     encoderEvent.EventType = ES_ENCODER_PULSE;

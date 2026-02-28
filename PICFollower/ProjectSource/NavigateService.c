@@ -37,8 +37,8 @@
 #define DUTY_TRANS_TAPE_DET 20u
 #define DUTY_TRANS_HALF     30u
 #define DUTY_TRANS_FULL     50u
-#define DUTY_ROTATE         45u
-#define DUTY_SEARCH         5u
+#define DUTY_ROTATE         20u
+#define DUTY_SEARCH         30u
 #define TAPE_BASE_DUTY      DUTY_TRANS_TAPE_DET
 #define TAPE_CORR_DUTY      10u   // steering correction amount
 #define TAPE_LOST_DUTY      15u   // slow search when tape lost

@@ -54,7 +54,7 @@
 /* Pulse values need to be tuned!! */
 #define ROT_90_PULSES           1000
 #define ROT_180_PULSES          ROT_90_PULSES*2
-#define INIT_ROT_ADJUST         500 
+#define INIT_ROT_ADJUST        55 
 #define COLLECT_FWD_ALIGN       500 
 
 
