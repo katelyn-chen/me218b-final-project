@@ -50,12 +50,13 @@
 
 /* Grabber (OC1 -> RB4): open/close */
 // changes travel distance
-#define GRAB_OPEN_TICKS        4700u // tested!!! DONT CHANGE
+#define GRAB_OPEN_TICKS        4700u // tested!!! DONT CHANGE VALUES
 #define GRAB_CLOSE_TICKS       1000u
 
 /* Arm (OC4 -> RA4): ready/down */
-#define ARM_UP_TICKS           1540u
-#define ARM_DOWN_TICKS         3300u
+#define ARM_UP_TICKS           1540u // tested!!! DONT CHANGE VALUES
+#define ARM_DOWN_TICKS         3400u
+// 1540, 3300 is 90 degree 
 
 /* Safety clamp for arm motion */
 #define ARM_MIN_TICKS          1400u
