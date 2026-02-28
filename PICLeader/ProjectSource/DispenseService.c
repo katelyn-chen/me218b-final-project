@@ -8,11 +8,18 @@
    Sequence:
      1) Lower push-down arm
      2) Small backup delay
-     3) Move bucket from collector side → dispense side
+     3) Move bucket from collector side → dispense side   (NOW SLOW-RAMPED)
      4) Rotate bucket bottom +90 degrees
      5) Wait for balls to fall
-     6) Return bucket to collector side
+     6) Return bucket to collector side                   (NOW SLOW-RAMPED)
      7) Raise push arm while navigating away
+
+ Notes
+   - OC3/OC4/OC5 PWM use Timer2
+   - Flag servo on RB3 uses Timer4 ISR (software 50 Hz)
+   - Bucket swing arm (OC4) is slowed by ramping pulse width using ES timer 14
+     -> REQUIRES in ES_Configure.h:
+        #define TIMER14_RESP_FUNC PostDispenseService
 ****************************************************************************/
 
 #include "DispenseService.h"
@@ -43,7 +50,7 @@
 #define US_PUSH_ARM_DOWN      2000u
 
 /* OC4 : bucket swing arm (collector <-> dispense) */
-#define US_BUCKET_COLLECT     2500u
+#define US_BUCKET_COLLECT     1700u
 #define US_BUCKET_DISPENSE    2000u
 
 /* OC3 : continuous rotation bucket bottom */
@@ -87,9 +94,6 @@ static void Servo_OC5(uint16_t us);
 /*====================== ACTION HELPERS =====================*/
 static void PushArmDown(void){ Servo_OC5(US_PUSH_ARM_DOWN); }
 static void PushArmUp(void){ Servo_OC5(US_PUSH_ARM_UP); }
-
-static void BucketToDispense(void){ Servo_OC4(US_BUCKET_DISPENSE); }
-static void BucketToCollect(void){ Servo_OC4(US_BUCKET_COLLECT); }
 
 static void BucketRotateStart(void){ Servo_OC3(US_BUCKET_ROTATE_CW); }
 static void BucketRotateStop(void){ Servo_OC3(US_BUCKET_STOP); }
@@ -212,6 +216,80 @@ void __ISR(_TIMER_4_VECTOR, IPL6SOFT) T4Handler(void)
   }
 }
 
+/*======================================================================
+  BUCKET SWING ARM (OC4) — SLOW RAMP
+  - Instead of jumping OC4RS instantly, ramp pulse width in small steps.
+  - Uses ES timer 14 to schedule ramp ticks.
+  - REQUIRES in ES_Configure.h:
+      #define TIMER14_RESP_FUNC PostDispenseService
+======================================================================*/
+#define BUCKET_RAMP_TIMER       14u
+#define BUCKET_RAMP_TICK_MS     20u   /* 50 Hz-ish update */
+#define BUCKET_RAMP_STEP_US     10u   /* try 5..20 (smaller = slower) */
+
+static uint16_t BucketCurUs    = US_BUCKET_COLLECT;
+static uint16_t BucketTargetUs = US_BUCKET_COLLECT;
+static bool     BucketRamping  = false;
+
+static void BucketArm_SetImmediate(uint16_t us);
+static void BucketArm_GotoSlow(uint16_t targetUs);
+static void BucketArm_RampTick(void);
+
+static void BucketArm_SetImmediate(uint16_t us)
+{
+  BucketCurUs = us;
+  Servo_OC4(us);
+}
+
+static void BucketArm_GotoSlow(uint16_t targetUs)
+{
+  BucketTargetUs = targetUs;
+
+  if (BucketCurUs == BucketTargetUs) {
+    BucketRamping = false;
+    ES_Timer_StopTimer(BUCKET_RAMP_TIMER);
+    return;
+  }
+
+  BucketRamping = true;
+  ES_Timer_InitTimer(BUCKET_RAMP_TIMER, BUCKET_RAMP_TICK_MS);
+}
+
+static void BucketArm_RampTick(void)
+{
+  if (!BucketRamping) return;
+
+  int32_t err = (int32_t)BucketTargetUs - (int32_t)BucketCurUs;
+
+  if (err == 0) {
+    BucketRamping = false;
+    ES_Timer_StopTimer(BUCKET_RAMP_TIMER);
+    return;
+  }
+
+  int32_t step = (err > 0) ? (int32_t)BUCKET_RAMP_STEP_US : -(int32_t)BUCKET_RAMP_STEP_US;
+
+  /* clamp if we would overshoot */
+  if ((err > 0 && step > err) || (err < 0 && step < err)) {
+    BucketCurUs = BucketTargetUs;
+  } else {
+    BucketCurUs = (uint16_t)((int32_t)BucketCurUs + step);
+  }
+
+  Servo_OC4(BucketCurUs);
+
+  if (BucketCurUs == BucketTargetUs) {
+    BucketRamping = false;
+    ES_Timer_StopTimer(BUCKET_RAMP_TIMER);
+  } else {
+    ES_Timer_InitTimer(BUCKET_RAMP_TIMER, BUCKET_RAMP_TICK_MS);
+  }
+}
+
+/* ramped bucket commands */
+static void BucketToDispense(void){ BucketArm_GotoSlow(US_BUCKET_DISPENSE); }
+static void BucketToCollect(void){  BucketArm_GotoSlow(US_BUCKET_COLLECT);  }
+
 /*=========================== INIT ============================*/
 bool InitDispenseService(uint8_t Priority)
 {
@@ -227,18 +305,24 @@ bool InitDispenseService(uint8_t Priority)
 
   BucketRotateStop();
   PushArmUp();
-  
+
+  /* start bucket arm known + slow ramp system baseline */
+  BucketArm_SetImmediate(US_BUCKET_COLLECT);
+  BucketTargetUs = US_BUCKET_COLLECT;
+  BucketRamping = false;
+  ES_Timer_StopTimer(BUCKET_RAMP_TIMER);
+
   ES_Timer_StopTimer(DISPENSE_TIMER);
 
   DB_printf("DispenseService: init done\r\n");
 
-  ES_Event_t e = { DISP_IDLE,0 };
-  return ES_PostToService(MyPriority,e);
+  ES_Event_t e = { ES_INIT, 0 };
+  return ES_PostToService(MyPriority, e);
 }
 
 bool PostDispenseService(ES_Event_t e)
 {
-  return ES_PostToService(MyPriority,e);
+  return ES_PostToService(MyPriority, e);
 }
 
 /*=========================== STATE MACHINE ============================*/
@@ -246,10 +330,15 @@ ES_Event_t RunDispenseService(ES_Event_t ThisEvent)
 {
   ES_Event_t ReturnEvent = {ES_NO_EVENT,0};
 
+  /* handle bucket ramp timer first (so it doesn't mess with state machine) */
+  if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == BUCKET_RAMP_TIMER)) {
+    BucketArm_RampTick();
+    return ReturnEvent;
+  }
+
   switch(CurState)
   {
     case DISP_IDLE:
-        DB_printf("display idle state \n");
       if(ThisEvent.EventType == ES_DISPENSE_START)
       {
         DB_printf("Dispense start\r\n");
@@ -277,13 +366,7 @@ ES_Event_t RunDispenseService(ES_Event_t ThisEvent)
           FlagSetPulseUs(US_FLAG_CENTER);
         }
       }
-      
-      if(ThisEvent.EventType == ES_WAIT_BALL) {
-        BucketToCollect(); // move bucket to collect position and stop there
-        ES_Timer_InitTimer(BUCKET_MOVE_TIMER, 900);
-        DB_printf("bucket moved to collect \n");
-      }
-      break; 
+      break;
 
     case DISP_PUSH_ARM_DOWN:
       if((ThisEvent.EventType==ES_TIMEOUT) && (ThisEvent.EventParam==DISPENSE_TIMER))
@@ -296,7 +379,7 @@ ES_Event_t RunDispenseService(ES_Event_t ThisEvent)
     case DISP_BACKUP_DELAY:
       if((ThisEvent.EventType==ES_TIMEOUT) && (ThisEvent.EventParam==DISPENSE_TIMER))
       {
-        BucketToDispense();
+        BucketToDispense(); /* now slow */
         CurState = DISP_MOVE_BUCKET;
         ES_Timer_InitTimer(DISPENSE_TIMER,T_BUCKET_MOVE_MS);
       }
@@ -324,7 +407,7 @@ ES_Event_t RunDispenseService(ES_Event_t ThisEvent)
     case DISP_WAIT_DROP:
       if((ThisEvent.EventType==ES_TIMEOUT) && (ThisEvent.EventParam==DISPENSE_TIMER))
       {
-        BucketToCollect();
+        BucketToCollect(); /* now slow */
         CurState = DISP_RETURN_BUCKET;
         ES_Timer_InitTimer(DISPENSE_TIMER,T_RETURN_MS);
       }
