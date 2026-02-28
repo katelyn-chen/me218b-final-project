@@ -112,7 +112,7 @@ static inline uint16_t ClampArm(uint16_t v)
 
 static void SetGrabber(uint16_t ticks) { OC2RS = ticks; }
 static void SetArm(uint16_t ticks)     { OC1RS = ClampArm(ticks); }
-
+static void SetBucketArm(uint16_t ticks)     { OC4RS = ClampArm(ticks); }
 /*=========================== HELPERS ============================*/
 static void TransitionTo(CollectState_t next, uint16_t ms);
 static void PostCollectDoneHandshake(void);
@@ -163,11 +163,7 @@ ES_Event_t RunCollectService(ES_Event_t ThisEvent)
 
         TransitionTo(COLLECT_GO_READY, 0);
       }
-      if (ThisEvent.EventType == ES_BUCKET_READY)
-{
-  SetArm(ARM_UP_TICKS);
-  DB_printf("bucket ready cmd received\r\n");
-}
+      
       break;
 
     case COLLECT_GO_READY:
@@ -186,7 +182,12 @@ ES_Event_t RunCollectService(ES_Event_t ThisEvent)
             DB_printf("posted lower bucket \n");
             post = false;
         }
-      if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == COLLECT_TIMER))
+      if (ThisEvent.EventType == ES_BUCKET_READY)
+        {
+          SetBucketArm(ARM_UP_TICKS);
+          DB_printf("bucket ready cmd received\r\n");
+        }
+        if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == COLLECT_TIMER))
       {
         TransitionTo(COLLECT_GRAB_CLOSE, 0);
       }

@@ -73,6 +73,7 @@ static void InitServoPWM(void);
 static uint16_t UsToOCrs(uint16_t us);
 
 static void Servo_OC3(uint16_t us); // bucket bottom
+static void Servo_OC4(uint16_t us); // bucket arm
 static void Servo_OC5(uint16_t us); // push-down arm
 
 /*====================== ACTION HELPERS =====================*/
@@ -335,10 +336,7 @@ static void InitServoPWM(void)
     T2CONbits.ON = 1;
   }
 
-  /* IMPORTANT: RB3 must stay GPIO (flag is software-servo) */
-#ifdef RPB3Rbits
-  RPB3Rbits.RPB3R = 0;
-#endif
+
   ANSELBbits.ANSB3 = 0;
   TRISBbits.TRISB3 = 0;
 
@@ -366,4 +364,5 @@ static uint16_t UsToOCrs(uint16_t us)
 }
 
 static void Servo_OC3(uint16_t us){ OC3RS=UsToOCrs(us); }
+static void Servo_OC4(uint16_t us){ OC4RS=UsToOCrs(us); }
 static void Servo_OC5(uint16_t us){ OC5RS=UsToOCrs(us); }
