@@ -50,6 +50,11 @@
 #define US_BUCKET_STOP        1500u
 #define US_BUCKET_ROTATE_CW   1700u
 
+#define BUCKET_ARM_MIN_TICKS  1400
+#define BUCKET_ARM_MAX_TICKS  3400
+
+#define BUCKET_COLLECT_TICKS  1540
+
 /*============================== TIMER ==============================*/
 #ifndef DISPENSE_TIMER
 #define DISPENSE_TIMER         2u
@@ -89,7 +94,7 @@ static void PushArmDown(void){ Servo_OC5(US_PUSH_ARM_DOWN); }
 static void PushArmUp(void){ Servo_OC5(US_PUSH_ARM_UP); }
 
 static void BucketToDispense(void){ Servo_OC4(US_BUCKET_DISPENSE); }
-static void BucketToCollect(void){ Servo_OC4(US_BUCKET_COLLECT); }
+static void BucketToCollect(void){ Servo_OC4(BUCKET_COLLECT_TICKS); }
 
 static void BucketRotateStart(void){ Servo_OC3(US_BUCKET_ROTATE_CW); }
 static void BucketRotateStop(void){ Servo_OC3(US_BUCKET_STOP); }
@@ -398,6 +403,14 @@ static uint16_t UsToOCrs(uint16_t us)
   return (uint16_t)((us*25u)/10u);
 }
 
+static inline uint16_t ClampArm(uint16_t v)
+{
+  if (v < BUCKET_ARM_MIN_TICKS) return BUCKET_ARM_MIN_TICKS;
+  if (v > BUCKET_ARM_MAX_TICKS) return BUCKET_ARM_MAX_TICKS;
+  return v;
+}
+
 static void Servo_OC3(uint16_t us){ OC3RS=UsToOCrs(us); }
-static void Servo_OC4(uint16_t us){ OC4RS=UsToOCrs(us); }
+//static void Servo_OC4(uint16_t us){ OC4RS=UsToOCrs(us); }
+static void Servo_OC4(uint16_t ticks) {OC1RS = ClampArm(ticks);}
 static void Servo_OC5(uint16_t us){ OC5RS=UsToOCrs(us); }
