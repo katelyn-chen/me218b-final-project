@@ -49,12 +49,13 @@
 ============================================================================*/
 
 /* Grabber (OC1 -> RB4): open/close */
-#define GRAB_OPEN_TICKS        4700u
+// changes travel distance
+#define GRAB_OPEN_TICKS        4700u // tested!!! DONT CHANGE
 #define GRAB_CLOSE_TICKS       1000u
 
 /* Arm (OC4 -> RA4): ready/down */
-#define ARM_UP_TICKS           3300u
-#define ARM_DOWN_TICKS         1540u
+#define ARM_UP_TICKS           1540u
+#define ARM_DOWN_TICKS         3300u
 
 /* Safety clamp for arm motion */
 #define ARM_MIN_TICKS          1400u
