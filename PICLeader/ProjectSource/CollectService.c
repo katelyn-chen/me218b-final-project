@@ -149,6 +149,7 @@ ES_Event_t RunCollectService(ES_Event_t ThisEvent)
   switch (CurState)
   {
     case COLLECT_IDLE:
+
       if ((ThisEvent.EventType == ES_START_BUTTON) ||
           (ThisEvent.EventType == ES_COLLECT_START))
       {
@@ -162,6 +163,11 @@ ES_Event_t RunCollectService(ES_Event_t ThisEvent)
 
         TransitionTo(COLLECT_GO_READY, 0);
       }
+      if (ThisEvent.EventType == ES_BUCKET_READY)
+{
+  SetArm(ARM_UP_TICKS);
+  DB_printf("bucket ready cmd received\r\n");
+}
       break;
 
     case COLLECT_GO_READY:
