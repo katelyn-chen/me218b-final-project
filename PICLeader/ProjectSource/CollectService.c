@@ -58,8 +58,8 @@
 #define ARM_DOWN_TICKS         3400u
 // 1540, 3300 is 90 degree 
 
-#define BUCKET_ARM_DISPENSE_TICKS    3000u // tested!!! DONT CHANGE VALUES
-#define BUCKET_ARM_COLLECT_TICKS     9000u
+#define BUCKET_ARM_DISPENSE_TICKS    3000u 
+#define BUCKET_ARM_COLLECT_TICKS     5000u
 
 /* Safety clamp for arm motion */
 #define ARM_MIN_TICKS          1400u
@@ -115,7 +115,7 @@ static inline uint16_t ClampArm(uint16_t v)
 
 static void SetGrabber(uint16_t ticks) { OC2RS = ticks; }
 static void SetArm(uint16_t ticks)     { OC1RS = ClampArm(ticks); }
-static void SetBucketArm(uint16_t ticks)     { OC4RS = ClampArm(ticks); }
+static void SetBucketArm(uint16_t ticks)     { OC4RS = ticks; }
 /*=========================== HELPERS ============================*/
 static void TransitionTo(CollectState_t next, uint16_t ms);
 static void PostCollectDoneHandshake(void);
