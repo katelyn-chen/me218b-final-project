@@ -127,8 +127,8 @@ static void InitServoPWM(void);
 static uint16_t UsToOCrs(uint16_t us);
 static uint16_t ClampGrabUs(uint16_t us);
 static uint16_t ClampArmUs(uint16_t us);
-static void ServoSet_OC1_us(uint16_t us); /* grabber */
-static void ServoSet_OC4_us(uint16_t us); /* arm */
+static void ServoSet_OC2_us(uint16_t us); /* grabber */
+static void ServoSet_OC1_us(uint16_t us); /* arm */
 
 /*====================== SERVO RAMP ENGINE (SEPARATED) =====================*/
 static volatile uint16_t grab_cur_us = GRAB_NEUTRAL_US;
@@ -155,8 +155,8 @@ static uint16_t StepToward(uint16_t cur, uint16_t tgt, uint16_t stepUs)
 
 static void ServoWriteAll(void)
 {
-  ServoSet_OC1_us(grab_cur_us);
-  ServoSet_OC4_us(arm_cur_us);
+  ServoSet_OC2_us(grab_cur_us);
+  ServoSet_OC1_us(arm_cur_us);
 }
 
 static void ServoRampTo(uint16_t grab_us, uint16_t arm_us)
@@ -457,8 +457,9 @@ static void InitServoPWM(void)
     T2CONbits.ON = 1;
   }
 
-  /* OC1 (grabber) and OC4 (arm) in PWM mode on Timer2 */
+  /* OC2 (grabber) and OC1 (arm) in PWM mode on Timer2 */
   OC1CON = 0; OC1R = 0; OC1RS = 0; OC1CONbits.OCTSEL = 0; OC1CONbits.OCM = 0b110; OC1CONbits.ON = 1;
+  OC2CON = 0; OC2R = 0; OC2RS = 0; OC2CONbits.OCTSEL = 0; OC2CONbits.OCM = 0b110; OC2CONbits.ON = 1;
   OC4CON = 0; OC4R = 0; OC4RS = 0; OC4CONbits.OCTSEL = 0; OC4CONbits.OCM = 0b110; OC4CONbits.ON = 1;
 
   /* PPS + PIN CONFIG */
@@ -466,8 +467,10 @@ static void InitServoPWM(void)
   ANSELBCLR = _ANSELB_ANSB4_MASK;
 #endif
 
-  TRISAbits.TRISA4 = 0;
-  TRISBbits.TRISB4 = 0;
+  TRISAbits.TRISA4 = 0; // bucket rotation
+  TRISBbits.TRISB4 = 0; // grabber arm rotation
+  TRISAbits.TRISA1 = 0; // grabber rack and pinion
+  ANSELAbits.ANSA1 = 0;
 
 #ifndef PPS_FN_PWM
 #define PPS_FN_PWM 0b0101
@@ -475,6 +478,7 @@ static void InitServoPWM(void)
 
   RPA4Rbits.RPA4R = PPS_FN_PWM;  /* OC4 -> RA4 */
   RPB4Rbits.RPB4R = PPS_FN_PWM;  /* OC1 -> RB4 */
+  RPA1Rbits.RPA1R = PPS_FN_PWM; /* OC2 -> RA1 */
 
   ServoInitDone = true;
   DB_printf("Collect PWM init ok (Timer2 %u Hz). Ramp timer uses ES timer %u.\r\n",
@@ -505,5 +509,5 @@ static uint16_t UsToOCrs(uint16_t us)
   return (uint16_t)ticks;
 }
 
-static void ServoSet_OC1_us(uint16_t us) { OC1RS = UsToOCrs(ClampGrabUs(us)); }
-static void ServoSet_OC4_us(uint16_t us) { OC4RS = UsToOCrs(ClampArmUs(us)); }
+static void ServoSet_OC2_us(uint16_t us) { OC2RS = UsToOCrs(ClampGrabUs(us)); }
+static void ServoSet_OC1_us(uint16_t us) { OC1RS = UsToOCrs(ClampArmUs(us)); }

@@ -107,7 +107,7 @@ static void InitServoPWM(void);
 static uint16_t UsToOCrs(uint16_t us);
 
 static void Servo_OC3(uint16_t us); /* bucket bottom */
-static void Servo_OC5(uint16_t us); /* swing arm */
+static void Servo_OC4(uint16_t us); /* swing arm */
 
 /*====================== SWING ARM RAMP ENGINE =====================*/
 static uint16_t SwingCurUs    = US_SWING_READY;
@@ -121,7 +121,7 @@ static void Swing_RampTick(void);
 static void Swing_SetImmediate(uint16_t us)
 {
   SwingCurUs = us;
-  Servo_OC5(us);
+  Servo_OC4(us);
 }
 
 static void Swing_GotoSlow(uint16_t targetUs)
@@ -157,7 +157,7 @@ static void Swing_RampTick(void)
     SwingCurUs = (uint16_t)((int32_t)SwingCurUs + step);
   }
 
-  Servo_OC5(SwingCurUs);
+  Servo_OC4(SwingCurUs);
 
   if (SwingCurUs == SwingTargetUs) {
     SwingRamping = false;
@@ -207,12 +207,6 @@ bool PostDispenseService(ES_Event_t e)
 ES_Event_t RunDispenseService(ES_Event_t ThisEvent)
 {
   ES_Event_t ReturnEvent = { ES_NO_EVENT, 0 };
-
-  /* ramp timer: swing arm slow stepping */
-  if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == BUCKET_RAMP_TIMER)) {
-    Swing_RampTick();
-    return ReturnEvent;
-  }
 
   switch (CurState)
   {
@@ -323,15 +317,15 @@ ES_Event_t RunDispenseService(ES_Event_t ThisEvent)
 static void InitServoPWM(void)
 {
   /* Use Timer2 as shared servo timebase — init ONLY if it is OFF */
-  if (T2CONbits.ON == 0u)
-  {
-    T2CON = 0;
-    T2CONbits.TCS = 0;
-    T2CONbits.TCKPS = SERVO_TIMER_PRESCALE_BITS; /* 1:8 */
-    TMR2 = 0;
-    PR2 = (uint16_t)SERVO_PR2_VALUE;
-    T2CONbits.ON = 1;
-  }
+  // if (T2CONbits.ON == 0u)
+  // {
+  //   T2CON = 0;
+  //   T2CONbits.TCS = 0;
+  //   T2CONbits.TCKPS = SERVO_TIMER_PRESCALE_BITS; /* 1:8 */
+  //   TMR2 = 0;
+  //   PR2 = (uint16_t)SERVO_PR2_VALUE;
+  //   T2CONbits.ON = 1;
+  // }
 
   /* OC3 (bottom) PWM on Timer2 */
   OC3CON = 0; OC3R = 0; OC3RS = 0;
@@ -339,17 +333,15 @@ static void InitServoPWM(void)
   OC3CONbits.OCM = 0b110;    /* PWM */
   OC3CONbits.ON = 1;
 
-  /* OC5 (swing arm) PWM on Timer2 */
+  /* OC5 (lower arm) PWM on Timer2 */
   OC5CON = 0; OC5R = 0; OC5RS = 0;
   OC5CONbits.OCTSEL = 0;     /* Timer2 */
   OC5CONbits.OCM = 0b110;    /* PWM */
   OC5CONbits.ON = 1;
 
-  /* PPS mapping (CHANGE IF YOUR WIRING IS DIFFERENT) */
+  /* PPS mapping */
   TRISBbits.TRISB6  = 0;  /* RB6 output */
   TRISBbits.TRISB10 = 0;  /* RB10 output */
-
-  /* These PPS function codes must match your board/PIC setup */
   RPB6Rbits.RPB6R   = 0b0110; /* OC5 -> RB6 (as your old code) */
   RPB10Rbits.RPB10R = 0b0101; /* OC3 -> RB10 (as your old code) */
 
@@ -367,4 +359,4 @@ static uint16_t UsToOCrs(uint16_t us)
 }
 
 static void Servo_OC3(uint16_t us) { OC3RS = UsToOCrs(us); }
-static void Servo_OC5(uint16_t us) { OC5RS = UsToOCrs(us); }
+static void Servo_OC4(uint16_t us) { OC4RS = UsToOCrs(us); }
