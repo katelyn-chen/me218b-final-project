@@ -379,9 +379,9 @@ static void InitServoPWM(void)
     /* Timer2 as 50Hz timebase for all OC servo outputs */
     T2CON = 0;
     T2CONbits.TCS = 0;
-    T2CONbits.TCKPS = SERVO_TIMER_PRESCALE_BITS;
+    T2CONbits.TCKPS = SERVO_TIMER_PRESCALE_BITS;   /* 1:8 */
     TMR2 = 0;
-    PR2 = (uint16_t)SERVO_PR2_VALUE;
+    PR2 = (uint16_t)SERVO_PR2_VALUE;               /* ~49999 */
 
     T2CONbits.ON = 1;
   }
@@ -403,20 +403,43 @@ static void InitServoPWM(void)
      OC4 -> RA4 (arm)
      OC1 -> RB4 (rotation grab)
   */
-  ANSELAbits.ANSA1 = 0;   /* RA1 digital */
-  ANSELAbits.ANSA4 = 0;   /* RA4 digital (safe) */
-  ANSELBbits.ANSB4 = 0;   /* RB4 digital */
 
+  /* Make pins digital where applicable:
+     - RA1 is typically AN1 on many PIC32MX -> clear ANSA1
+     - RB4 is OC1 pin and is often analog-capable -> clear ANSB4 if it exists as analog
+     - RA4 often is NOT analog, so no ANSEL bit exists (that's why ANSA4 failed)
+  */
+#ifdef _ANSELA_ANSA1_MASK
+  ANSELACLR = _ANSELA_ANSA1_MASK;   /* RA1 digital */
+#endif
+
+#ifdef _ANSELB_ANSB4_MASK
+  ANSELBCLR = _ANSELB_ANSB4_MASK;   /* RB4 digital */
+#endif
+
+  /* TRIS outputs */
   TRISAbits.TRISA1 = 0;
   TRISAbits.TRISA4 = 0;
   TRISBbits.TRISB4 = 0;
 
-  /* OC function code on PPS output select */
-  RPA1Rbits.RPA1R = 0b0101;   /* OC2 -> RA1 */
-  RPA4Rbits.RPA4R = 0b0101;   /* OC4 -> RA4 */
-  RPB4Rbits.RPB4R = 0b0101;   /* OC1 -> RB4 */
+  /* PPS output select: use the same function code you used elsewhere */
+#ifndef PPS_FN_PWM
+#define PPS_FN_PWM 0b0101
+#endif
+
+  /* OC2 -> RA1 */
+  RPA1Rbits.RPA1R = PPS_FN_PWM;
+
+  /* OC4 -> RA4 */
+  RPA4Rbits.RPA4R = PPS_FN_PWM;
+
+  /* OC1 -> RB4 */
+  RPB4Rbits.RPB4R = PPS_FN_PWM;
 
   ServoInitDone = true;
+
+  DB_printf("Collect PWM init: PR2=%u TCKPS=%u OC1/2/4 mapped\r\n",
+            (unsigned)PR2, (unsigned)T2CONbits.TCKPS);
 }
 
 static uint16_t UsToOCrs(uint16_t us)
