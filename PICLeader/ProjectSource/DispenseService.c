@@ -43,7 +43,7 @@
 #define US_PUSH_ARM_DOWN      2000u
 
 /* OC4 : bucket swing arm (collector <-> dispense) */
-#define US_BUCKET_COLLECT     1700u
+#define US_BUCKET_COLLECT     2500u
 #define US_BUCKET_DISPENSE    2000u
 
 /* OC3 : continuous rotation bucket bottom */
@@ -280,7 +280,7 @@ ES_Event_t RunDispenseService(ES_Event_t ThisEvent)
       
       if(ThisEvent.EventType == ES_WAIT_BALL) {
         BucketToCollect(); // move bucket to collect position and stop there
-        ES_Timer_InitTimer(BUCKET_MOVE_TIMER, 500);
+        ES_Timer_InitTimer(BUCKET_MOVE_TIMER, 900);
         DB_printf("bucket moved to collect \n");
       }
       break; 

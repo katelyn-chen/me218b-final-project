@@ -62,7 +62,7 @@
 #define SERVO_TIMER_PRESCALE_VAL    8u
 
 /* 50 Hz: 20ms period */
-#define SERVO_HZ                    50u
+#define SERVO_HZ                    150u
 #define SERVO_PR2_VALUE             ((PBCLK_HZ / (SERVO_TIMER_PRESCALE_VAL * SERVO_HZ)) - 1u)
 
 /* ========= PULSE WIDTHS (TUNE THESE ON ROBOT) =========
