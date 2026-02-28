@@ -96,7 +96,7 @@ static uint8_t MyPriority;
 static CollectState_t CurState = COLLECT_IDLE;
 static uint8_t BallCount = 0u;
 static CollectStatus_t whichCollect;
-
+static bool post = true;
 /*=========================== SERVO HW ============================*/
 static bool ServoInitDone = false;
 
@@ -172,12 +172,20 @@ ES_Event_t RunCollectService(ES_Event_t ThisEvent)
       break;
 
     case COLLECT_ARM_DOWN:
+    {
+        if (BallCount == 1 && post == true) {
+            ES_Event_t BucketLowerEvent;
+            BucketLowerEvent.EventType = ES_WAIT_BALL;
+            PostDispenseService(BucketLowerEvent);
+            DB_printf("posted lower bucket \n");
+            post = false;
+        }
       if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == COLLECT_TIMER))
       {
         TransitionTo(COLLECT_GRAB_CLOSE, 0);
       }
       break;
-
+    }
     case COLLECT_GRAB_CLOSE:
       if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == COLLECT_TIMER))
       {
