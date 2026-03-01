@@ -219,6 +219,13 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
 //                PostSPIFollowerService(cmdEvent);
             }
             
+            if (ThisEvent.EventType == ES_NEW_KEY && ThisEvent.EventParam == '2') {
+                DoTranslate(PackTranslateParam(DUTY_TRANS_HALF, DIR_FWD);
+                cmdEvent.EventParam = CMD_ENCODER_FIRST_FWD;
+                PostSPIFollowerService(cmdEvent);
+                DB_printf("testing translate \r\n");
+            }
+            
             if (ThisEvent.EventType == ES_BEACON_FOUND)
             {
               BeaconId_t id;
