@@ -73,7 +73,7 @@ static void InitServoPWM(void);
 static uint16_t UsToOCrs(uint16_t us);
 
 static void Servo_OC3(uint16_t us); // bucket bottom
-static void Servo_OC4(uint16_t us); // bucket arm
+//static void Servo_OC4(uint16_t us); // bucket arm
 static void Servo_OC5(uint16_t us); // push-down arm
 
 /*====================== ACTION HELPERS =====================*/
@@ -105,8 +105,8 @@ static void RequestCmd(uint8_t cmdByte)
 ======================================================================*/
 
 /* --- MS18-F pulse widths (SPEC) --- */
-#define US_FLAG_MIN           1200u // og 800
-#define US_FLAG_MAX           1800u // og 2100
+#define US_FLAG_MIN           800u // og 800
+#define US_FLAG_MAX           2500u // og 2100
 #define US_FLAG_CENTER        1000u
 
 /* Choose your “blue” and green” endpoints.
@@ -397,5 +397,5 @@ static uint16_t UsToOCrs(uint16_t us)
 }
 
 static void Servo_OC3(uint16_t us){ OC3RS=UsToOCrs(us); }
-static void Servo_OC4(uint16_t us){ OC4RS=UsToOCrs(us); }
+//static void Servo_OC4(uint16_t us){ OC4RS=UsToOCrs(us); }
 static void Servo_OC5(uint16_t us){ OC5RS=UsToOCrs(us); }
