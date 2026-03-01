@@ -209,13 +209,14 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
 //                StartBeaconAlignSearch();
 //                PostBeaconService(startBeaconSearch);
 //                field = FIELD_BLUE;
-                DB_printf("L detected! We are on GREEN field\r\n");
-//                field = FIELD_GREEN;
-//                cmdEvent.EventParam = CMD_SIDE_FOUND_GREEN;
-//                PostSPIFollowerService(cmdEvent);
-                DoRotate(PackRotateParam(ROT_90, ROT_CW));
-                cmdEvent.EventParam = CMD_ENCODER_FIRST_ALIGN;
+                DB_printf("L detected from button press! We are on GREEN field\r\n");
+                field = FIELD_GREEN;
+                cmdEvent.EventParam = CMD_SIDE_FOUND_GREEN;
                 PostSPIFollowerService(cmdEvent);
+                
+//                DoRotate(PackRotateParam(ROT_90, ROT_CW));
+//                cmdEvent.EventParam = CMD_ENCODER_FIRST_ALIGN;
+//                PostSPIFollowerService(cmdEvent);
             }
             
             if (ThisEvent.EventType == ES_BEACON_FOUND)

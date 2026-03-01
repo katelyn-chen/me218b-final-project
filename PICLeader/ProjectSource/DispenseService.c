@@ -39,11 +39,11 @@
 #define T_PUSH_ARM_UP_MS       1500u
 
 /*=========================== SERVO POSITIONS ============================*/
-/* OC5 : push-down arm (RB6 in your PPS) */
-#define US_PUSH_ARM_UP        1200u
-#define US_PUSH_ARM_DOWN      2000u
+/* OC5 : push-down arm (RB6) */
+#define US_PUSH_ARM_UP        2500u
+#define US_PUSH_ARM_DOWN      600u // tuned
 
-/* OC3 : continuous rotation bucket bottom (RB10 on your other code; keep OC3 here) */
+/* OC3 : continuous rotation bucket bottom (RB10) */
 #define US_BUCKET_STOP        1500u
 #define US_BUCKET_ROTATE_CW   1700u
 
@@ -63,7 +63,7 @@ typedef enum {
   DISP_DONE
 } DispState_t;
 
-static DispState_t CurState = DISP_IDLE;
+static DispState_t CurState;
 static uint8_t MyPriority;
 
 /*====================== PWM HELPERS =====================*/
@@ -93,7 +93,7 @@ static void RequestCmd(uint8_t cmdByte)
 }
 
 /*======================================================================
-  FLAG SERVO (RB3) — MS18-F analog positional servo
+  FLAG SERVO (RB3) MS18-F analog positional servo
   Spec highlights:
     - Neutral: 1500us
     - Range: 900..2100us for ~120deg travel (about 120° max)
@@ -105,11 +105,11 @@ static void RequestCmd(uint8_t cmdByte)
 ======================================================================*/
 
 /* --- MS18-F pulse widths (SPEC) --- */
-#define US_FLAG_MIN           900u
-#define US_FLAG_MAX           2100u
-#define US_FLAG_CENTER        1500u
+#define US_FLAG_MIN           1200u // og 800
+#define US_FLAG_MAX           1800u // og 2100
+#define US_FLAG_CENTER        1000u
 
-/* Choose your “blue” and “green” endpoints.
+/* Choose your “blue” and green” endpoints.
    If the flag points the wrong way, swap these two. */
 #define US_FLAG_BLUE          US_FLAG_MAX
 #define US_FLAG_GREEN         US_FLAG_MIN
@@ -172,8 +172,8 @@ static void InitFlagServoRB3(void)
 static void FlagSetPulseUs(uint16_t us)
 {
   /* Clamp to datasheet valid range */
-  if (us < US_FLAG_MIN) us = US_FLAG_MIN;
-  if (us > US_FLAG_MAX) us = US_FLAG_MAX;
+  //if (us < US_FLAG_MIN) us = US_FLAG_MIN;
+  //if (us > US_FLAG_MAX) us = US_FLAG_MAX;
 
   __builtin_disable_interrupts();
   FlagPulseUs = us;
@@ -230,6 +230,7 @@ bool InitDispenseService(uint8_t Priority)
 
   BucketRotateStop();
   PushArmUp();
+  CurState = DISP_IDLE;
 
   ES_Timer_StopTimer(DISPENSE_TIMER);
 
@@ -272,8 +273,10 @@ ES_Event_t RunDispenseService(ES_Event_t ThisEvent)
 
         if (side == FIELD_BLUE) {
           FlagSetPulseUs(US_FLAG_BLUE);
+          DB_printf("set arm to blue \r\n");
         } else if (side == FIELD_GREEN) {
           FlagSetPulseUs(US_FLAG_GREEN);
+          DB_printf("set arm to green \r\n");
         } else {
           FlagSetPulseUs(US_FLAG_CENTER);
         }
@@ -367,30 +370,24 @@ static void InitServoPWM(void)
     T2CONbits.ON = 1;
   }
 
-  #ifdef RPB3Rbits
-  RPB3Rbits.RPB3R = 0;   /* RB3 must stay GPIO */
-#endif
-ANSELBbits.ANSB3 = 0;
-TRISBbits.TRISB3 = 0;
-
+  // flag indicator servo
   ANSELBbits.ANSB3 = 0;
   TRISBbits.TRISB3 = 0;
-
+  TRISBbits.TRISB6 = 0;
+  TRISBbits.TRISB10 = 0;
+  
   /* OC3 bottom */
   OC3CON=0; OC3R=0; OC3RS=0;
-  OC3CONbits.OCTSEL=0; OC3CONbits.OCM=0b110; OC3CONbits.ON=1;
+  OC3CONbits.OCTSEL=0; OC3CONbits.OCM=0b110; 
 
   /* OC5 push-down arm */
   OC5CON=0; OC5R=0; OC5RS=0;
-  OC5CONbits.OCTSEL=0; OC5CONbits.OCM=0b110; OC5CONbits.ON=1;
-
-  /* PPS mapping: keep these consistent with your wiring */
-  TRISBbits.TRISB6 = 0;
-  TRISBbits.TRISB10 = 0;
+  OC5CONbits.OCTSEL=0; OC5CONbits.OCM=0b110; 
 
   RPB6Rbits.RPB6R   = 0b0110; /* OC5 -> RB6 */
   RPB10Rbits.RPB10R = 0b0101; /* OC3 -> RB10 */
-
+  OC3CONbits.ON=1; OC5CONbits.ON=1;
+  
   ServoInitDone = true;
 }
 
