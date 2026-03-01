@@ -52,12 +52,12 @@
 #define SPI_CLK_PERIOD_NS      50000u
 
 /* Pulse values need to be tuned!! */
-#define ROT_90_PULSES           1000
+#define ROT_90_PULSES           35
 #define ROT_180_PULSES          ROT_90_PULSES*2
-#define INIT_ROT_ADJUST         30 
-#define COLLECT_FWD_ALIGN       500 
+#define INIT_ROT_ADJUST         15 
+#define COLLECT_FWD_ALIGN       45 
 #define RIGHT_FULL_ROTATE       60      // tuned! one full wheel rotation
-#define SIDE_INDICATE_FIRST_FWD 60
+#define SIDE_INDICATE_FIRST_FWD 30
 
 
 /*---------------------------- Module Types -------------------------------*/

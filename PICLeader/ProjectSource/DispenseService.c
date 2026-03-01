@@ -108,8 +108,11 @@ static void RequestCmd(uint8_t cmdByte)
 #define FLAG_LAT              LATBbits.LATB3
 #define FLAG_ANSEL            ANSELBbits.ANSB3
 
-#define T4_PRESCALE_BITS      0b11u
+#define T4_PRESCALE_BITS      0b11u // 1:256 prescale
 #define TICKS_FOR_US(us)      ((uint16_t)(((uint32_t)(us) * 25u) / 10u))
+//#define PBCLK 40000000UL
+//#define PRESCALE 256UL
+//#define TICKS_FOR_US(us) ((uint16_t)(((us) * (PBCLK / PRESCALE)) / 1000000UL))
 
 typedef enum { FLAG_PHASE_START = 0, FLAG_PHASE_END = 1 } FlagPhase_t;
 static volatile FlagPhase_t FlagPhase = FLAG_PHASE_START;
@@ -146,6 +149,7 @@ static void InitFlagServoRB3(void)
 
   FlagPhase = FLAG_PHASE_START;
   PR4 = 1;
+//  PR4  = TICKS_FOR_US(1000);
   TMR4 = 0;
 
   T4CONbits.ON = 1;
@@ -165,7 +169,8 @@ static void FlagSetPulseUs(uint16_t us)
 
 void __ISR(_TIMER_4_VECTOR, IPL4SOFT) T4Handler(void)
 {
-  IFS0CLR = _IFS0_T4IF_MASK;
+//  DB_printf("0\r\n");
+    IFS0CLR = _IFS0_T4IF_MASK;
 
   if (FlagPhase == FLAG_PHASE_START)
   {
@@ -238,6 +243,7 @@ ES_Event_t RunDispenseService(ES_Event_t ThisEvent)
       if(ThisEvent.EventType == ES_INDICATE_SIDE)
       {
         Field_t side = (Field_t)ThisEvent.EventParam;
+        DB_printf("Side indicated! Moving flag in dispense. side = %d\r\n", side);
 
         if (side == FIELD_BLUE) {
           FlagSetPulseUs(US_FLAG_BLUE);

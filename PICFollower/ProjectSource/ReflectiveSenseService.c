@@ -30,7 +30,10 @@
 #define OFFCENTER_LEFT_BITFIELD   0b01100 // middle + left
 #define ALL_TAPE_BITFIELD         0b11111
 #define RIGHT_CORNER_BITFIELD     0b00111
+#define RIGHT_CORNER_BITFIELD_4   0b01111
 #define LEFT_CORNER_BITFIELD      0b11100
+#define LEFT_CORNER_BITFIELD_4    0b11110
+
 
 #define TAPE_CONFIRM_COUNT       5
 
@@ -70,7 +73,7 @@ ES_Event_t RunReflectiveSenseService(ES_Event_t ThisEvent)
     }
     case ES_TAPE_CHANGE:
     {
-        //DB_printf("Tape change detected! Sensor bitfield: %d\r\n", ThisEvent.EventParam);
+//        DB_printf("Tape change detected! Sensor bitfield: %d\r\n", ThisEvent.EventParam);
         uint8_t tapeState = (uint8_t)ThisEvent.EventParam;
 //        static uint8_t pendingState = 0;
 //
@@ -89,13 +92,15 @@ ES_Event_t RunReflectiveSenseService(ES_Event_t ThisEvent)
               NewEvent.EventParam = FULL_T;
               DB_printf("all tape detected, full T \n");
               PostNavigateService(NewEvent);
-          } else if (tapeState == RIGHT_CORNER_BITFIELD) {
+          } else if (tapeState == RIGHT_CORNER_BITFIELD || tapeState == RIGHT_CORNER_BITFIELD_4) {
               NewEvent.EventType = ES_T_DETECTED;
               NewEvent.EventParam = RIGHT_CORNER;
+              DB_printf("right corner bitfield detected \n");
               PostNavigateService(NewEvent);
-          } else if (tapeState == LEFT_CORNER_BITFIELD) {
+          } else if (tapeState == LEFT_CORNER_BITFIELD || tapeState == LEFT_CORNER_BITFIELD_4) {
               NewEvent.EventType = ES_T_DETECTED;
               NewEvent.EventParam = LEFT_CORNER;
+              DB_printf("left corner bitfield detected \n");
               PostNavigateService(NewEvent);
           } else if (tapeState == CENTER_BITFIELD) { 
               NewEvent.EventType = ES_TAPE_DETECT;
