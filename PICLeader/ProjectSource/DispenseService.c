@@ -93,29 +93,41 @@ static void RequestCmd(uint8_t cmdByte)
 }
 
 /*======================================================================
-  FLAG SERVO (RB3) — SOFTWARE SERVO OUTPUT (Timer4 ISR)
-  IMPORTANT:
-    - RB3 MUST NOT be PPS-mapped to any OC output.
-    - Flag only changes on ES_INDICATE_SIDE event.
+  FLAG SERVO (RB3) — MS18-F analog positional servo
+  Spec highlights:
+    - Neutral: 1500us
+    - Range: 900..2100us for ~120deg travel (about 120° max)
+    - Direction: CCW as pulse increases (900 -> 2100)  (per datasheet)
+
+  Implementation:
+    - Timer4 ISR generates continuous 50Hz pulses on RB3 as GPIO
+    - ES_INDICATE_SIDE updates the pulse width; servo holds position
 ======================================================================*/
-#define US_FLAG_BLUE          2000u
-#define US_FLAG_GREEN         1000u
+
+/* --- MS18-F pulse widths (SPEC) --- */
+#define US_FLAG_MIN           900u
+#define US_FLAG_MAX           2100u
 #define US_FLAG_CENTER        1500u
 
-#define SERVO_PERIOD_US       20000u
+/* Choose your “blue” and “green” endpoints.
+   If the flag points the wrong way, swap these two. */
+#define US_FLAG_BLUE          US_FLAG_MAX
+#define US_FLAG_GREEN         US_FLAG_MIN
 
+#define FLAG_PERIOD_US        20000u  /* 50Hz */
+
+/* RB3 GPIO */
 #define FLAG_TRIS             TRISBbits.TRISB3
 #define FLAG_LAT              LATBbits.LATB3
 #define FLAG_ANSEL            ANSELBbits.ANSB3
 
-#define T4_PRESCALE_BITS      0b11u // 1:256 prescale
-#define TICKS_FOR_US(us)      ((uint16_t)(((uint32_t)(us) * 25u) / 10u))
-//#define PBCLK 40000000UL
-//#define PRESCALE 256UL
-//#define TICKS_FOR_US(us) ((uint16_t)(((us) * (PBCLK / PRESCALE)) / 1000000UL))
+/* PBCLK=20MHz, Timer4 prescale 1:8 => tick = 0.4us => 2.5 ticks/us */
+#define T4_PRESCALE_BITS      0b11u   /* PIC32: 11 = 1:8 */
+#define TICKS_FROM_US(us)     ((uint16_t)(((uint32_t)(us) * 25u) / 10u)) /* us * 2.5 */
 
-typedef enum { FLAG_PHASE_START = 0, FLAG_PHASE_END = 1 } FlagPhase_t;
-static volatile FlagPhase_t FlagPhase = FLAG_PHASE_START;
+/* ISR state */
+typedef enum { FLAG_PHASE_PULSE = 0, FLAG_PHASE_REST = 1 } FlagPhase_t;
+static volatile FlagPhase_t FlagPhase = FLAG_PHASE_PULSE;
 static volatile uint16_t FlagPulseUs = US_FLAG_CENTER;
 static bool FlagInitDone = false;
 
@@ -126,72 +138,85 @@ static void InitFlagServoRB3(void)
 {
   if (FlagInitDone) return;
 
-  FLAG_ANSEL = 0;
-  FLAG_TRIS  = 0;
-  FLAG_LAT   = 0;
-
+  /* RB3 must be plain GPIO (NOT PPS output) */
 #ifdef RPB3Rbits
-  RPB3Rbits.RPB3R = 0;   /* DETACH PPS from RB3 so GPIO works */
+  RPB3Rbits.RPB3R = 0;        /* detach PPS mapping from RB3 */
 #endif
 
-  INTCONbits.MVEC = 1;
+  FLAG_ANSEL = 0;             /* digital */
+  FLAG_TRIS  = 0;             /* output */
+  FLAG_LAT   = 0;
 
+  /* Timer4 setup */
   T4CON = 0;
-  T4CONbits.TCS   = 0;
+  T4CONbits.TCS   = 0;        /* PBCLK */
   T4CONbits.TCKPS = T4_PRESCALE_BITS;
   TMR4 = 0;
 
+  /* Interrupt priority */
   IPC4bits.T4IP = 4;
   IPC4bits.T4IS = 0;
 
   IFS0CLR = _IFS0_T4IF_MASK;
   IEC0SET = _IEC0_T4IE_MASK;
 
-  FlagPhase = FLAG_PHASE_START;
+  /* Start ISR quickly; it will schedule proper widths */
+  FlagPhase = FLAG_PHASE_PULSE;
   PR4 = 1;
-//  PR4  = TICKS_FOR_US(1000);
   TMR4 = 0;
 
   T4CONbits.ON = 1;
-
   FlagInitDone = true;
 }
 
 static void FlagSetPulseUs(uint16_t us)
 {
-  if (us < 800u)  us = 800u;
-  if (us > 2200u) us = 2200u;
+  /* Clamp to datasheet valid range */
+  if (us < US_FLAG_MIN) us = US_FLAG_MIN;
+  if (us > US_FLAG_MAX) us = US_FLAG_MAX;
 
   __builtin_disable_interrupts();
   FlagPulseUs = us;
   __builtin_enable_interrupts();
 }
 
+/* Timer4 ISR: produces pulse then rest to complete 20ms period */
 void __ISR(_TIMER_4_VECTOR, IPL4SOFT) T4Handler(void)
 {
-//  DB_printf("0\r\n");
-    IFS0CLR = _IFS0_T4IF_MASK;
+  IFS0CLR = _IFS0_T4IF_MASK;
 
-  if (FlagPhase == FLAG_PHASE_START)
+  if (FlagPhase == FLAG_PHASE_PULSE)
   {
-    FLAG_LAT = 1;
-    FlagPhase = FLAG_PHASE_END;
+    FLAG_LAT = 1;                 /* pulse start */
+    FlagPhase = FLAG_PHASE_REST;
 
     TMR4 = 0;
-    PR4  = TICKS_FOR_US(FlagPulseUs);
+    PR4  = TICKS_FROM_US(FlagPulseUs);
   }
   else
   {
-    FLAG_LAT = 0;
-    FlagPhase = FLAG_PHASE_START;
+    FLAG_LAT = 0;                 /* pulse end */
+    FlagPhase = FLAG_PHASE_PULSE;
 
-    uint16_t remainUs = (FlagPulseUs >= SERVO_PERIOD_US) ? 1u
-                      : (uint16_t)(SERVO_PERIOD_US - FlagPulseUs);
+    uint16_t restUs = (FlagPulseUs >= FLAG_PERIOD_US) ? 1u
+                    : (uint16_t)(FLAG_PERIOD_US - FlagPulseUs);
 
     TMR4 = 0;
-    PR4  = TICKS_FOR_US(remainUs);
+    PR4  = TICKS_FROM_US(restUs);
   }
 }
+
+/* ---- In InitDispenseService() add/keep: ----
+    InitFlagServoRB3();
+    FlagSetPulseUs(US_FLAG_CENTER);
+*/
+
+/* ---- In RunDispenseService(), on ES_INDICATE_SIDE: ----
+    if (side == FIELD_BLUE)  FlagSetPulseUs(US_FLAG_BLUE);
+    else if (side == FIELD_GREEN) FlagSetPulseUs(US_FLAG_GREEN);
+    else FlagSetPulseUs(US_FLAG_CENTER);
+*/
+
 
 /*=========================== INIT ============================*/
 bool InitDispenseService(uint8_t Priority)
