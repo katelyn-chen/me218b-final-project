@@ -36,7 +36,7 @@
 
 
 #define TAPE_CONFIRM_COUNT        5
-#define NEXT_T_WAIT               1000        // 1 second
+#define NEXT_T_WAIT               1500        // 1.5 second
 
 /*============================== STATE ==============================*/
 static uint8_t MyPriority;
@@ -52,6 +52,7 @@ bool InitReflectiveSenseService(uint8_t Priority)
   MyPriority = Priority;
   DB_printf("ReflectiveSenseService: init done\r\n");
   ES_Event_t ThisEvent = { ES_INIT, 0 };
+  ES_Timer_StopTimer(LINE_TIMER);
   return ES_PostToService(MyPriority, ThisEvent);
 }
 

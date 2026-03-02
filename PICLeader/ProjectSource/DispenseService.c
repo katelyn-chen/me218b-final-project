@@ -34,7 +34,8 @@
 /*============================== TIMING ==============================*/
 #define T_PUSH_ARM_DOWN_MS     950u
 #define T_BACKUP_DELAY_MS      100u
-#define T_ROTATE_BUCKET_MS     900u
+#define T_ROTATE_BUCKET_90_MS  200u // tuned 90 degree rotation
+#define T_ROTATE_BUCKET_180_MS 400u
 #define T_DISPENSE_WAIT_MS     1200u
 #define T_PUSH_ARM_UP_MS       1500u
 
@@ -44,7 +45,7 @@
 #define US_PUSH_ARM_DOWN      600u // tuned
 
 /* OC3 : continuous rotation bucket bottom (RB10) */
-#define US_BUCKET_STOP        1500u
+#define US_BUCKET_STOP        1400u // tuned
 #define US_BUCKET_ROTATE_CW   1700u
 
 /*============================== TIMER ==============================*/
@@ -65,6 +66,7 @@ typedef enum {
 
 static DispState_t CurState;
 static uint8_t MyPriority;
+static bool FirstDispense = true;
 
 /*====================== PWM HELPERS =====================*/
 static bool ServoInitDone = false;
@@ -253,6 +255,9 @@ ES_Event_t RunDispenseService(ES_Event_t ThisEvent)
     } else {
       FlagSetPulseUs(US_FLAG_CENTER);
     }
+    
+    /*testing push arm*/
+    PushArmDown();
 
     return ReturnEvent; /* swallow event so it doesn't fall into state logic */
   }
@@ -272,16 +277,6 @@ ES_Event_t RunDispenseService(ES_Event_t ThisEvent)
         CurState = DISP_PUSH_ARM_DOWN;
         ES_Timer_InitTimer(DISPENSE_TIMER,T_PUSH_ARM_DOWN_MS);
       }
-
-      if(ThisEvent.EventType == ES_WAIT_BALL)
-      {
-        /* Request bucket/arm to be at ready position via CollectService (OC4 owner) */
-        ES_Event_t e;
-        e.EventType = ES_BUCKET_READY;
-        e.EventParam = 0;
-        PostCollectService(e);
-        DB_printf("requested bucket ready via CollectService\r\n");
-      }
       break;
 
     case DISP_PUSH_ARM_DOWN:
@@ -292,16 +287,22 @@ ES_Event_t RunDispenseService(ES_Event_t ThisEvent)
       }
       break;
 
-    case DISP_BACKUP_DELAY:
+    case DISP_BACKUP_DELAY: // need to test, do we actually need backup delay if the arm's long enough?
       if((ThisEvent.EventType==ES_TIMEOUT) && (ThisEvent.EventParam==DISPENSE_TIMER))
       {
         BucketRotateStart();
+        if (FirstDispense) {
+            ES_Timer_InitTimer(DISPENSE_TIMER,T_ROTATE_BUCKET_90_MS);
+            FirstDispense == false;
+        } else {
+            ES_Timer_InitTimer(DISPENSE_TIMER,T_ROTATE_BUCKET_180_MS);
+            FirstDispense == true;
+        }        
         CurState = DISP_ROTATE_BUCKET;
-        ES_Timer_InitTimer(DISPENSE_TIMER,T_ROTATE_BUCKET_MS);
       }
       break;
 
-    case DISP_ROTATE_BUCKET:
+    case DISP_ROTATE_BUCKET: // opening bucket bottom
       if((ThisEvent.EventType==ES_TIMEOUT) && (ThisEvent.EventParam==DISPENSE_TIMER))
       {
         BucketRotateStop();
@@ -310,7 +311,7 @@ ES_Event_t RunDispenseService(ES_Event_t ThisEvent)
       }
       break;
 
-    case DISP_WAIT_DROP:
+    case DISP_WAIT_DROP: // dropping balls into game bucket
       if((ThisEvent.EventType==ES_TIMEOUT) && (ThisEvent.EventParam==DISPENSE_TIMER))
       {
         PushArmUp();
@@ -323,12 +324,20 @@ ES_Event_t RunDispenseService(ES_Event_t ThisEvent)
       if((ThisEvent.EventType==ES_TIMEOUT) && (ThisEvent.EventParam==DISPENSE_TIMER))
       {
         CurState = DISP_DONE;
+        
+        // close bucket, ready for next collect
+        BucketRotateStart();
+        ES_Timer_InitTimer(DISPENSE_TIMER,T_ROTATE_BUCKET_90_MS); 
       }
       break;
 
     case DISP_DONE:
     {
       DB_printf("Dispense complete\r\n");
+      if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == DISPENSE_TIMER) {
+          BucketRotateStop();
+      }
+
 
 #ifdef CMD_DISPENSE_DONE
       RequestCmd(CMD_DISPENSE_DONE);
