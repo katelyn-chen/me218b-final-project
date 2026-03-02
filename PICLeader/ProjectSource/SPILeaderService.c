@@ -52,7 +52,7 @@
 #define SPI_CLK_PERIOD_NS      50000u
 
 /* Pulse values need to be tuned!! */
-#define ROT_90_PULSES           35
+#define ROT_90_PULSES           20
 #define ROT_180_PULSES          ROT_90_PULSES*2
 #define INIT_ROT_ADJUST         15 
 #define COLLECT_FWD_ALIGN       45 
