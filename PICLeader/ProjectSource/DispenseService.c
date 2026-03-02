@@ -172,8 +172,8 @@ static void InitFlagServoRB3(void)
 static void FlagSetPulseUs(uint16_t us)
 {
   /* Clamp to datasheet valid range */
-  //if (us < US_FLAG_MIN) us = US_FLAG_MIN;
-  //if (us > US_FLAG_MAX) us = US_FLAG_MAX;
+  if (us < US_FLAG_MIN) us = US_FLAG_MIN;
+  if (us > US_FLAG_MAX) us = US_FLAG_MAX;
 
   __builtin_disable_interrupts();
   FlagPulseUs = us;
