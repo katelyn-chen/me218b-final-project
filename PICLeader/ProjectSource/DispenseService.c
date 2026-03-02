@@ -41,7 +41,7 @@
 /*=========================== SERVO POSITIONS ============================*/
 /* OC5 : push-down arm (RB6) */
 #define US_PUSH_ARM_UP        2500u
-#define US_PUSH_ARM_DOWN      600u // tuned
+#define US_PUSH_ARM_DOWN      600u   // tuned
 
 /* OC3 : continuous rotation bucket bottom (RB10) */
 #define US_BUCKET_STOP        1500u
@@ -63,7 +63,7 @@ typedef enum {
   DISP_DONE
 } DispState_t;
 
-static DispState_t CurState;
+static DispState_t CurState = DISP_IDLE;
 static uint8_t MyPriority;
 
 /*====================== PWM HELPERS =====================*/
@@ -73,7 +73,6 @@ static void InitServoPWM(void);
 static uint16_t UsToOCrs(uint16_t us);
 
 static void Servo_OC3(uint16_t us); // bucket bottom
-//static void Servo_OC4(uint16_t us); // bucket arm
 static void Servo_OC5(uint16_t us); // push-down arm
 
 /*====================== ACTION HELPERS =====================*/
@@ -93,24 +92,18 @@ static void RequestCmd(uint8_t cmdByte)
 }
 
 /*======================================================================
-  FLAG SERVO (RB3) MS18-F analog positional servo
-  Spec highlights:
-    - Neutral: 1500us
-    - Range: 900..2100us for ~120deg travel (about 120° max)
-    - Direction: CCW as pulse increases (900 -> 2100)  (per datasheet)
-
-  Implementation:
-    - Timer4 ISR generates continuous 50Hz pulses on RB3 as GPIO
-    - ES_INDICATE_SIDE updates the pulse width; servo holds position
+  FLAG SERVO (RB3) ? positional servo on GPIO using Timer4 ISR
+  - Timer4 ISR generates continuous 50Hz pulses on RB3
+  - ES_INDICATE_SIDE updates pulse width; servo holds position
+  - RB3 MUST be plain GPIO (NOT PPS-mapped)
 ======================================================================*/
 
-/* --- MS18-F pulse widths (SPEC) --- */
-#define US_FLAG_MIN           800u // og 800
-#define US_FLAG_MAX           2500u // og 2100
-#define US_FLAG_CENTER        1000u
+/* (safe default servo range ? tune endpoints after it moves reliably) */
+#define US_FLAG_MIN           900u
+#define US_FLAG_MAX           2100u
+#define US_FLAG_CENTER        1500u
 
-/* Choose your “blue” and green” endpoints.
-   If the flag points the wrong way, swap these two. */
+/* If direction is reversed, swap BLUE/GREEN */
 #define US_FLAG_BLUE          US_FLAG_MAX
 #define US_FLAG_GREEN         US_FLAG_MIN
 
@@ -121,8 +114,8 @@ static void RequestCmd(uint8_t cmdByte)
 #define FLAG_LAT              LATBbits.LATB3
 #define FLAG_ANSEL            ANSELBbits.ANSB3
 
-/* PBCLK=20MHz, Timer4 prescale 1:8 => tick = 0.4us => 2.5 ticks/us */
-#define T4_PRESCALE_BITS      0b11u   /* PIC32: 11 = 1:8 */
+/* PBCLK=20MHz, Timer4 prescale 1:8 => 2.5 ticks/us */
+#define T4_PRESCALE_BITS      0b11u   /* 11 = 1:8 */
 #define TICKS_FROM_US(us)     ((uint16_t)(((uint32_t)(us) * 25u) / 10u)) /* us * 2.5 */
 
 /* ISR state */
@@ -166,14 +159,15 @@ static void InitFlagServoRB3(void)
   TMR4 = 0;
 
   T4CONbits.ON = 1;
+
   FlagInitDone = true;
 }
 
 static void FlagSetPulseUs(uint16_t us)
 {
-  /* Clamp to datasheet valid range */
-  //if (us < US_FLAG_MIN) us = US_FLAG_MIN;
-  //if (us > US_FLAG_MAX) us = US_FLAG_MAX;
+  /* clamp to safe servo range */
+  if (us < US_FLAG_MIN) us = US_FLAG_MIN;
+  if (us > US_FLAG_MAX) us = US_FLAG_MAX;
 
   __builtin_disable_interrupts();
   FlagPulseUs = us;
@@ -206,18 +200,6 @@ void __ISR(_TIMER_4_VECTOR, IPL4SOFT) T4Handler(void)
   }
 }
 
-/* ---- In InitDispenseService() add/keep: ----
-    InitFlagServoRB3();
-    FlagSetPulseUs(US_FLAG_CENTER);
-*/
-
-/* ---- In RunDispenseService(), on ES_INDICATE_SIDE: ----
-    if (side == FIELD_BLUE)  FlagSetPulseUs(US_FLAG_BLUE);
-    else if (side == FIELD_GREEN) FlagSetPulseUs(US_FLAG_GREEN);
-    else FlagSetPulseUs(US_FLAG_CENTER);
-*/
-
-
 /*=========================== INIT ============================*/
 bool InitDispenseService(uint8_t Priority)
 {
@@ -225,35 +207,37 @@ bool InitDispenseService(uint8_t Priority)
 
   if (!ServoInitDone) InitServoPWM();
 
+  /* init flag servo and hold center */
   InitFlagServoRB3();
   FlagSetPulseUs(US_FLAG_CENTER);
 
   BucketRotateStop();
   PushArmUp();
-  CurState = DISP_IDLE;
 
+  CurState = DISP_IDLE;
   ES_Timer_StopTimer(DISPENSE_TIMER);
 
   DB_printf("DispenseService: init done\r\n");
 
   ES_Event_t e = { ES_INIT, 0 };
-  return ES_PostToService(MyPriority,e);
+  return ES_PostToService(MyPriority, e);
 }
 
 bool PostDispenseService(ES_Event_t e)
 {
-  return ES_PostToService(MyPriority,e);
+  return ES_PostToService(MyPriority, e);
 }
 
 /*=========================== STATE MACHINE ============================*/
 ES_Event_t RunDispenseService(ES_Event_t ThisEvent)
 {
-  ES_Event_t ReturnEvent = {ES_NO_EVENT,0};
+  ES_Event_t ReturnEvent = { ES_NO_EVENT, 0 };
 
-  switch(CurState)
+  switch (CurState)
   {
     case DISP_IDLE:
-      if(ThisEvent.EventType == ES_DISPENSE_START)
+
+      if (ThisEvent.EventType == ES_DISPENSE_START)
       {
         DB_printf("Dispense start\r\n");
         PushArmDown();
@@ -263,73 +247,76 @@ ES_Event_t RunDispenseService(ES_Event_t ThisEvent)
 #endif
 
         CurState = DISP_PUSH_ARM_DOWN;
-        ES_Timer_InitTimer(DISPENSE_TIMER,T_PUSH_ARM_DOWN_MS);
+        ES_Timer_InitTimer(DISPENSE_TIMER, T_PUSH_ARM_DOWN_MS);
       }
 
-      if(ThisEvent.EventType == ES_INDICATE_SIDE)
+      /* side detected -> move flag */
+      if (ThisEvent.EventType == ES_INDICATE_SIDE)
       {
         Field_t side = (Field_t)ThisEvent.EventParam;
-        DB_printf("Side indicated! Moving flag in dispense. side = %d\r\n", side);
+        DB_printf("Side indicated! (dispense) side = %d\r\n", side);
 
         if (side == FIELD_BLUE) {
           FlagSetPulseUs(US_FLAG_BLUE);
-          DB_printf("set arm to blue \r\n");
+          DB_printf("flag -> BLUE\r\n");
         } else if (side == FIELD_GREEN) {
           FlagSetPulseUs(US_FLAG_GREEN);
-          DB_printf("set arm to green \r\n");
+          DB_printf("flag -> GREEN\r\n");
         } else {
           FlagSetPulseUs(US_FLAG_CENTER);
+          DB_printf("flag -> CENTER\r\n");
         }
       }
 
-      if(ThisEvent.EventType == ES_WAIT_BALL)
+      /* bucket ready position is owned by CollectService (OC4) */
+      if (ThisEvent.EventType == ES_WAIT_BALL)
       {
-        /* Request bucket/arm to be at ready position via CollectService (OC4 owner) */
         ES_Event_t e;
-        e.EventType = ES_BUCKET_READY;
+        e.EventType  = ES_BUCKET_READY;
         e.EventParam = 0;
         PostCollectService(e);
         DB_printf("requested bucket ready via CollectService\r\n");
       }
+
       break;
 
     case DISP_PUSH_ARM_DOWN:
-      if((ThisEvent.EventType==ES_TIMEOUT) && (ThisEvent.EventParam==DISPENSE_TIMER))
+      if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == DISPENSE_TIMER))
       {
         CurState = DISP_BACKUP_DELAY;
-        ES_Timer_InitTimer(DISPENSE_TIMER,T_BACKUP_DELAY_MS);
+        ES_Timer_InitTimer(DISPENSE_TIMER, T_BACKUP_DELAY_MS);
       }
       break;
 
     case DISP_BACKUP_DELAY:
-      if((ThisEvent.EventType==ES_TIMEOUT) && (ThisEvent.EventParam==DISPENSE_TIMER))
+      if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == DISPENSE_TIMER))
       {
         BucketRotateStart();
         CurState = DISP_ROTATE_BUCKET;
-        ES_Timer_InitTimer(DISPENSE_TIMER,T_ROTATE_BUCKET_MS);
+        ES_Timer_InitTimer(DISPENSE_TIMER, T_ROTATE_BUCKET_MS);
       }
       break;
 
     case DISP_ROTATE_BUCKET:
-      if((ThisEvent.EventType==ES_TIMEOUT) && (ThisEvent.EventParam==DISPENSE_TIMER))
+      if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == DISPENSE_TIMER))
       {
         BucketRotateStop();
         CurState = DISP_WAIT_DROP;
-        ES_Timer_InitTimer(DISPENSE_TIMER,T_DISPENSE_WAIT_MS);
+        ES_Timer_InitTimer(DISPENSE_TIMER, T_DISPENSE_WAIT_MS);
       }
       break;
 
     case DISP_WAIT_DROP:
-      if((ThisEvent.EventType==ES_TIMEOUT) && (ThisEvent.EventParam==DISPENSE_TIMER))
+      if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == DISPENSE_TIMER))
       {
         PushArmUp();
         CurState = DISP_PUSH_ARM_UP;
-        ES_Timer_InitTimer(DISPENSE_TIMER,T_PUSH_ARM_UP_MS);
+        ES_Timer_InitTimer(DISPENSE_TIMER, T_PUSH_ARM_UP_MS);
       }
       break;
 
     case DISP_PUSH_ARM_UP:
-      if((ThisEvent.EventType==ES_TIMEOUT) && (ThisEvent.EventParam==DISPENSE_TIMER))
+      if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == DISPENSE_TIMER))
       {
         CurState = DISP_DONE;
       }
@@ -343,7 +330,7 @@ ES_Event_t RunDispenseService(ES_Event_t ThisEvent)
       RequestCmd(CMD_DISPENSE_DONE);
 #endif
 
-      ES_Event_t done = {ES_DISPENSE_COMPLETE,0};
+      ES_Event_t done = { ES_DISPENSE_COMPLETE, 0 };
       ES_PostAll(done);
 
       CurState = DISP_IDLE;
@@ -361,41 +348,54 @@ ES_Event_t RunDispenseService(ES_Event_t ThisEvent)
 /*=========================== PWM ============================*/
 static void InitServoPWM(void)
 {
+  /* Timer2 as 50Hz timebase (shared) */
   if (T2CONbits.ON == 0u)
   {
     T2CON = 0;
-    T2CONbits.TCKPS = 0b011u;
+    T2CONbits.TCKPS = 0b011u; /* 1:8 */
     TMR2 = 0;
     PR2 = 49999u;
     T2CONbits.ON = 1;
   }
 
-  // flag indicator servo
-  ANSELBbits.ANSB3 = 0;
+  /* make these digital outputs */
+  ANSELBbits.ANSB3 = 0; /* RB3 flag */
   TRISBbits.TRISB3 = 0;
-  TRISBbits.TRISB6 = 0;
-  TRISBbits.TRISB10 = 0;
-  
+
+  TRISBbits.TRISB6  = 0; /* RB6 OC5 */
+  TRISBbits.TRISB10 = 0; /* RB10 OC3 */
+
   /* OC3 bottom */
-  OC3CON=0; OC3R=0; OC3RS=0;
-  OC3CONbits.OCTSEL=0; OC3CONbits.OCM=0b110; 
+  OC3CON = 0; OC3R = 0; OC3RS = 0;
+  OC3CONbits.OCTSEL = 0;
+  OC3CONbits.OCM = 0b110;
+  OC3CONbits.ON = 1;
 
   /* OC5 push-down arm */
-  OC5CON=0; OC5R=0; OC5RS=0;
-  OC5CONbits.OCTSEL=0; OC5CONbits.OCM=0b110; 
+  OC5CON = 0; OC5R = 0; OC5RS = 0;
+  OC5CONbits.OCTSEL = 0;
+  OC5CONbits.OCM = 0b110;
+  OC5CONbits.ON = 1;
 
+  /* PPS mapping: keep these consistent with wiring */
   RPB6Rbits.RPB6R   = 0b0110; /* OC5 -> RB6 */
   RPB10Rbits.RPB10R = 0b0101; /* OC3 -> RB10 */
-  OC3CONbits.ON=1; OC5CONbits.ON=1;
-  
+
+  /* RB3 MUST remain GPIO */
+#ifdef RPB3Rbits
+  RPB3Rbits.RPB3R = 0;
+#endif
+
   ServoInitDone = true;
+
+  DB_printf("Dispense PWM init: PR2=%u\r\n", (unsigned)PR2);
 }
 
 static uint16_t UsToOCrs(uint16_t us)
 {
-  return (uint16_t)((us*25u)/10u);
+  /* 2.5 ticks/us */
+  return (uint16_t)(((uint32_t)us * 25u) / 10u);
 }
 
-static void Servo_OC3(uint16_t us){ OC3RS=UsToOCrs(us); }
-//static void Servo_OC4(uint16_t us){ OC4RS=UsToOCrs(us); }
-static void Servo_OC5(uint16_t us){ OC5RS=UsToOCrs(us); }
+static void Servo_OC3(uint16_t us){ OC3RS = UsToOCrs(us); }
+static void Servo_OC5(uint16_t us){ OC5RS = UsToOCrs(us); }
