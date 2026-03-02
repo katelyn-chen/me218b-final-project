@@ -297,8 +297,10 @@ typedef enum
   ES_CMD_REQ,          // posted to SPIFollower, requests an event to be sent to leader
   /* Events for ReflectiveSenseService */
   ES_TAPE_CHANGE,
-  // event checker
-  ES_LIMIT_TRIGGER
+  // event checker limit switch
+  ES_RIGHT_LIMIT_TRIGGER,
+  ES_LEFT_LIMIT_TRIGGER,
+  ES_BACK_LIMIT_TRIGGER
 }ES_EventType_t; // changed to be event type
 
 /****************************************************************************/

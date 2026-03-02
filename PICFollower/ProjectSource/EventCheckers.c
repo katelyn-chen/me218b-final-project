@@ -191,18 +191,44 @@ bool Check4Tape(void)
 bool Check4LimitSwitchChange(void) {
   // check for either home or end limit switches and post which one and the change
     bool ReturnVal = false;
-    static bool LastLimitState = true;
-    static bool CurrentLimitState = PORTBbits.RB10;
+    static bool LastRightLimitState = true;
+    static bool CurrentRightLimitState = PORTAbits.RA3;
+
+    static bool LastLeftLimitState = true;
+    static bool CurrentLeftLimitState = PORTAbits.RA0;
+
+    static bool LastBackLimitState = true;
+    static bool CurrentBackLimitState = PORTBbits.RB10;
     
-    if (CurrentLimitState != LastLimitState) {
+    if (CurrentRightLimitState != LastRightLimitState) {
         ES_Event_t NewEvent;
-        if (CurrentLimitState == false) { // Button pressed
+        if (CurrentRightLimitState == false) { // Button pressed
             ReturnVal = true;
-            NewEvent.EventType = ES_LIMIT_TRIGGER;
-            DB_printf("Limit Pressed Detected!\r\n");
+            NewEvent.EventType = ES_RIGHT_LIMIT_TRIGGER;
+            DB_printf("Right Limit Pressed Detected!\r\n");
             PostSPIFollowerService(NewEvent);
         }
     } 
-    LastLimitState = CurrentLimitState;
+    if (CurrentLeftLimitState != LastLeftLimitState) {
+        ES_Event_t NewEvent;
+        if (CurrentLeftLimitState == false) { // Button pressed
+            ReturnVal = true;
+            NewEvent.EventType = ES_LEFT_LIMIT_TRIGGER;
+            DB_printf("Left Limit Pressed Detected!\r\n");
+            PostSPIFollowerService(NewEvent);
+        }
+    }
+    if (CurrentBackLimitState != LastBackLimitState) {
+        ES_Event_t NewEvent;
+        if (CurrentBackLimitState == false) { // Button pressed
+            ReturnVal = true;
+            NewEvent.EventType = ES_BACK_LIMIT_TRIGGER;
+            DB_printf("Back Limit Pressed Detected!\r\n");
+            PostSPIFollowerService(NewEvent);
+        }
+    }
+    LastRightLimitState = CurrentRightLimitState;
+    LastLeftLimitState = CurrentLeftLimitState;
+    LastBackLimitState = CurrentBackLimitState; 
     return ReturnVal;
 }
