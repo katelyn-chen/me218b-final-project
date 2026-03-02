@@ -125,12 +125,12 @@ typedef enum {
   OC5_TO_FLAG = 1
 } OC5Route_t;
 
-static OC5Route_t OC5Route = OC5_TO_ARM;
+static OC5Route_t OC5Route = OC5_TO_FLAG;
 
 /* PPS swap helpers */
 static void RouteOC5ToFlagRB3(void)
 {
-  OC5ON = 0;
+  OC5CON = 0;
   /* make RB3 a clean digital output */
   ANSELBbits.ANSB3 = 0;
   TRISBbits.TRISB3 = 0;
@@ -144,7 +144,7 @@ static void RouteOC5ToFlagRB3(void)
 #ifdef RPB3Rbits
   RPB3Rbits.RPB3R = 0b0110;  
 #endif
-  OC5ON = 1;
+  OC5CON = 1;
 
   OC5Route = OC5_TO_FLAG;
   DB_printf("FLAG: OC5 routed to RB3\r\n");
@@ -153,16 +153,23 @@ static void RouteOC5ToFlagRB3(void)
 static void RouteOC5ToArmRB6(void)
 {
   /* detach OC5 from RB3 */
-  OC5CON = 0;
-#ifdef RPB3Rbits
-  RPB3Rbits.RPB3R = 0;
-#endif
+//  OC5CON = 0;
+//#ifdef RPB3Rbits
+//  RPB3Rbits.RPB3R = 0;
+//#endif
+//
+//  /* OC5 -> RB6 (push-down arm pin) */
+//#ifdef RPB6Rbits
+//  RPB6Rbits.RPB6R = 0b0110;   /* OC5 -> RB6 */
+//#endif
+//OC5CON = 1;
+  
+    OC5CON=0; OC5R=0; OC5RS=0;
+  OC5CONbits.OCTSEL=0; OC5CONbits.OCM=0b110;
 
-  /* OC5 -> RB6 (push-down arm pin) */
-#ifdef RPB6Rbits
-  RPB6Rbits.RPB6R = 0b0110;   /* OC5 -> RB6 */
-#endif
-OC5ON = 1;
+  RPB3Rbits.RPB3R   = 0b0000; /* OC5 -> RB3 OFF */
+  RPB6Rbits.RPB6R = 0b0110; /* OC5 -> RB6 ON */
+  OC5CONbits.ON=1;
 
   OC5Route = OC5_TO_ARM;
   DB_printf("FLAG: OC5 routed back to RB6\r\n");
@@ -185,7 +192,7 @@ bool InitDispenseService(uint8_t Priority)
   if (!ServoInitDone) InitServoPWM();
 
   /* default: OC5 routed to arm (RB6) at boot */
-  RouteOC5ToFlagRB3();
+//  RouteOC5ToFlagRB3();
 
   BucketRotateStop();
   PushArmUp();
@@ -208,20 +215,20 @@ bool PostDispenseService(ES_Event_t e)
 ES_Event_t RunDispenseService(ES_Event_t ThisEvent)
 {
   ES_Event_t ReturnEvent = {ES_NO_EVENT,0};
-  //   if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == FLAG_HOLD_TIMER))
-  // {
-  //   /* after holding long enough, give OC5 back to the arm */
-  //   RouteOC5ToArmRB6();
-  //   return ReturnEvent;
-  // }
+     if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == FLAG_HOLD_TIMER))
+   {
+     /* after holding long enough, give OC5 back to the arm */
+     RouteOC5ToArmRB6();
+     DB_printf("Side indicated, returning OC5 to arm");
+     return ReturnEvent;
+   }
   /* your keystroke posts the event to all services (ES_PostAll) and you handle it in every state (you currently don’t). */
     if (ThisEvent.EventType == ES_INDICATE_SIDE)
   {
     Field_t side = (Field_t)ThisEvent.EventParam;
-    DB_printf("Side indicated (global)! Setting flag using OC5 PPS swap. side=%d\r\n", side);
 
     /* route OC5 to RB3 (flag), command pulse, hold briefly */
-    RouteOC5ToFlagRB3();
+//    RouteOC5ToFlagRB3();
 
     if (side == FIELD_BLUE) {
       FlagCommandPulseUs(US_FLAG_BLUE);
@@ -234,8 +241,7 @@ ES_Event_t RunDispenseService(ES_Event_t ThisEvent)
       DB_printf("FLAG -> CENTER\r\n");
     }
 
-    // ES_Timer_InitTimer(FLAG_HOLD_TIMER, T_FLAG_HOLD_MS);
-    RouteOC5ToArmRB6();
+     ES_Timer_InitTimer(FLAG_HOLD_TIMER, T_FLAG_HOLD_MS);
     return ReturnEvent;
   }
 
@@ -357,7 +363,7 @@ static void InitServoPWM(void)
   OC5CON=0; OC5R=0; OC5RS=0;
   OC5CONbits.OCTSEL=0; OC5CONbits.OCM=0b110;
 
-  RPB6Rbits.RPB6R   = 0b0110; /* OC5 -> RB6 */
+  RPB3Rbits.RPB3R   = 0b0110; /* OC5 -> RB3 FLAG */
   RPB10Rbits.RPB10R = 0b0101; /* OC3 -> RB10 */
   OC3CONbits.ON=1; OC5CONbits.ON=1;
 

@@ -126,35 +126,35 @@ bool Check4Keystroke(void)
 
 
 // check if ultrasonic distance has been measured -- potentially switch to service with IC?
-bool Check4Wall(void){
-    bool ReturnVal = false; 
-    bool CurrentEchoState = PIN_ReadDigitalPIC32Pin(UltrasonicEcho); // Read the current state of the Echo pin
-    static bool LastEchoState = 0;
-    static uint8_t TimeAtRise = 0;
-    
-    if (CurrentEchoState != LastEchoState) {
-        if (CurrentEchoState == 1) {
-            // start timer when echo is high (start of pulse)
-            TimeAtRise = ES_Timer_GetTime();
-        } else {
-            // echo low, calculate pulse width and convert to distance
-            uint32_t TimeDelta = ES_Timer_GetTime() - TimeAtRise;
-            
-            // assuming 1 tick = 1 microsecond
-            uint16_t DistanceCM = (uint16_t)(TimeDelta / 58);
-
-            ES_Event_t newEvent;
-            newEvent.EventType = ES_NEW_DIST; 
-            newEvent.EventParam = DistanceCM;
-            
-            ES_PostAll(newEvent);
-            
-            ReturnVal = true;
-        }
-    }
-    LastEchoState = CurrentEchoState;
-    return ReturnVal;
-}
+//bool Check4Wall(void){
+//    bool ReturnVal = false; 
+////    bool CurrentEchoState = PIN_ReadDigitalPIC32Pin(UltrasonicEcho); // Read the current state of the Echo pin
+//    static bool LastEchoState = 0;
+//    static uint8_t TimeAtRise = 0;
+//    
+//    if (CurrentEchoState != LastEchoState) {
+//        if (CurrentEchoState == 1) {
+//            // start timer when echo is high (start of pulse)
+//            TimeAtRise = ES_Timer_GetTime();
+//        } else {
+//            // echo low, calculate pulse width and convert to distance
+//            uint32_t TimeDelta = ES_Timer_GetTime() - TimeAtRise;
+//            
+//            // assuming 1 tick = 1 microsecond
+//            uint16_t DistanceCM = (uint16_t)(TimeDelta / 58);
+//
+//            ES_Event_t newEvent;
+//            newEvent.EventType = ES_NEW_DIST; 
+//            newEvent.EventParam = DistanceCM;
+//            
+//            ES_PostAll(newEvent);
+//            
+//            ReturnVal = true;
+//        }
+//    }
+//    LastEchoState = CurrentEchoState;
+//    return ReturnVal;
+//}
 
 
 /*
@@ -189,16 +189,20 @@ bool Check4Tape(void)
 }
 
 bool Check4LimitSwitchChange(void) {
+//    DB_printf("Test!\r\n");
   // check for either home or end limit switches and post which one and the change
     bool ReturnVal = false;
-    static bool LastRightLimitState = true;
-    static bool CurrentRightLimitState = PORTAbits.RA3;
+    static bool LastRightLimitState = false;
+    static bool CurrentRightLimitState;
+    CurrentRightLimitState = PORTAbits.RA3;
 
-    static bool LastLeftLimitState = true;
-    static bool CurrentLeftLimitState = PORTAbits.RA0;
+    static bool LastLeftLimitState = false;
+    static bool CurrentLeftLimitState;
+    CurrentLeftLimitState = PORTAbits.RA0;
 
-    static bool LastBackLimitState = true;
-    static bool CurrentBackLimitState = PORTBbits.RB10;
+    static bool LastBackLimitState = false;
+    static bool CurrentBackLimitState;
+    CurrentBackLimitState = PORTBbits.RB10;
     
 //    if (CurrentRightLimitState != LastRightLimitState) {
 //        ES_Event_t NewEvent;
@@ -211,7 +215,7 @@ bool Check4LimitSwitchChange(void) {
 //    } 
     if (CurrentLeftLimitState != LastLeftLimitState) {
         ES_Event_t NewEvent;
-        if (CurrentLeftLimitState == false) { // Button pressed
+        if (CurrentLeftLimitState == true) { // Button pressed
             ReturnVal = true;
             NewEvent.EventType = ES_LEFT_LIMIT_TRIGGER;
             DB_printf("Left Limit Pressed Detected!\r\n");
@@ -223,7 +227,7 @@ bool Check4LimitSwitchChange(void) {
 //        if (CurrentBackLimitState == false) { // Button pressed
 //            ReturnVal = true;
 //            NewEvent.EventType = ES_BACK_LIMIT_TRIGGER;
-//            DB_printf("Back Limit Pressed Detected!\r\n");
+//            DB_printf("Back Limit Pressed Detected!\r\n,");
 //            PostNavigateService(NewEvent);
 //        }
 //    }

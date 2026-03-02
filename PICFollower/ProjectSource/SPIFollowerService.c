@@ -204,7 +204,8 @@ static void InitPinHardware(void)
     PIN_MapPinInput(TapeSensor3);
     PIN_MapPinInput(TapeSensor4);
     PIN_MapPinInput(TapeSensor5);
-    PIN_MapPinInput(LimitRight);
+//    PIN_MapPinInput(LimitRight);
+    PIN_MapPinInput(IRFrontSensor);
     PIN_MapPinInput(LimitFrontLeft);
     PIN_MapPinInput(LimitBackRight);
 }
