@@ -346,7 +346,7 @@ typedef enum
 #define TIMER_UNUSED 0
 #define TIMER0_RESP_FUNC PostSPIFollowerService
 #define TIMER1_RESP_FUNC PostNavigateService
-#define TIMER2_RESP_FUNC TIMER_UNUSED
+#define TIMER2_RESP_FUNC PostReflectiveSenseService
 #define TIMER3_RESP_FUNC TIMER_UNUSED
 #define TIMER4_RESP_FUNC TIMER_UNUSED
 #define TIMER5_RESP_FUNC TIMER_UNUSED
@@ -371,6 +371,7 @@ typedef enum
 #define SPI_TIMER 0
 #define MOTOR_TIMER 14
 #define CMD_WAIT_TIMER 1
+#define LINE_TIMER 2
 /*#define SERVICE0_TIMER 15
 #define REFLECT_TIMER 1
 #define BEACON_TIMER 2*/

@@ -35,21 +35,21 @@
 #define LEFT_CORNER_BITFIELD_4    0b11110
 
 
-#define TAPE_CONFIRM_COUNT       5
+#define TAPE_CONFIRM_COUNT        5
+#define NEXT_T_WAIT               1000        // 1 second
 
 /*============================== STATE ==============================*/
 static uint8_t MyPriority;
 static uint8_t lastConfirmedState;
 static uint8_t debounceCounter;
+static uint8_t T_count = 0;
 
 /*====================== PRIVATE FUNCTION PROTOS =====================*/
-static void InitReflectiveHardware(void);
 
 /*=========================== PUBLIC API =============================*/
 bool InitReflectiveSenseService(uint8_t Priority)
 {
   MyPriority = Priority;
-  InitReflectiveHardware();
   DB_printf("ReflectiveSenseService: init done\r\n");
   ES_Event_t ThisEvent = { ES_INIT, 0 };
   return ES_PostToService(MyPriority, ThisEvent);
@@ -75,33 +75,28 @@ ES_Event_t RunReflectiveSenseService(ES_Event_t ThisEvent)
     {
 //        DB_printf("Tape change detected! Sensor bitfield: %d\r\n", ThisEvent.EventParam);
         uint8_t tapeState = (uint8_t)ThisEvent.EventParam;
-//        static uint8_t pendingState = 0;
-//
-//        if (tapeState == pendingState) {
-//            debounceCounter++;
-//        } else {
-//            pendingState = tapeState;
-//            debounceCounter = 1;
-//        }
-//
-//        if (debounceCounter >= TAPE_CONFIRM_COUNT && tapeState != lastConfirmedState) {
-//          lastConfirmedState = tapeState;
           ES_Event_t NewEvent;
-          if (tapeState == ALL_TAPE_BITFIELD) { 
+          if (tapeState == ALL_TAPE_BITFIELD && T_count == 0) { 
               NewEvent.EventType = ES_T_DETECTED;
               NewEvent.EventParam = FULL_T;
               DB_printf("all tape detected, full T \n");
               PostNavigateService(NewEvent);
-          } else if (tapeState == RIGHT_CORNER_BITFIELD || tapeState == RIGHT_CORNER_BITFIELD_4) {
+              T_count++;
+              ES_Timer_InitTimer(LINE_TIMER, NEXT_T_WAIT);
+          } else if ((tapeState == RIGHT_CORNER_BITFIELD || tapeState == RIGHT_CORNER_BITFIELD_4) && T_count == 0) {
               NewEvent.EventType = ES_T_DETECTED;
               NewEvent.EventParam = RIGHT_CORNER;
               DB_printf("right corner bitfield detected \n");
               PostNavigateService(NewEvent);
-          } else if (tapeState == LEFT_CORNER_BITFIELD || tapeState == LEFT_CORNER_BITFIELD_4) {
+              T_count++;
+              ES_Timer_InitTimer(LINE_TIMER, NEXT_T_WAIT);
+          } else if ((tapeState == LEFT_CORNER_BITFIELD || tapeState == LEFT_CORNER_BITFIELD_4) && T_count == 0) {
               NewEvent.EventType = ES_T_DETECTED;
               NewEvent.EventParam = LEFT_CORNER;
               DB_printf("left corner bitfield detected \n");
               PostNavigateService(NewEvent);
+              T_count++;
+              ES_Timer_InitTimer(LINE_TIMER, NEXT_T_WAIT);
           } else if (tapeState == CENTER_BITFIELD) { 
               NewEvent.EventType = ES_TAPE_DETECT;
               NewEvent.EventParam = TAPE_CENTERED; 
@@ -120,18 +115,18 @@ ES_Event_t RunReflectiveSenseService(ES_Event_t ThisEvent)
               NewEvent.EventParam = NO_TAPE;
               PostNavigateService(NewEvent);
           }
-//      }
+          
       break;
+    }
+    case ES_TIMEOUT:
+    {
+        if (ThisEvent.EventParam == LINE_TIMER) {
+            DB_printf("Line timer timeout, resetting T count \n");
+            T_count = 0;
+            ES_Timer_StopTimer(LINE_TIMER);
+        }
+        break;
     }
   }
   return ReturnEvent;
-}
-
-static void InitReflectiveHardware(void)
-{
-    PIN_MapPinInput(TapeSensor1);
-    PIN_MapPinInput(TapeSensor2);
-    PIN_MapPinInput(TapeSensor3);
-    PIN_MapPinInput(TapeSensor4);
-    PIN_MapPinInput(TapeSensor5);
 }
