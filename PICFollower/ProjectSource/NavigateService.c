@@ -48,6 +48,8 @@
 #define ROTATE_45_TIME_MS         550u
 #define ROTATE_90_TIME_MS         1100u
 #define ROTATE_FIRST_COLLECT_MS   400u
+#define VEER_AWAY_FROM_WALL       1000u
+
 
 #ifndef MOTOR_TIMER
 #define MOTOR_TIMER               14u
@@ -203,6 +205,44 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
 
         case ORIENT_BEACON_SWEEP:
         {
+            if (ThisEvent.EventType == ES_LEFT_LIMIT_TRIGGER) {
+                if (PORTAbits.RA3) {
+                    DB_printf("The front left limit switch was hit but no wall detected in front! veering fwd and right\r\n");
+                    SetMotor1(DUTY_TRANS_HALF*0.75);
+                    SetMotor2(DUTY_TRANS_HALF);
+                    ES_Timer_InitTimer(MOTOR_TIMER, VEER_AWAY_FROM_WALL);
+                
+                } else {
+                    /* Hit front left limit switch*/
+                    DB_printf("The front left limit switch was hit and a wall was detected in front! veering fwd and right\r\n");
+                    SetMotor1(-DUTY_TRANS_HALF*0.75);
+                    SetMotor2(-DUTY_TRANS_HALF);
+                    ES_Timer_InitTimer(MOTOR_TIMER, VEER_AWAY_FROM_WALL);
+                }
+                        
+                
+            }
+            
+            if (ThisEvent.EventType == ES_RIGHT_LIMIT_TRIGGER) {
+                if (PORTAbits.RA3) {
+                    DB_printf("The front left limit switch was hit but no wall detected in front! veering fwd and left\r\n");
+                    SetMotor1(DUTY_TRANS_HALF);
+                    SetMotor2(DUTY_TRANS_HALF*0.75);
+                    ES_Timer_InitTimer(MOTOR_TIMER, VEER_AWAY_FROM_WALL);
+                
+                } else {
+                    /* Hit front left limit switch*/
+                    DB_printf("The front left limit switch was hit and a wall was detected in front! veering fwd and right\r\n");
+                    SetMotor1(-DUTY_TRANS_HALF);
+                    SetMotor2(-DUTY_TRANS_HALF*0.75);
+                    ES_Timer_InitTimer(MOTOR_TIMER, VEER_AWAY_FROM_WALL);
+                }
+            }
+            
+            if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == MOTOR_TIMER) {
+                StartBeaconAlignSearch();
+                PostBeaconService(startBeaconSearch);
+            }
             if (ThisEvent.EventType == ES_NEW_KEY && ThisEvent.EventParam == '1') {
                 orientState = ORIENT_DONE;
                 DB_printf("Moving to orient done state because key pressed\r\n");
@@ -532,6 +572,7 @@ static void StopMotors(void)
 }
 
 static void SetMotor1(int16_t dutySignedPercent)
+//  right motor
 {
   uint16_t mag = (dutySignedPercent < 0) ? (uint16_t)(-dutySignedPercent) : (uint16_t)dutySignedPercent;
   uint16_t ocrs = DutyPercentToOCrs(mag);

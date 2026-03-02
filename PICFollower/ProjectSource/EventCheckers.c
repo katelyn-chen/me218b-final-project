@@ -200,33 +200,33 @@ bool Check4LimitSwitchChange(void) {
     static bool LastBackLimitState = true;
     static bool CurrentBackLimitState = PORTBbits.RB10;
     
-    if (CurrentRightLimitState != LastRightLimitState) {
-        ES_Event_t NewEvent;
-        if (CurrentRightLimitState == false) { // Button pressed
-            ReturnVal = true;
-            NewEvent.EventType = ES_RIGHT_LIMIT_TRIGGER;
-            DB_printf("Right Limit Pressed Detected!\r\n");
-            PostSPIFollowerService(NewEvent);
-        }
-    } 
+//    if (CurrentRightLimitState != LastRightLimitState) {
+//        ES_Event_t NewEvent;
+//        if (CurrentRightLimitState == false) { // Button pressed
+//            ReturnVal = true;
+//            NewEvent.EventType = ES_RIGHT_LIMIT_TRIGGER;
+//            DB_printf("Right Limit Pressed Detected!\r\n");
+//            PostNavigateService(NewEvent);
+//        }
+//    } 
     if (CurrentLeftLimitState != LastLeftLimitState) {
         ES_Event_t NewEvent;
         if (CurrentLeftLimitState == false) { // Button pressed
             ReturnVal = true;
             NewEvent.EventType = ES_LEFT_LIMIT_TRIGGER;
             DB_printf("Left Limit Pressed Detected!\r\n");
-            PostSPIFollowerService(NewEvent);
+            PostNavigateService(NewEvent);
         }
     }
-    if (CurrentBackLimitState != LastBackLimitState) {
-        ES_Event_t NewEvent;
-        if (CurrentBackLimitState == false) { // Button pressed
-            ReturnVal = true;
-            NewEvent.EventType = ES_BACK_LIMIT_TRIGGER;
-            DB_printf("Back Limit Pressed Detected!\r\n");
-            PostSPIFollowerService(NewEvent);
-        }
-    }
+//    if (CurrentBackLimitState != LastBackLimitState) {
+//        ES_Event_t NewEvent;
+//        if (CurrentBackLimitState == false) { // Button pressed
+//            ReturnVal = true;
+//            NewEvent.EventType = ES_BACK_LIMIT_TRIGGER;
+//            DB_printf("Back Limit Pressed Detected!\r\n");
+//            PostNavigateService(NewEvent);
+//        }
+//    }
     LastRightLimitState = CurrentRightLimitState;
     LastLeftLimitState = CurrentLeftLimitState;
     LastBackLimitState = CurrentBackLimitState; 

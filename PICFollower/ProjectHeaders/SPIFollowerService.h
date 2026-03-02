@@ -21,9 +21,9 @@ ES_Event_t RunSPIFollowerService(ES_Event_t ThisEvent);
 #define TapeSensor3  SPI_RPB11
 #define TapeSensor4 SPI_RPB12
 #define TapeSensor5 SPI_RPB13
-#define LimitRight SPI_RPA3
-#define LimitLeft SPI_RPA0
-#define LimitBack SPI_RPB10
+#define IRFrontSensor SPI_RPA3
+#define LimitFrontLeft SPI_RPA0
+#define LimitBackRight SPI_RPB10
 
 #define SDIPin SPI_RPB8
 #define SDOPin SPI_RPA4

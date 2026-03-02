@@ -205,8 +205,8 @@ static void InitPinHardware(void)
     PIN_MapPinInput(TapeSensor4);
     PIN_MapPinInput(TapeSensor5);
     PIN_MapPinInput(LimitRight);
-    PIN_MapPinInput(LimitLeft);
-    PIN_MapPinInput(LimitBack);
+    PIN_MapPinInput(LimitFrontLeft);
+    PIN_MapPinInput(LimitBackRight);
 }
 
 /*======================= COMMAND -> EVENT MAP =======================*/
