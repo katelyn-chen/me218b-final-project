@@ -117,12 +117,35 @@ bool Check4Lock(void)
 ****************************************************************************/
 bool Check4Keystroke(void)
 {
-  if (IsNewKeyReady())   // new key waiting?
+  if (IsNewKeyReady())
   {
-    ES_Event_t ThisEvent;
-    ThisEvent.EventType   = ES_NEW_KEY;
-    ThisEvent.EventParam  = GetNewKey();
-    ES_PostAll(ThisEvent);
+    char key = GetNewKey();
+
+    /* keep posting ES_NEW_KEY so your old debug behaviors still work */
+    ES_Event_t k;
+    k.EventType  = ES_NEW_KEY;
+    k.EventParam = (uint16_t)key;
+    ES_PostAll(k);
+
+    /* NEW: convert keypress into side indication event */
+    if (key == '1') {
+      ES_Event_t sideEvt;
+      sideEvt.EventType  = ES_INDICATE_SIDE;
+      sideEvt.EventParam = FIELD_GREEN;
+      ES_PostAll(sideEvt);
+      DB_printf("KEY 1 -> ES_INDICATE_SIDE GREEN\r\n");
+      return true;
+    }
+
+    if (key == '2') {
+      ES_Event_t sideEvt;
+      sideEvt.EventType  = ES_INDICATE_SIDE;
+      sideEvt.EventParam = FIELD_BLUE;
+      ES_PostAll(sideEvt);
+      DB_printf("KEY 2 -> ES_INDICATE_SIDE BLUE\r\n");
+      return true;
+    }
+
     return true;
   }
   return false;
