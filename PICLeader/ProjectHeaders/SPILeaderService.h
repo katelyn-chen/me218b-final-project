@@ -10,6 +10,7 @@
 
 /*----------------------------- DEFINING PINS FOR EVENT CHECKERS -----------------------------*/
 #define InitButton  SPI_RPA2
+#define ProgressLED SPI_RPA3
 
 /*----------------------------- TypeDefs For Use Elsewhere -----------------------------*/
 /*
@@ -96,7 +97,8 @@ static inline void UnpackRotateParam(uint16_t p, RotAngle_t *ang, RotDir_t *dir)
 #define CMD_MOVE_DONE             0x22
 #define CMD_ALIGN_COLLECT         0x23
 #define CMD_ENCODER_FIRST_FWD     0x24
-
+#define CMD_COLLECT_BACK          0x25
+#define CMD_COLLECT_FWD           0x26
 
 #define CMD_END_GAME              0x99
 #define CMD_QUERY                 0xAA
@@ -114,5 +116,7 @@ static inline void UnpackRotateParam(uint16_t p, RotAngle_t *ang, RotDir_t *dir)
 #define CMD_OTHER_COLLECT_DONE    0x37
 #define CMD_SECOND_COLLECT_START  0x38
 #define CMD_OTHER_COLLECT_START   0x39
+#define CMD_FIRST_COLLECT_ARM_UP  0x40
+#define CMD_FIRST_COLLECT_GRAB    0x41
 
 #endif /* SPI_LEADER_SERVICE_H */

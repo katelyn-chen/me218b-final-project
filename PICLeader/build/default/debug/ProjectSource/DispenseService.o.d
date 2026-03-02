@@ -7,8 +7,8 @@ build/default/debug/ProjectSource/DispenseService.o: \
  FrameworkHeaders/bitdefs.h FrameworkHeaders/Bin_Const.h \
  FrameworkHeaders/terminal.h FrameworkHeaders/ES_Events.h \
  FrameworkHeaders/ES_PostList.h FrameworkHeaders/ES_General.h \
- FrameworkHeaders/ES_Timers.h FrameworkHeaders/ES_Timers.h \
- FrameworkHeaders/dbprintf.h
+ FrameworkHeaders/ES_Timers.h ProjectHeaders/CollectService.h \
+ FrameworkHeaders/ES_Timers.h FrameworkHeaders/dbprintf.h
 
 ProjectHeaders/DispenseService.h:
 
@@ -41,6 +41,8 @@ FrameworkHeaders/ES_PostList.h:
 FrameworkHeaders/ES_General.h:
 
 FrameworkHeaders/ES_Timers.h:
+
+ProjectHeaders/CollectService.h:
 
 FrameworkHeaders/ES_Timers.h:
 

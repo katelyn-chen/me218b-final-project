@@ -107,12 +107,10 @@ static void RequestCmd(uint8_t cmdByte)
 ======================================================================*/
 
 /* --- MS18-F pulse widths (SPEC) --- */
-#define US_FLAG_MIN           1200u // og 800
-#define US_FLAG_MAX           1800u // og 2100
-#define US_FLAG_CENTER        1000u
+#define US_FLAG_MIN           600 //1200u // og 800
+#define US_FLAG_MAX           2500 //1800u // og 2100
+#define US_FLAG_CENTER        1500u
 
-/* Choose your “blue” and green” endpoints.
-   If the flag points the wrong way, swap these two. */
 #define US_FLAG_BLUE          US_FLAG_MAX
 #define US_FLAG_GREEN         US_FLAG_MIN
 
@@ -140,10 +138,8 @@ static void InitFlagServoRB3(void)
 {
   if (FlagInitDone) return;
 
-  /* RB3 must be plain GPIO (NOT PPS output) */
-#ifdef RPB3Rbits
-  RPB3Rbits.RPB3R = 0;        /* detach PPS mapping from RB3 */
-#endif
+
+  RPB3Rbits.RPB3R = 0b0000;        /* detach PPS mapping from RB3 */
 
   FLAG_ANSEL = 0;             /* digital */
   FLAG_TRIS  = 0;             /* output */
@@ -255,9 +251,6 @@ ES_Event_t RunDispenseService(ES_Event_t ThisEvent)
     } else {
       FlagSetPulseUs(US_FLAG_CENTER);
     }
-    
-    /*testing push arm*/
-    PushArmDown();
 
     return ReturnEvent; /* swallow event so it doesn't fall into state logic */
   }

@@ -78,6 +78,12 @@ typedef enum {
 } InitOrientState_t;
 
 typedef enum {
+  COLLECT_BACK,
+  COLLECT_FWD,
+  COLLECT_START
+} InitCollectState_t;
+
+typedef enum {
     FIRST,
     MIDDLE,
     END
@@ -98,6 +104,7 @@ typedef enum {
 static uint8_t             MyPriority;
 static NavigateState_t     curState;
 static InitOrientState_t   orientState;
+static InitCollectState_t  collectState;
 static Field_t             field = FIELD_UNKNOWN;
 static uint16_t            duty = DUTY_STOP;
 
@@ -266,6 +273,15 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
                 DB_printf("testing translate \r\n");
             }
             
+            if (ThisEvent.EventType == ES_NEW_KEY && ThisEvent.EventParam == '3') {
+                DB_printf("Jumping into collect sequence! \r\n");
+                cmdEvent.EventParam = CMD_ALIGN_COLLECT;
+                PostSPIFollowerService(cmdEvent);
+                DoTranslate(PackTranslateParam(TRANS_HALF, DIR_FWD));
+                curState = COLLECT_ALIGN;
+                collectState = COLLECT_START;
+            }
+            
             if (ThisEvent.EventType == ES_BEACON_FOUND)
             {
               BeaconId_t id;
@@ -413,17 +429,47 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         PostSPIFollowerService(cmdEvent);
         DoTranslate(PackTranslateParam(TRANS_HALF, DIR_FWD));
         curState = COLLECT_ALIGN;
+        collectState = COLLECT_START;
       }
       break;
     }
 
     case COLLECT_ALIGN:
     {
-      if (ThisEvent.EventType == ES_MOVE_DONE) {
-        StopMotors();
-        //cmdEvent.EventParam = CMD_FIRST_COLLECT_START;
-        //PostSPIFollowerService(cmdEvent);
-      }
+        if (ThisEvent.EventType == ES_COLLECT_BACK) {
+            cmdEvent.EventParam = CMD_COLLECT_BACK;
+            PostSPIFollowerService(cmdEvent);
+            DoTranslate(PackTranslateParam(TRANS_HALF, DIR_REV));
+            collectState = COLLECT_BACK;
+        }
+        if (ThisEvent.EventType == ES_COLLECT_FWD) {
+            cmdEvent.EventParam = CMD_COLLECT_FWD;
+            PostSPIFollowerService(cmdEvent);
+            DoTranslate(PackTranslateParam(TRANS_HALF, DIR_FWD));
+            collectState = COLLECT_FWD;
+        }
+            
+        if (ThisEvent.EventType == ES_MOVE_DONE) {
+            StopMotors();
+            switch (collectState) {
+                case COLLECT_START:
+                  DB_printf("Nav service telling collect service to stop\r\n");
+                  cmdEvent.EventParam = CMD_FIRST_COLLECT_START;
+                  PostSPIFollowerService(cmdEvent);
+                  break;
+                
+                case COLLECT_BACK:
+                    cmdEvent.EventParam = CMD_FIRST_COLLECT_ARM_UP;
+                    PostSPIFollowerService(cmdEvent);
+                    break;
+                    
+                case COLLECT_FWD:
+                    cmdEvent.EventParam = CMD_FIRST_COLLECT_GRAB;
+                    PostSPIFollowerService(cmdEvent);
+                    break;
+                }
+        }  
+           
       if (ThisEvent.EventType == ES_FIND_BUCKET)
       {
         if (ThisEvent.EventParam == FIRST_COLLECT) {

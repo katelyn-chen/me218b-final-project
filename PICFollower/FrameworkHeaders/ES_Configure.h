@@ -295,6 +295,8 @@ typedef enum
   ES_ALIGN_ULTRASONICS,
   ES_ULTRASONIC_DETECTED,
   ES_CMD_REQ,          // posted to SPIFollower, requests an event to be sent to leader
+  ES_COLLECT_BACK,
+  ES_COLLECT_FWD,
   /* Events for ReflectiveSenseService */
   ES_TAPE_CHANGE,
   // event checker limit switch
@@ -335,7 +337,7 @@ typedef enum
 
 /****************************************************************************/
 // This is the list of event checking functions
-#define EVENT_CHECK_LIST Check4Keystroke, Check4Tape //, Check4LimitSwitchChange
+#define EVENT_CHECK_LIST Check4Keystroke, Check4Tape, Check4LimitSwitchChange
 
 /****************************************************************************/
 // These are the definitions for the post functions to be executed when the

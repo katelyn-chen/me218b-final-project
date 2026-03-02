@@ -162,9 +162,9 @@ bool Check4Button(void)
       ES_Event_t NewEvent;
 
       /* start collect */
-      NewEvent.EventType = ES_COLLECT_START;
-      NewEvent.EventParam = 0;
-      PostCollectService(NewEvent);
+//      NewEvent.EventType = ES_COLLECT_START;
+//      NewEvent.EventParam = 0;
+//      PostCollectService(NewEvent);
 
       /* broadcast start to everyone (instead of only InitService) */
       ES_Event_t StartEvent;

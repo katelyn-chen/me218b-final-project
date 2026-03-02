@@ -58,7 +58,8 @@
 #define COLLECT_FWD_ALIGN       45 
 #define RIGHT_FULL_ROTATE       60      // tuned! one full wheel rotation
 #define SIDE_INDICATE_FIRST_FWD 30
-
+#define COLLECT_NUDGE_FWD       20
+#define COLLECT_NUDGE_BACK      20
 
 /*---------------------------- Module Types -------------------------------*/
 typedef enum {
@@ -283,6 +284,11 @@ static bool IsKnownFollowerStatus(uint8_t cmd)
     case CMD_OTHER_COLLECT_START:
     case CMD_DISPENSE_START:
     case CMD_ENCODER_FIRST_FWD:
+    case CMD_COLLECT_BACK:
+    case CMD_COLLECT_FWD:
+    case CMD_FIRST_COLLECT_ARM_UP:
+    case CMD_FIRST_COLLECT_GRAB:
+    case CMD_ALIGN_COLLECT:
       return true;
 
     default:
@@ -402,8 +408,33 @@ static void HandleFollowerStatus(uint8_t statusByte)
         cmdEvent.EventParam = SIDE_INDICATE_FIRST_FWD;
         PostEncoderService(cmdEvent);
         break;
+    
+    case CMD_COLLECT_FWD:
+        DB_printf("Nudging forward to dispenser \r\n");
+        cmdEvent.EventType = ES_ENCODER_TARGET_STRAIGHT;
+        cmdEvent.EventParam = COLLECT_NUDGE_FWD;
+        PostEncoderService(cmdEvent);
+        break;
         
+    case CMD_COLLECT_BACK:
+        DB_printf("Nudging backward from dispenser \r\n");
+        cmdEvent.EventType = ES_ENCODER_TARGET_STRAIGHT;
+        cmdEvent.EventParam = COLLECT_NUDGE_BACK;
+        PostEncoderService(cmdEvent);
+        break;    
+        
+        
+    case CMD_FIRST_COLLECT_ARM_UP:
+        DB_printf("Telling collect service to move arm up\r\n");
+        cmdEvent.EventType = ES_COLLECT_BACK_DONE;
+        PostCollectService(cmdEvent);
+        break;
           
+      case CMD_FIRST_COLLECT_GRAB:
+        DB_printf("Telling collect service to start grabbing again\r\n");
+        cmdEvent.EventType = ES_COLLECT_FWD_DONE;
+        PostCollectService(cmdEvent);
+        break;
 
 
     default:
@@ -415,4 +446,6 @@ static void InitPinHardware(void)
 {
   /* Capacitive Touch Sensor: RA2, Pin 9 */
   PIN_MapPinInput(InitButton);
+  PIN_MapPinOutput(ProgressLED);
+  LATAbits.LATA3 = 0; // progress LED off
 }

@@ -594,6 +594,8 @@ bool SPIOperate_HasSS2_Risen(void);
 
 ****************************************************************************/
 bool PIN_MapPinInput(SPI_PinMap_t WhichPin);
+bool PIN_MapPinOutput(SPI_PinMap_t WhichPin);
+
 
 SPI_ReadPinState_t PIN_ReadDigitalPIC32Pin(SPI_PinMap_t WhichPin);
 

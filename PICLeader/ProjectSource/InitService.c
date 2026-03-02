@@ -146,6 +146,7 @@ ES_Event_t RunInitService(ES_Event_t ThisEvent)
 
     case GAME_MODE:
       if (ThisEvent.EventType == ES_INIT_GAME) {
+        LATAbits.LATA3 = 1;
         SecondsElapsed = 0;  // reset counter
         ES_Timer_InitTimer(GAME_TIMER, GAME_TIME_MS); // start game timer
       }
@@ -158,6 +159,7 @@ ES_Event_t RunInitService(ES_Event_t ThisEvent)
           curState = IDLE;
           ES_Event_t GameOver;
           GameOver.EventType = ES_ENTER_IDLE;
+          LATAbits.LATA3 = 0;
           PostInitService(GameOver);
         } else {
           ES_Timer_InitTimer(GAME_TIMER, GAME_TIME_MS); // restart 1 second timer

@@ -192,47 +192,34 @@ bool Check4LimitSwitchChange(void) {
 //    DB_printf("Test!\r\n");
   // check for either home or end limit switches and post which one and the change
     bool ReturnVal = false;
-    static bool LastRightLimitState = false;
-    static bool CurrentRightLimitState;
-    CurrentRightLimitState = PORTAbits.RA3;
 
-    static bool LastLeftLimitState = false;
-    static bool CurrentLeftLimitState;
-    CurrentLeftLimitState = PORTAbits.RA0;
+    static bool LastFrontLeftLimitState = false;
+    static bool CurrentFrontLeftLimitState;
+    CurrentFrontLeftLimitState = PORTAbits.RA0;
 
-    static bool LastBackLimitState = false;
-    static bool CurrentBackLimitState;
-    CurrentBackLimitState = PORTBbits.RB10;
-    
-//    if (CurrentRightLimitState != LastRightLimitState) {
-//        ES_Event_t NewEvent;
-//        if (CurrentRightLimitState == false) { // Button pressed
-//            ReturnVal = true;
-//            NewEvent.EventType = ES_RIGHT_LIMIT_TRIGGER;
-//            DB_printf("Right Limit Pressed Detected!\r\n");
-//            PostNavigateService(NewEvent);
-//        }
-//    } 
-    if (CurrentLeftLimitState != LastLeftLimitState) {
+    static bool LastBackRightLimitState = false;
+    static bool CurrentBackRightLimitState;
+    CurrentBackRightLimitState = PORTBbits.RB10;
+
+    if (CurrentFrontLeftLimitState != LastFrontLeftLimitState) {
         ES_Event_t NewEvent;
-        if (CurrentLeftLimitState == true) { // Button pressed
+        if (CurrentFrontLeftLimitState == true) { // Button pressed
             ReturnVal = true;
             NewEvent.EventType = ES_LEFT_LIMIT_TRIGGER;
             DB_printf("Left Limit Pressed Detected!\r\n");
             PostNavigateService(NewEvent);
         }
     }
-//    if (CurrentBackLimitState != LastBackLimitState) {
-//        ES_Event_t NewEvent;
-//        if (CurrentBackLimitState == false) { // Button pressed
-//            ReturnVal = true;
-//            NewEvent.EventType = ES_BACK_LIMIT_TRIGGER;
-//            DB_printf("Back Limit Pressed Detected!\r\n,");
-//            PostNavigateService(NewEvent);
-//        }
-//    }
-    LastRightLimitState = CurrentRightLimitState;
-    LastLeftLimitState = CurrentLeftLimitState;
-    LastBackLimitState = CurrentBackLimitState; 
+    if (CurrentBackRightLimitState != LastBackRightLimitState) {
+        ES_Event_t NewEvent;
+        if (CurrentBackRightLimitState == true) { // Button pressed
+            ReturnVal = true;
+            NewEvent.EventType = ES_BACK_LIMIT_TRIGGER;
+            DB_printf("Back Limit Pressed Detected!\r\n");
+            PostNavigateService(NewEvent);
+        }
+    }
+    LastFrontLeftLimitState = CurrentFrontLeftLimitState;
+    LastBackRightLimitState = CurrentBackRightLimitState; 
     return ReturnVal;
 }

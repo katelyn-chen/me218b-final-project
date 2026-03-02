@@ -59,7 +59,7 @@
 // 1540, 3300 is 90 degree 
 
 #define BUCKET_ARM_DISPENSE_TICKS    3000u 
-#define BUCKET_ARM_COLLECT_TICKS     5000u
+#define BUCKET_ARM_COLLECT_TICKS     5500u
 
 /* Safety clamp for arm motion */
 #define ARM_MIN_TICKS          1400u
@@ -153,8 +153,7 @@ ES_Event_t RunCollectService(ES_Event_t ThisEvent)
   {
     case COLLECT_IDLE:
 
-      if ((ThisEvent.EventType == ES_START_BUTTON) ||
-          (ThisEvent.EventType == ES_COLLECT_START))
+      if (ThisEvent.EventType == ES_COLLECT_START)
       {
         DB_printf("CollectService start\r\n");
         BallCount = 0u;
@@ -164,7 +163,7 @@ ES_Event_t RunCollectService(ES_Event_t ThisEvent)
           whichCollect = ThisEvent.EventParam;
         }
 
-        TransitionTo(COLLECT_GO_READY, 0);
+        TransitionTo(COLLECT_GO_READY, 0); // arm is down
       }
       
       break;
@@ -172,7 +171,8 @@ ES_Event_t RunCollectService(ES_Event_t ThisEvent)
     case COLLECT_GO_READY:
       if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == COLLECT_TIMER))
       {
-        TransitionTo(COLLECT_ARM_DOWN, 0);
+        DB_printf("arm ready\r\n");
+          TransitionTo(COLLECT_ARM_DOWN, 0);
       }
       break;
 
@@ -183,16 +183,29 @@ ES_Event_t RunCollectService(ES_Event_t ThisEvent)
             DB_printf("lower bucket \r\n");
             MoveBucket = false;
         }
-        if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == COLLECT_TIMER))
-      {
-        TransitionTo(COLLECT_GRAB_CLOSE, 0);
-      }
+        
+        if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == COLLECT_TIMER)) // arm done going down
+        {
+            // nudge forward
+            DB_printf("collect service: requested nudge fwd\r\n");
+            RequestNudge(CMD_COLLECT_FWD);
+        }  
+        if (ThisEvent.EventType == ES_COLLECT_FWD_DONE) {
+            DB_printf("grabber close\r\n");
+            TransitionTo(COLLECT_GRAB_CLOSE, 0);
+        }
       break;
     }
     case COLLECT_GRAB_CLOSE:
-      if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == COLLECT_TIMER))
+      if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == COLLECT_TIMER)) // done grabbing
       {
-        TransitionTo(COLLECT_ARM_UP, 0);
+          // nudge back
+          DB_printf("CollectService request nudge back\r\n");
+        RequestNudge(CMD_COLLECT_BACK);
+      }          
+      if (ThisEvent.EventType == ES_COLLECT_BACK_DONE) {
+          DB_printf("CollectService arm up\r\n");
+          TransitionTo(COLLECT_ARM_UP, 0);
       }
       break;
 
@@ -283,7 +296,7 @@ static void TransitionTo(CollectState_t next, uint16_t ms)
       break;
 
     case COLLECT_ARM_UP:
-      SetArm(ARM_UP_TICKS);
+      SetArm(ARM_UP_TICKS); 
       ES_Timer_InitTimer(COLLECT_TIMER, (ms == 0) ? T_ARM_MOVE_MS : ms);
       break;
 

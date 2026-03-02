@@ -297,6 +297,8 @@ typedef enum
   ES_ENTER_IDLE,
   ES_WAIT_BALL, // collect position for bucket
   ES_BUCKET_READY,
+  ES_COLLECT_BACK_DONE,
+  ES_COLLECT_FWD_DONE,
 
 /* Encoder Events */
   ES_ENCODER_TARGET_REACHED,

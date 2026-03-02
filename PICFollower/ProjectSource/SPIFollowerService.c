@@ -204,7 +204,6 @@ static void InitPinHardware(void)
     PIN_MapPinInput(TapeSensor3);
     PIN_MapPinInput(TapeSensor4);
     PIN_MapPinInput(TapeSensor5);
-//    PIN_MapPinInput(LimitRight);
     PIN_MapPinInput(IRFrontSensor);
     PIN_MapPinInput(LimitFrontLeft);
     PIN_MapPinInput(LimitBackRight);
@@ -237,6 +236,8 @@ static bool IsKnownCommand(uint8_t cmd)
         case CMD_SECOND_COLLECT_DONE:
         case CMD_OTHER_COLLECT_DONE:
         case CMD_DISPENSE_DONE:
+        case CMD_COLLECT_BACK:
+        case CMD_COLLECT_FWD:
             return true;
 
         default:
@@ -377,6 +378,18 @@ static void HandleCommandByte(uint8_t cmd)
         cmdEvent.EventParam = OTHER_COLLECT;
         break;
     }
+    
+    case CMD_COLLECT_FWD:
+        DB_printf("Telling nav to nudge forward to dispenser \r\n");
+        cmdEvent.EventType = ES_COLLECT_FWD;
+        PostNavigateService(cmdEvent);
+        break;
+        
+    case CMD_COLLECT_BACK:
+        DB_printf("Nudging nav to nudge back from dispenser \r\n");
+        cmdEvent.EventType = ES_COLLECT_BACK;
+        PostNavigateService(cmdEvent);
+        break; 
 
     default:
         break;
