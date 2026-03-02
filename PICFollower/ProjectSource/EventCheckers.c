@@ -187,3 +187,22 @@ bool Check4Tape(void)
   lastTapeState = currentTapeState; 
   return tapeDetected;
 }
+
+bool Check4LimitSwitchChange(void) {
+  // check for either home or end limit switches and post which one and the change
+    bool ReturnVal = false;
+    static bool LastLimitState = true;
+    static bool CurrentLimitState = PORTBbits.RB10;
+    
+    if (CurrentLimitState != LastLimitState) {
+        ES_Event_t NewEvent;
+        if (CurrentLimitState == false) { // Button pressed
+            ReturnVal = true;
+            NewEvent.EventType = ES_LIMIT_TRIGGER;
+            DB_printf("Limit Pressed Detected!\r\n");
+            PostSPIFollowerService(NewEvent);
+        }
+    } 
+    LastLimitState = CurrentLimitState;
+    return ReturnVal;
+}

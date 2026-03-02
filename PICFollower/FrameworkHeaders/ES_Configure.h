@@ -296,7 +296,9 @@ typedef enum
   ES_ULTRASONIC_DETECTED,
   ES_CMD_REQ,          // posted to SPIFollower, requests an event to be sent to leader
   /* Events for ReflectiveSenseService */
-  ES_TAPE_CHANGE
+  ES_TAPE_CHANGE,
+  // event checker
+  ES_LIMIT_TRIGGER
 }ES_EventType_t; // changed to be event type
 
 /****************************************************************************/
