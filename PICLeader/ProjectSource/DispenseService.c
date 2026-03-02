@@ -130,6 +130,7 @@ static OC5Route_t OC5Route = OC5_TO_ARM;
 /* PPS swap helpers */
 static void RouteOC5ToFlagRB3(void)
 {
+  OC5ON = 0;
   /* make RB3 a clean digital output */
   ANSELBbits.ANSB3 = 0;
   TRISBbits.TRISB3 = 0;
@@ -143,6 +144,7 @@ static void RouteOC5ToFlagRB3(void)
 #ifdef RPB3Rbits
   RPB3Rbits.RPB3R = 0b0110;  
 #endif
+  OC5ON = 1;
 
   OC5Route = OC5_TO_FLAG;
   DB_printf("FLAG: OC5 routed to RB3\r\n");
@@ -151,6 +153,7 @@ static void RouteOC5ToFlagRB3(void)
 static void RouteOC5ToArmRB6(void)
 {
   /* detach OC5 from RB3 */
+  OC5CON = 0;
 #ifdef RPB3Rbits
   RPB3Rbits.RPB3R = 0;
 #endif
@@ -159,6 +162,7 @@ static void RouteOC5ToArmRB6(void)
 #ifdef RPB6Rbits
   RPB6Rbits.RPB6R = 0b0110;   /* OC5 -> RB6 */
 #endif
+OC5ON = 1;
 
   OC5Route = OC5_TO_ARM;
   DB_printf("FLAG: OC5 routed back to RB6\r\n");
@@ -181,7 +185,7 @@ bool InitDispenseService(uint8_t Priority)
   if (!ServoInitDone) InitServoPWM();
 
   /* default: OC5 routed to arm (RB6) at boot */
-  RouteOC5ToArmRB6();
+  RouteOC5ToFlagRB3();
 
   BucketRotateStop();
   PushArmUp();
@@ -204,12 +208,12 @@ bool PostDispenseService(ES_Event_t e)
 ES_Event_t RunDispenseService(ES_Event_t ThisEvent)
 {
   ES_Event_t ReturnEvent = {ES_NO_EVENT,0};
-    if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == FLAG_HOLD_TIMER))
-  {
-    /* after holding long enough, give OC5 back to the arm */
-    RouteOC5ToArmRB6();
-    return ReturnEvent;
-  }
+  //   if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == FLAG_HOLD_TIMER))
+  // {
+  //   /* after holding long enough, give OC5 back to the arm */
+  //   RouteOC5ToArmRB6();
+  //   return ReturnEvent;
+  // }
   /* your keystroke posts the event to all services (ES_PostAll) and you handle it in every state (you currently don’t). */
     if (ThisEvent.EventType == ES_INDICATE_SIDE)
   {
@@ -230,7 +234,8 @@ ES_Event_t RunDispenseService(ES_Event_t ThisEvent)
       DB_printf("FLAG -> CENTER\r\n");
     }
 
-    ES_Timer_InitTimer(FLAG_HOLD_TIMER, T_FLAG_HOLD_MS);
+    // ES_Timer_InitTimer(FLAG_HOLD_TIMER, T_FLAG_HOLD_MS);
+    RouteOC5ToArmRB6();
     return ReturnEvent;
   }
 
