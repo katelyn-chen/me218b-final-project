@@ -93,117 +93,84 @@ static void RequestCmd(uint8_t cmdByte)
 }
 
 /*======================================================================
-  FLAG SERVO (RB3) MS18-F analog positional servo
-  Spec highlights:
-    - Neutral: 1500us
-    - Range: 900..2100us for ~120deg travel (about 120° max)
-    - Direction: CCW as pulse increases (900 -> 2100)  (per datasheet)
+  FLAG SERVO (RB3) — trying to share OC5 via PPS swap
+  - Goal: move flag ONCE at beginning when side is determined
+  - Then give OC5 back to push-down arm (RB6) for the rest of the game
 
-  Implementation:
-    - Timer4 ISR generates continuous 50Hz pulses on RB3 as GPIO
-    - ES_INDICATE_SIDE updates the pulse width; servo holds position
+  How it works:
+    - On ES_INDICATE_SIDE:
+        * PPS-map OC5 -> RB3 (flag signal)
+        * write OC5RS to desired pulse width
+        * start a short timer so we keep pulses for a bit (servo can reach)
+    - On timeout:
+        * PPS-map OC5 -> RB6 (arm signal)
+        * detach RB3 PPS (flag stops getting pulses; should stay in place)
 ======================================================================*/
 
-/* --- MS18-F pulse widths (SPEC) --- */
-#define US_FLAG_MIN           1200u // og 800
-#define US_FLAG_MAX           1800u // og 2100
-#define US_FLAG_CENTER        1000u
+/* so here jsut hold OC5 on RB3" briefly */
+#ifndef FLAG_HOLD_TIMER
+#define FLAG_HOLD_TIMER        14u  
+#endif
+#define T_FLAG_HOLD_MS         1800u 
 
-/* Choose your “blue” and green” endpoints.
-   If the flag points the wrong way, swap these two. */
-#define US_FLAG_BLUE          US_FLAG_MAX
-#define US_FLAG_GREEN         US_FLAG_MIN
+/* flag servo pulse widths (tune) */
+#define US_FLAG_GREEN          900u
+#define US_FLAG_BLUE           2000u
+#define US_FLAG_CENTER         1500u
 
-#define FLAG_PERIOD_US        20000u  /* 50Hz */
 
-/* RB3 GPIO */
-#define FLAG_TRIS             TRISBbits.TRISB3
-#define FLAG_LAT              LATBbits.LATB3
-#define FLAG_ANSEL            ANSELBbits.ANSB3
+/* track where OC5 is currently routed */
+typedef enum {
+  OC5_TO_ARM = 0,
+  OC5_TO_FLAG = 1
+} OC5Route_t;
 
-/* PBCLK=20MHz, Timer4 prescale 1:8 => tick = 0.4us => 2.5 ticks/us */
-#define T4_PRESCALE_BITS      0b11u   /* PIC32: 11 = 1:8 */
-#define TICKS_FROM_US(us)     ((uint16_t)(((uint32_t)(us) * 25u) / 10u)) /* us * 2.5 */
+static OC5Route_t OC5Route = OC5_TO_ARM;
 
-/* ISR state */
-typedef enum { FLAG_PHASE_PULSE = 0, FLAG_PHASE_REST = 1 } FlagPhase_t;
-static volatile FlagPhase_t FlagPhase = FLAG_PHASE_PULSE;
-static volatile uint16_t FlagPulseUs = US_FLAG_CENTER;
-static bool FlagInitDone = false;
-
-static void InitFlagServoRB3(void);
-static void FlagSetPulseUs(uint16_t us);
-
-static void InitFlagServoRB3(void)
+/* PPS swap helpers */
+static void RouteOC5ToFlagRB3(void)
 {
-  if (FlagInitDone) return;
+  /* make RB3 a clean digital output */
+  ANSELBbits.ANSB3 = 0;
+  TRISBbits.TRISB3 = 0;
 
-  /* RB3 must be plain GPIO (NOT PPS output) */
-#ifdef RPB3Rbits
-  RPB3Rbits.RPB3R = 0;        /* detach PPS mapping from RB3 */
+  /* IMPORTANT: detach OC5 from RB6 so only one pin is driven */
+#ifdef RPB6Rbits
+  RPB6Rbits.RPB6R = 0;
 #endif
 
-  FLAG_ANSEL = 0;             /* digital */
-  FLAG_TRIS  = 0;             /* output */
-  FLAG_LAT   = 0;
+  /* OC5 -> RB3 */
+#ifdef RPB3Rbits
+  RPB3Rbits.RPB3R = 0b0110;  
+#endif
 
-  /* Timer4 setup */
-  T4CON = 0;
-  T4CONbits.TCS   = 0;        /* PBCLK */
-  T4CONbits.TCKPS = T4_PRESCALE_BITS;
-  TMR4 = 0;
-
-  /* Interrupt priority */
-  IPC4bits.T4IP = 4;
-  IPC4bits.T4IS = 0;
-
-  IFS0CLR = _IFS0_T4IF_MASK;
-  IEC0SET = _IEC0_T4IE_MASK;
-
-  /* Start ISR quickly; it will schedule proper widths */
-  FlagPhase = FLAG_PHASE_PULSE;
-  PR4 = 1;
-  TMR4 = 0;
-
-  T4CONbits.ON = 1;
-  FlagInitDone = true;
+  OC5Route = OC5_TO_FLAG;
+  DB_printf("FLAG: OC5 routed to RB3\r\n");
 }
 
-static void FlagSetPulseUs(uint16_t us)
+static void RouteOC5ToArmRB6(void)
 {
-  /* Clamp to datasheet valid range */
-  if (us < US_FLAG_MIN) us = US_FLAG_MIN;
-  if (us > US_FLAG_MAX) us = US_FLAG_MAX;
+  /* detach OC5 from RB3 */
+#ifdef RPB3Rbits
+  RPB3Rbits.RPB3R = 0;
+#endif
 
-  __builtin_disable_interrupts();
-  FlagPulseUs = us;
-  __builtin_enable_interrupts();
+  /* OC5 -> RB6 (push-down arm pin) */
+#ifdef RPB6Rbits
+  RPB6Rbits.RPB6R = 0b0110;   /* OC5 -> RB6 */
+#endif
+
+  OC5Route = OC5_TO_ARM;
+  DB_printf("FLAG: OC5 routed back to RB6\r\n");
 }
 
-/* Timer4 ISR: produces pulse then rest to complete 20ms period */
-void __ISR(_TIMER_4_VECTOR, IPL4SOFT) T4Handler(void)
+static void FlagCommandPulseUs(uint16_t us)
 {
-  IFS0CLR = _IFS0_T4IF_MASK;
+  /* clamp-ish (avoid crazy) */
+  if (us < 700u)  us = 700u;
+  if (us > 2300u) us = 2300u;
 
-  if (FlagPhase == FLAG_PHASE_PULSE)
-  {
-    FLAG_LAT = 1;                 /* pulse start */
-    FlagPhase = FLAG_PHASE_REST;
-
-    TMR4 = 0;
-    PR4  = TICKS_FROM_US(FlagPulseUs);
-  }
-  else
-  {
-    FLAG_LAT = 0;                 /* pulse end */
-    FlagPhase = FLAG_PHASE_PULSE;
-
-    uint16_t restUs = (FlagPulseUs >= FLAG_PERIOD_US) ? 1u
-                    : (uint16_t)(FLAG_PERIOD_US - FlagPulseUs);
-
-    TMR4 = 0;
-    PR4  = TICKS_FROM_US(restUs);
-  }
+  OC5RS = UsToOCrs(us);
 }
 
 /*=========================== INIT ============================*/
@@ -213,8 +180,8 @@ bool InitDispenseService(uint8_t Priority)
 
   if (!ServoInitDone) InitServoPWM();
 
-  InitFlagServoRB3();
-  FlagSetPulseUs(US_FLAG_CENTER);
+  /* default: OC5 routed to arm (RB6) at boot */
+  RouteOC5ToArmRB6();
 
   BucketRotateStop();
   PushArmUp();
@@ -237,24 +204,34 @@ bool PostDispenseService(ES_Event_t e)
 ES_Event_t RunDispenseService(ES_Event_t ThisEvent)
 {
   ES_Event_t ReturnEvent = {ES_NO_EVENT,0};
-
+    if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == FLAG_HOLD_TIMER))
+  {
+    /* after holding long enough, give OC5 back to the arm */
+    RouteOC5ToArmRB6();
+    return ReturnEvent;
+  }
   /* your keystroke posts the event to all services (ES_PostAll) and you handle it in every state (you currently don’t). */
-  if (ThisEvent.EventType == ES_INDICATE_SIDE)
+    if (ThisEvent.EventType == ES_INDICATE_SIDE)
   {
     Field_t side = (Field_t)ThisEvent.EventParam;
-    DB_printf("Side indicated (global)! Moving flag in dispense. side=%d\r\n", side);
+    DB_printf("Side indicated (global)! Setting flag using OC5 PPS swap. side=%d\r\n", side);
+
+    /* route OC5 to RB3 (flag), command pulse, hold briefly */
+    RouteOC5ToFlagRB3();
 
     if (side == FIELD_BLUE) {
-      FlagSetPulseUs(US_FLAG_BLUE);
-      DB_printf("set arm to blue \r\n");
+      FlagCommandPulseUs(US_FLAG_BLUE);
+      DB_printf("FLAG -> BLUE\r\n");
     } else if (side == FIELD_GREEN) {
-      FlagSetPulseUs(US_FLAG_GREEN);
-      DB_printf("set arm to green \r\n");
+      FlagCommandPulseUs(US_FLAG_GREEN);
+      DB_printf("FLAG -> GREEN\r\n");
     } else {
-      FlagSetPulseUs(US_FLAG_CENTER);
+      FlagCommandPulseUs(US_FLAG_CENTER);
+      DB_printf("FLAG -> CENTER\r\n");
     }
 
-    return ReturnEvent; /* swallow event so it doesn't fall into state logic */
+    ES_Timer_InitTimer(FLAG_HOLD_TIMER, T_FLAG_HOLD_MS);
+    return ReturnEvent;
   }
 
   switch(CurState)
