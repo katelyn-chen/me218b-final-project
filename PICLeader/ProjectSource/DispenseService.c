@@ -392,4 +392,4 @@ static uint16_t UsToOCrs(uint16_t us)
 
 static void Servo_OC3(uint16_t us){ OC3RS=UsToOCrs(us); }
 static void Servo_OC4(uint16_t us){ OC4RS=UsToOCrs(us); }
-static void Servo_OC5(uint16_t us){ OC5RS=UsToOCrs(us); }
+static void Servo_OC5(uint16_t us){ OC5RS=UsToOCrs(us); }`

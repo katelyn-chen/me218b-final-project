@@ -48,7 +48,7 @@
 #define ROTATE_45_TIME_MS         550u
 #define ROTATE_90_TIME_MS         1100u
 #define ROTATE_FIRST_COLLECT_MS   400u
-#define VEER_AWAY_FROM_WALL       1000u
+#define VEER_AWAY_FROM_WALL       2000u
 
 
 #ifndef MOTOR_TIMER
@@ -214,7 +214,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         case ORIENT_BEACON_SWEEP:
         {
             if (ThisEvent.EventType == ES_FRONT_LEFT_LIMIT_TRIGGER) {
-                if (PORTAbits.RA3) {
+                if (!PORTAbits.RA3) {
                     DB_printf("The front left limit switch was hit but no wall detected in front! veering fwd and right\r\n");
                     SetMotor1((int16_t)DUTY_TRANS_HALF*0.7);
                     SetMotor2((int16_t)DUTY_TRANS_HALF*1.6);
@@ -234,15 +234,15 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
             if (ThisEvent.EventType == ES_BACK_RIGHT_LIMIT_TRIGGER) {
                 if (!PORTAbits.RA3) {
                     DB_printf("The back right limit switch was hit but no wall detected in front! veering fwd and left\r\n");
-                    SetMotor1((int16_t)DUTY_TRANS_HALF*0.8);
-                    SetMotor2((int16_t)DUTY_TRANS_HALF*1.4);
+                    SetMotor1((int16_t)DUTY_TRANS_HALF*0.9);
+                    SetMotor2((int16_t)DUTY_TRANS_HALF*1.5);
                     ES_Timer_InitTimer(MOTOR_TIMER, VEER_AWAY_FROM_WALL);
                 
                 } else {
                     /* Hit front left limit switch*/
                     DB_printf("The back right limit switch was hit and a wall was detected in front! veering back and right\r\n");
-                    SetMotor1(-(int16_t)DUTY_TRANS_HALF*0.8);
-                    SetMotor2(-(int16_t)DUTY_TRANS_HALF*1.4);
+                    SetMotor1(-(int16_t)DUTY_TRANS_HALF*0.9);
+                    SetMotor2(-(int16_t)DUTY_TRANS_HALF*1.5);
                     ES_Timer_InitTimer(MOTOR_TIMER, VEER_AWAY_FROM_WALL);
                 }
             }
