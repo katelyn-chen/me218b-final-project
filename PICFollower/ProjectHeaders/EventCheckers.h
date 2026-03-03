@@ -24,5 +24,6 @@
 bool Check4Keystroke(void);
 bool Check4Tape(void);
 bool Check4LimitSwitchChange(void);
+bool Check4IRDistance(void);
 
 #endif /* EventCheckers_H */

@@ -466,7 +466,8 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
             DoTranslate(PackTranslateParam(TRANS_HALF, DIR_FWD));
         }
         
-        if (!PORTAbits.RA3) {
+//        if (!PORTAbits.RA3) {
+        if (ThisEvent.EventType == ES_IR_TRIGGER) {
                 // front sensor sees a wall!
             cmdEvent.EventParam = CMD_ALIGN_COLLECT;
             PostSPIFollowerService(cmdEvent);

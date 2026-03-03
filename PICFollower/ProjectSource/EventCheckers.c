@@ -225,18 +225,19 @@ bool Check4LimitSwitchChange(void) {
 }
 
 // SPI_RPA3
-//bool Check4IRDistance (void) {
-//    bool ReturnVal = false;
-//    static bool LastDistanceState = true;
-//    static bool CurrDistanceState;
-//    CurrDistanceState = PORTBbits.RB3;
-//    
-//    if ((LastDistanceState != CurrDistanceState) && (CurrDistanceState == false)) {
-//        ReturnVal = true;
-//        NewEvent.EventType = ES_IR_TRIGGER;
-//        DB_printf("IR sensor triggered \r\n");
-//        PostNavigateService(NewEvent);
-//    }
-//    LastDistanceState = CurrDistanceState;
-//    return ReturnVal;
-//}
+bool Check4IRDistance (void) {
+    bool ReturnVal = false;
+    static bool LastDistanceState = true;
+    static bool CurrDistanceState;
+    CurrDistanceState = PORTBbits.RB3;
+    
+    if ((LastDistanceState != CurrDistanceState) && (CurrDistanceState == false)) {
+        ReturnVal = true;
+        ES_Event_t NewEvent;
+        NewEvent.EventType = ES_IR_TRIGGER;
+        DB_printf("IR sensor triggered \r\n");
+        PostNavigateService(NewEvent);
+    }
+    LastDistanceState = CurrDistanceState;
+    return ReturnVal;
+}
