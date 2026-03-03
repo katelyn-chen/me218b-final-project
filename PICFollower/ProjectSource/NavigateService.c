@@ -293,6 +293,10 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
                 curState = COLLECT_ALIGN;
                 collectState = COLLECT_START;
             }
+            if (ThisEvent.EventType == ES_NEW_KEY && ThisEvent.EventParam == '4') {
+                DB_printf("Testing line following, jumping to first collect\r\n");
+                curState = FIRST_DISPENSE;
+            }
             
             if (ThisEvent.EventType == ES_BEACON_FOUND)
             {
@@ -462,7 +466,8 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
             DoTranslate(PackTranslateParam(TRANS_HALF, DIR_FWD));
         }
         
-        if (!PORTAbits.RA3) {
+//        if (!PORTAbits.RA3) {
+        if (ThisEvent.EventType == ES_IR_TRIGGER) {
                 // front sensor sees a wall!
             cmdEvent.EventParam = CMD_ALIGN_COLLECT;
             PostSPIFollowerService(cmdEvent);

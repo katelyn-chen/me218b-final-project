@@ -301,7 +301,8 @@ typedef enum
   ES_TAPE_CHANGE,
   // event checker limit switch
   ES_FRONT_LEFT_LIMIT_TRIGGER,
-  ES_BACK_RIGHT_LIMIT_TRIGGER
+  ES_BACK_RIGHT_LIMIT_TRIGGER,
+  ES_IR_TRIGGER
 }ES_EventType_t; // changed to be event type
 
 /****************************************************************************/
@@ -336,7 +337,7 @@ typedef enum
 
 /****************************************************************************/
 // This is the list of event checking functions
-#define EVENT_CHECK_LIST Check4Keystroke, Check4Tape, Check4LimitSwitchChange
+#define EVENT_CHECK_LIST Check4Keystroke, Check4Tape, Check4LimitSwitchChange, Check4IRDistance
 
 /****************************************************************************/
 // These are the definitions for the post functions to be executed when the
