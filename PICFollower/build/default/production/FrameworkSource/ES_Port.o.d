@@ -4,21 +4,12 @@ build/default/production/FrameworkSource/ES_Port.o: \
  FrameworkHeaders/ES_Types.h FrameworkHeaders/terminal.h \
  FrameworkHeaders/ES_Port.h FrameworkHeaders/ES_Types.h \
  FrameworkHeaders/ES_Timers.h FrameworkHeaders/terminal.h
-
 FrameworkHeaders/ES_Port.h:
-
 FrameworkHeaders/bitdefs.h:
-
 FrameworkHeaders/Bin_Const.h:
-
 FrameworkHeaders/ES_Types.h:
-
 FrameworkHeaders/terminal.h:
-
 FrameworkHeaders/ES_Port.h:
-
 FrameworkHeaders/ES_Types.h:
-
 FrameworkHeaders/ES_Timers.h:
-
 FrameworkHeaders/terminal.h:
