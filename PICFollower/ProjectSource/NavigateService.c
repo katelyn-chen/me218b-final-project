@@ -390,8 +390,8 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
               DB_printf("Begin tape detect\r\n");
               curState = INIT_COAL_DISP_SEARCH;
 //              DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_FWD));
-              SetMotor1(TRANS_TAPE);
-              SetMotor2(1.1*TRANS_TAPE);
+              SetMotor1(DUTY_TRANS_TAPE_DET);
+              SetMotor2(1.1*DUTY_TRANS_TAPE_DET);
               break;
 
             default:
