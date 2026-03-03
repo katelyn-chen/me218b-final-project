@@ -293,6 +293,10 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
                 curState = COLLECT_ALIGN;
                 collectState = COLLECT_START;
             }
+            if (ThisEvent.EventType == ES_NEW_KEY && ThisEvent.EventParam == '4') {
+                DB_printf("Testing line following, jumping to first collect\r\n");
+                curState = FIRST_DISPENSE;
+            }
             
             if (ThisEvent.EventType == ES_BEACON_FOUND)
             {
