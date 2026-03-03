@@ -54,10 +54,10 @@
 /* Pulse values need to be tuned!! */
 #define ROT_90_PULSES           25
 #define ROT_180_PULSES          ROT_90_PULSES*2
-#define COLLECT_FWD_ALIGN       20      // first fwd towards beacon 
+#define COLLECT_REV_ALIGN       10      // FIRST reverse from dispenser before lowering arm 
 #define INIT_ROT_ADJUST         23      // first rotation after seeing beacon
 #define RIGHT_FULL_ROTATE       60      // tuned! one full wheel rotation
-#define SIDE_INDICATE_FIRST_FWD 25      // this has become the first back after seeing the wall
+#define SIDE_INDICATE_FIRST_FWD 25      // first fwd towards beacon
 #define COLLECT_NUDGE_FWD       18      // nudging fwd to dispenser
 #define COLLECT_NUDGE_BACK      18      // nudging back from dispenser
 #define COLLECT_FWD_AFTER_T     15      // moving forward after the T

@@ -396,9 +396,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
     case INIT_COAL_DISP_SEARCH:
     {
       /* drive forward until T detected */
-      
-//      static uint8_t tape_t_count = 0;
-      
+           
       if (ThisEvent.EventType == ES_TAPE_DETECT)
       {
         LineFollow(ThisEvent, FOLLOW_FWD);
@@ -412,20 +410,14 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
       }
       
       if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == MOTOR_TIMER) {
-          // keep rotating, but now change state so we can start line following
+          /* keep rotating, but now change state so we can start line following
+           * now that the timer had expired */
           curState = COLLECT_POST_T;
       }
-
-//      if (ThisEvent.EventType == ES_MOVE_DONE && coalSearchFlag) {
-//        coalSearchFlag = 0;
-//        /* move forward to dispenser */
-//        cmdEvent.EventParam = CMD_ROT_CCW_90;
-//        PostSPIFollowerService(cmdEvent);
-//        DoRotate(PackRotateParam(ROT_90, ROT_CCW)); /* turn 90 to face dispenser */
-//        curState = COLLECT_POST_T;
-//      }
+      
       break;
     }
+    /* END INIT COAL DISPNESE SEARCH - NOW FACING AWAY FROM DISPENSER */
     
     case COLLECT_POST_T: {
         if (ThisEvent.EventType == ES_TAPE_DETECT && following)
@@ -434,7 +426,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         }
         
         if (ThisEvent.EventType == ES_T_DETECTED) {
-            // rotate 180
+            // rotate 180 to face dispenser
             cmdEvent.EventParam = CMD_ROT_CW_180;
             PostSPIFollowerService(cmdEvent);
             DoRotate(PackRotateParam(ROT_90, ROT_CW));
@@ -450,6 +442,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         }  
         break;
     }
+    /* END COLLECT POST T - NOW FACING DISPENSER */
 
     case COLLECT_ALIGN:
     {
@@ -457,24 +450,29 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
             if (!collectStarted) {
                 /* Once the T has been detected, bot moves back and lowers arm
                  I added this flag because I only want this code to run once */
-                collectStarted = 1;
+                collectStarted = 1; // mark collect as started
+                following = 1;
                 DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_REV));
-                followDir = FOLLOW_FWD;
+                followDir = FOLLOW_REV;
                 cmdEvent.EventParam = CMD_ALIGN_COLLECT;
                 PostSPIFollowerService(cmdEvent);
             }
         }
         
+        /* Line follow for both nudge fwd and nudge back, as well as initially
+         moving back from the dispenser */
         if (ThisEvent.EventType == ES_TAPE_DETECT && following)
         {
           LineFollow(ThisEvent, followDir);
         }
         
         if (ThisEvent.EventType == ES_COLLECT_BACK) {
+            
             /* Moving back from the ball dispenser */
             cmdEvent.EventParam = CMD_COLLECT_BACK;
             PostSPIFollowerService(cmdEvent);
             DoTranslate(PackTranslateParam(TRANS_FULL, DIR_REV));
+            
             /* Initiating backup ramp up - half the backup speed */
             ES_Timer_InitTimer(MOTOR_TIMER, BACKUP_RAMPUP_MS);
             SetMotor1(DUTY_TRANS_FULL*1.1*0.5);
@@ -484,6 +482,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         }
         
         if (ThisEvent.EventType == ES_COLLECT_FWD) {
+            
            /* Moving fwd to the ball dispenser */
             cmdEvent.EventParam = CMD_COLLECT_FWD;
             PostSPIFollowerService(cmdEvent);
@@ -493,7 +492,8 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         }
         
         if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == MOTOR_TIMER) {
-            /* This is for the backup ramp up - moving to full backup speed*/
+            
+            /* This is for the backup ramp up - moving to full backup speed */
             SetMotor1(DUTY_TRANS_FULL*1.1);
             SetMotor2(DUTY_TRANS_FULL*0.8);
             ES_Timer_StopTimer(MOTOR_TIMER);
