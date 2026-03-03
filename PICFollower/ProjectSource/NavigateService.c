@@ -50,6 +50,7 @@
 #define ROTATE_FIRST_COLLECT_MS   400u
 #define VEER_AWAY_FROM_WALL       2000u
 #define BACKUP_RAMPUP_MS          500
+#define SEARCH_TIME               10000
 
 
 #ifndef MOTOR_TIMER
@@ -209,6 +210,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
             ResetBeaconSequence();
             StartBeaconAlignSearch();
             PostBeaconService(startBeaconSearch);
+            ES_Timer_InitTimer(BEACON_TIMER, SEARCH_TIME);
           }
           break;
         }
@@ -253,6 +255,13 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
                 StartBeaconAlignSearch();
                 PostBeaconService(startBeaconSearch);
             }
+            
+            if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == BEACON_TIMER) {
+                DoTranslate(PackTranslateParam(TRANS_HALF, DIR_FWD));
+                ES_Timer_InitTimer(MOTOR_TIMER, 1000);
+                
+            }
+            
             if (ThisEvent.EventType == ES_NEW_KEY && ThisEvent.EventParam == '1') {
                 orientState = ORIENT_DONE;
                 DB_printf("Moving to orient done state because key pressed\r\n");
