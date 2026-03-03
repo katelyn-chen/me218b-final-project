@@ -390,7 +390,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         tape_t_count++;
         DB_printf("incrementing tape t count! t count %d\r\n", tape_t_count);
         
-        if (tape_t_count >= 2) {
+        if (tape_t_count = 2) {
             cmdEvent.EventParam = CMD_FWD_AFTER_T;
             PostSPIFollowerService(cmdEvent);
             DoTranslate(PackTranslateParam(TRANS_HALF, DIR_FWD));
@@ -885,6 +885,10 @@ static void SquareUpOnT(ES_Event_t ThisEvent)
 {
     switch (ThisEvent.EventType)
     {
+        case ES_T_DETECTED:
+        {
+         break;   
+        }
         case ES_TAPE_DETECT:
         {
             switch (ThisEvent.EventParam)

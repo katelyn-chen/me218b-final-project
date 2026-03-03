@@ -52,9 +52,9 @@
 #define SPI_CLK_PERIOD_NS      50000u
 
 /* Pulse values need to be tuned!! */
-#define ROT_90_PULSES           22
+#define ROT_90_PULSES           25
 #define ROT_180_PULSES          ROT_90_PULSES*2
-#define INIT_ROT_ADJUST         15 
+#define INIT_ROT_ADJUST         14 
 #define COLLECT_FWD_ALIGN       20 
 #define RIGHT_FULL_ROTATE       60      // tuned! one full wheel rotation
 #define SIDE_INDICATE_FIRST_FWD 25      // this has become the first back after seeing the wall
@@ -376,6 +376,7 @@ static void HandleFollowerStatus(uint8_t statusByte)
       cmdEvent.EventType = ES_ENCODER_TARGET_ROT;
       cmdEvent.EventParam = ROT_90_PULSES;
       PostEncoderService(cmdEvent);
+      LATAbits.LATA3 = 1;
       break;
     
     case CMD_ENCODER_FIRST_ALIGN:
@@ -392,6 +393,7 @@ static void HandleFollowerStatus(uint8_t statusByte)
       cmdEvent.EventType = ES_ENCODER_TARGET_STRAIGHT;
       cmdEvent.EventParam = COLLECT_FWD_ALIGN;
       PostEncoderService(cmdEvent);
+      LATAbits.LATA3 = 0;
       break;
 
     case CMD_FIRST_COLLECT_START:
@@ -399,7 +401,6 @@ static void HandleFollowerStatus(uint8_t statusByte)
       cmdEvent.EventType = ES_COLLECT_START;
       cmdEvent.EventParam = FIRST_COLLECT;
       PostCollectService(cmdEvent);
-      LATAbits.LATA3 = 1;
       break;
     
     case CMD_SECOND_COLLECT_START:
