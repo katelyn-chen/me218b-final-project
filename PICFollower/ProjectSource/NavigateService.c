@@ -201,7 +201,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
       {
         case ORIENT_IDLE:
         {
-            if (ThisEvent.EventType == ES_INIT) {
+          if (ThisEvent.EventType == ES_INIT) {
                 StopMotors();
             }
           if (ThisEvent.EventType == ES_ALIGN_ULTRASONICS)
@@ -232,9 +232,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
                     SetMotor1((int16_t)DUTY_TRANS_HALF*0.5);
                     SetMotor2((int16_t)DUTY_TRANS_FULL*0.8);
                     ES_Timer_InitTimer(MOTOR_TIMER, VEER_AWAY_FROM_WALL);
-                }
-                        
-                
+                } 
             }
             
             if (ThisEvent.EventType == ES_BACK_RIGHT_LIMIT_TRIGGER) {
@@ -261,7 +259,6 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
             if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == BEACON_TIMER) {
                 DoTranslate(PackTranslateParam(TRANS_HALF, DIR_FWD));
                 ES_Timer_InitTimer(MOTOR_TIMER, 1000);
-                
             }
             
             if (ThisEvent.EventType == ES_NEW_KEY && ThisEvent.EventParam == '1') {
@@ -271,7 +268,6 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
                 field = FIELD_BLUE;
                 cmdEvent.EventParam = CMD_SIDE_FOUND_BLUE;
                 PostSPIFollowerService(cmdEvent);
-                
             }
             
             if (ThisEvent.EventType == ES_NEW_KEY && ThisEvent.EventParam == '2') {
@@ -324,7 +320,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
                         DoTranslate(PackTranslateParam(DUTY_TRANS_HALF, DIR_FWD));
                         PostSPIFollowerService(cmdEvent);
                     }
-            }
+              }
           }
             
           if (ThisEvent.EventType == ES_MOVE_DONE)
@@ -334,9 +330,9 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
             DoRotate(PackRotateParam(ROT_90, ROT_CCW));
             cmdEvent.EventParam = CMD_ENCODER_FIRST_ALIGN;
             PostSPIFollowerService(cmdEvent);
-            }
+          }
           break;
-        }
+        } // end case ORIENT_BEACON_SWEEP
 
         case ORIENT_DONE:
         {
@@ -347,6 +343,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
           switch (ThisEvent.EventType)
           {
             case ES_NEW_KEY:
+            {
               if (ThisEvent.EventParam == '2') {
                 orientState = ORIENT_DONE;
                 DB_printf("posing to encoder service because key pressed\r\n");
@@ -354,9 +351,11 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
                 PostSPIFollowerService(cmdEvent);
                 StopMotors();
                 DoRotate(PackRotateParam(ROT_90, ROT_CCW));
+              }
             }
 
             case ES_MOVE_DONE:
+            {
 //              StopMotors();
               DB_printf("Begin tape detect\r\n");
               curState = INIT_COAL_DISP_SEARCH;
@@ -364,22 +363,27 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
               SetMotor1(-DUTY_TRANS_TAPE_DET);
               SetMotor2(-1.1*DUTY_TRANS_TAPE_DET);
               break;
+            }
 
-            default:
+            default: {
               break;
-          }
+            }
+          } // end switch event type
+          break;
+        } // end case ORIENT_DONE
+        
+        default: {
           break;
         }
 
-        default:
-          break;
-      }
+        break;
+      } // end switch orientState
       break;
-    }
+    } // end curState INIT_ORIENT
 
     case INIT_COAL_DISP_SEARCH:
     {
-        static uint8_t tape_t_count = 0;
+      static uint8_t tape_t_count = 0;
       /* drive forward and line follow until T detected */
       if (ThisEvent.EventType == ES_TAPE_DETECT)
       {
@@ -407,7 +411,8 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
 //            }
 //    }
 
-      if (ThisEvent.EventType == ES_MOVE_DONE) {
+      if (ThisEvent.EventType == ES_MOVE_DONE && coalSearchFlag) {
+        coalSearchFlag = 0;
         /* move forward to dispenser */
         cmdEvent.EventParam = CMD_ROT_CCW_90;
         PostSPIFollowerService(cmdEvent);
@@ -415,91 +420,96 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         curState = COLLECT_POST_T;
       }
       break;
-    }
+    } // end case INIT_COAL_DISP_SEARCH
     
-    case COLLECT_POST_T: {
-        if (ThisEvent.EventType == ES_MOVE_DONE) {
-            /* move forward initially to dispenser */
-            DoTranslate(PackTranslateParam(TRANS_HALF, DIR_FWD));
-        }
+    case COLLECT_POST_T: 
+    {
+      if (ThisEvent.EventType == ES_MOVE_DONE) {
+          /* move forward initially to dispenser */
+          DoTranslate(PackTranslateParam(TRANS_HALF, DIR_FWD));
+      }
         
-        if (ThisEvent.EventType == ES_IR_TRIGGER) {
-                // front sensor sees a wall!
-            cmdEvent.EventParam = CMD_ALIGN_COLLECT;
-            PostSPIFollowerService(cmdEvent);
-            DoTranslate(PackTranslateParam(TRANS_HALF, DIR_REV));
-            curState = COLLECT_ALIGN;
-            collectState = COLLECT_START;
-        }
-            
-        break;
-    }
+      if (ThisEvent.EventType == ES_IR_TRIGGER) {
+          // front sensor sees a wall!
+          cmdEvent.EventParam = CMD_ALIGN_COLLECT;
+          PostSPIFollowerService(cmdEvent);
+          DoTranslate(PackTranslateParam(TRANS_HALF, DIR_REV));
+          curState = COLLECT_ALIGN;
+          collectState = COLLECT_START;
+      }
+      break;
+    } // end case COLLECT_POST_T
 
     case COLLECT_ALIGN:
     {
-        if (ThisEvent.EventType == ES_COLLECT_BACK) {
-            /*Moving back from the ball dispenser*/
-            cmdEvent.EventParam = CMD_COLLECT_BACK;
-            PostSPIFollowerService(cmdEvent);
+      if (ThisEvent.EventType == ES_COLLECT_BACK) {
+        /*Moving back from the ball dispenser*/
+        cmdEvent.EventParam = CMD_COLLECT_BACK;
+        PostSPIFollowerService(cmdEvent);
 //            DoTranslate(PackTranslateParam(TRANS_FULL, DIR_REV));
-            ES_Timer_InitTimer(MOTOR_TIMER, BACKUP_RAMPUP_MS);
+        ES_Timer_InitTimer(MOTOR_TIMER, BACKUP_RAMPUP_MS);
+        
+        SetMotor1(DUTY_TRANS_FULL*1.1*0.5);
+        SetMotor2(DUTY_TRANS_FULL*0.8*0.5);
+        collectState = COLLECT_BACK;
+        LineFollowDirection = -1;
+      }
+
+      if (ThisEvent.EventType == ES_COLLECT_FWD) {
+          /*Moving fwd to the ball dispenser*/
+          cmdEvent.EventParam = CMD_COLLECT_FWD;
+          PostSPIFollowerService(cmdEvent);
+          DoTranslate(PackTranslateParam(TRANS_HALF, DIR_FWD));
+          collectState = COLLECT_FWD;
+          LineFollowDirection = 1;
+      }
+        
+      if (ThisEvent.EventType == ES_TAPE_DETECT)
+      {
+        LineFollow(ThisEvent);
+      }
             
-            SetMotor1(DUTY_TRANS_FULL*1.1*0.5);
-            SetMotor2(DUTY_TRANS_FULL*0.8*0.5);
-            collectState = COLLECT_BACK;
-            LineFollowDirection = -1;
-        }
-        if (ThisEvent.EventType == ES_COLLECT_FWD) {
-           /*Moving fwd to the ball dispenser*/
-            cmdEvent.EventParam = CMD_COLLECT_FWD;
+      if (ThisEvent.EventType == ES_MOVE_DONE) {
+        StopMotors();
+        switch (collectState) {
+          case COLLECT_START: {
+            DB_printf("Nav service telling collect service to stop\r\n");
+            cmdEvent.EventParam = CMD_FIRST_COLLECT_START;
             PostSPIFollowerService(cmdEvent);
-            DoTranslate(PackTranslateParam(TRANS_HALF, DIR_FWD));
-            collectState = COLLECT_FWD;
-            LineFollowDirection = 1;
-        }
-        
-        if (ThisEvent.EventType == ES_TAPE_DETECT)
-        {
-          LineFollow(ThisEvent);
-        }
-        
-        if (ThisEvent.EventType == ES_TIMEOUT) {
-            SetMotor1(DUTY_TRANS_FULL*1.1);
-            SetMotor2(DUTY_TRANS_FULL*0.8);
-        }
-            
-        if (ThisEvent.EventType == ES_MOVE_DONE) {
-            StopMotors();
-            switch (collectState) {
-                case COLLECT_START:
-                  DB_printf("Nav service telling collect service to stop\r\n");
-                  cmdEvent.EventParam = CMD_FIRST_COLLECT_START;
-                  PostSPIFollowerService(cmdEvent);
-                  break;
-                
-                case COLLECT_BACK:
-                    cmdEvent.EventParam = CMD_FIRST_COLLECT_ARM_UP;
-                    PostSPIFollowerService(cmdEvent);
-                    break;
-                    
-                case COLLECT_FWD:
-                    cmdEvent.EventParam = CMD_FIRST_COLLECT_GRAB;
-                    PostSPIFollowerService(cmdEvent);
-                    break;
-                }
-        }  
+            break;
+          }
+          
+          case COLLECT_BACK: {
+            cmdEvent.EventParam = CMD_FIRST_COLLECT_ARM_UP;
+            PostSPIFollowerService(cmdEvent);
+            break;
+          }
+              
+          case COLLECT_FWD: {
+            cmdEvent.EventParam = CMD_FIRST_COLLECT_GRAB;
+            PostSPIFollowerService(cmdEvent);
+            break;
+          } 
+          
+          default: {
+              break;
+          }
+        } // end collectState switch
+      }  
            
       if (ThisEvent.EventType == ES_FIND_BUCKET)
       {
         if (ThisEvent.EventParam == FIRST_COLLECT) {
           curState = FIRST_DISPENSE;
           DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_REV));
+        } else if (ThisEvent.EventParam == SECOND_COLLECT) {
+          curState = INIT_FIND_MIDDLE;
+        } else if (ThisEvent.EventParam == OTHER_COLLECT) {
+           curState = INIT_FIND_END;
         }
-        else if (ThisEvent.EventParam == SECOND_COLLECT) curState = INIT_FIND_MIDDLE;
-        else if (ThisEvent.EventParam == OTHER_COLLECT)    curState = INIT_FIND_END;
       }
       break;
-    }
+    } // end case COLLECT_ALIGN
 
     case FIRST_DISPENSE:
     {
@@ -520,7 +530,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         curState = INIT_FIND_MIDDLE;
       }
       break;
-    }
+    } // end case FIRST_DISPENSE
 
     case INIT_FIND_MIDDLE:
     {
@@ -529,7 +539,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         curState = ALIGN_MID_BUCKET;
       }
       break;
-    }
+    } // end case INIT_FIND_MIDDLE
 
     case ALIGN_MID_BUCKET:
     {
@@ -538,7 +548,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         curState = INIT_FIND_END;
       }
       break;
-    }
+    } // end case ALIGN_MID_BUCKET
 
     case INIT_FIND_END:
     {
@@ -547,7 +557,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         curState = ALIGN_END_BUCKET;
       }
       break;
-    }
+    } // end case INIT_FIND_END
 
     case ALIGN_END_BUCKET:
     {
@@ -556,7 +566,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         curState = INIT_REPEAT_COLLECT;
       }
       break;
-    }
+    } // end case ALIGN_END_BUCKET
 
     case INIT_REPEAT_COLLECT:
     {
@@ -565,7 +575,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         curState = FIND_COLLECT;
       }
       break;
-    }
+    } // end case INIT_REPEAT_COLLECT
 
     case FIND_COLLECT:
     {
@@ -574,15 +584,19 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         curState = COLLECT_ALIGN;
       }
       break;
-    }
+    } // end case FIND_COLLECT
 
-    case WAITING_FOR_SIDE:
-    default:
+    case WAITING_FOR_SIDE: {
       break;
-  }
+    } // end case WAITING_FOR_SIDE
+    
+    default: {
+      break;
+    } 
+  } // end switch curState
 
   return ReturnEvent;
-}
+} // end RunNavigateService
 
 /*=========================== INIT HELPERS ============================*/
 static void InitPinsAndPPS(void)
