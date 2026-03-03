@@ -107,9 +107,9 @@ static void RequestCmd(uint8_t cmdByte)
 ======================================================================*/
 
 /* --- MS18-F pulse widths (SPEC) --- */
-#define US_FLAG_MIN           600 //1200u // og 800
-#define US_FLAG_MAX           2500 //1800u // og 2100
-#define US_FLAG_CENTER        1500u
+#define US_FLAG_MIN           600u //1200u // og 800
+#define US_FLAG_MAX           2500u //1800u // og 2100
+#define US_FLAG_CENTER        (US_FLAG_MIN + US_FLAG_MAX)/2
 
 #define US_FLAG_BLUE          US_FLAG_MAX
 #define US_FLAG_GREEN         US_FLAG_MIN
@@ -392,4 +392,4 @@ static uint16_t UsToOCrs(uint16_t us)
 
 static void Servo_OC3(uint16_t us){ OC3RS=UsToOCrs(us); }
 static void Servo_OC4(uint16_t us){ OC4RS=UsToOCrs(us); }
-static void Servo_OC5(uint16_t us){ OC5RS=UsToOCrs(us); }`
+static void Servo_OC5(uint16_t us){ OC5RS=UsToOCrs(us); }
