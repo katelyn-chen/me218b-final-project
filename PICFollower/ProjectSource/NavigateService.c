@@ -38,7 +38,7 @@
 #define DUTY_TRANS_HALF     30u
 #define DUTY_TRANS_FULL     85u
 #define DUTY_ROTATE         30u
-#define DUTY_SEARCH         25u
+#define DUTY_SEARCH         30u
 #define TAPE_BASE_DUTY      DUTY_TRANS_TAPE_DET
 #define TAPE_CORR_DUTY      10u   // steering correction amount
 #define TAPE_LOST_DUTY      15u   // slow search when tape lost
@@ -266,17 +266,11 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
             if (ThisEvent.EventType == ES_NEW_KEY && ThisEvent.EventParam == '1') {
                 orientState = ORIENT_DONE;
                 DB_printf("Moving to orient done state because key pressed\r\n");
-//                StartBeaconAlignSearch();
-//                PostBeaconService(startBeaconSearch);
-//                field = FIELD_BLUE;
                 DB_printf("L detected from button press! We are on GREEN field\r\n");
                 field = FIELD_BLUE;
                 cmdEvent.EventParam = CMD_SIDE_FOUND_BLUE;
                 PostSPIFollowerService(cmdEvent);
                 
-//                DoRotate(PackRotateParam(ROT_90, ROT_CW));
-//                cmdEvent.EventParam = CMD_ENCODER_FIRST_ALIGN;
-//                PostSPIFollowerService(cmdEvent);
             }
             
             if (ThisEvent.EventType == ES_NEW_KEY && ThisEvent.EventParam == '2') {
@@ -309,23 +303,14 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
                 if (id != BEACON_ID_NONE)
                 {
                     /*Trying a new side id strategy because we aren't seeing all the beacons*/
-    //              bool pushed = PushBeaconIfNew(id);
-    //              if (pushed)
-    //              {
-    //                DB_printf("Beacon seq add: id=%u (len=%u)\r\n",
-    //                          (unsigned)id, (unsigned)SeqLen);
-    //
-    //                field = DetermineFieldFromSequence();
                     if (id == BEACON_ID_L) {
                         DB_printf("L detected! We are on GREEN field\r\n");
                         field = FIELD_GREEN;
                         cmdEvent.EventParam = CMD_SIDE_FOUND_GREEN;
-//                        PostSPIFollowerService(cmdEvent);
                     } else if (id == BEACON_ID_R) {
                         DB_printf("R detected! We are on BLUE field\r\n");
                         field = FIELD_BLUE;
                         cmdEvent.EventParam = CMD_SIDE_FOUND_BLUE;
-//                        PostSPIFollowerService(cmdEvent);
                     } else {
                         DB_printf("Other beacon detected, id = %d. Will keep rotating.\r\n", id);
                     }
@@ -337,8 +322,6 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
                         DB_printf("Moving towards L/R beacon\r\n");
                         DoTranslate(PackTranslateParam(DUTY_TRANS_HALF, DIR_FWD));
                         PostSPIFollowerService(cmdEvent);
-//                        cmdEvent.EventParam = CMD_ENCODER_FIRST_FWD;
-//                        PostSPIFollowerService(cmdEvent);
                     }
             }
           }
@@ -371,37 +354,6 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
                 StopMotors();
                 DoRotate(PackRotateParam(ROT_90, ROT_CCW));
             }
-              
-//            case ES_BEACON_FOUND:
-//            {
-//              DB_printf("Beacon found from ORIENT_DONE case\r\n");
-//              BeaconId_t id;
-//              BeaconSide_t side;
-//              UnpackBeaconParam((uint16_t)ThisEvent.EventParam, &id, &side);
-//              (void)side;
-//
-//              BeaconId_t targetBeacon = BEACON_ID_NONE;
-//
-//              if (field == FIELD_GREEN) {
-//                targetBeacon = BEACON_ID_G;
-//              }
-//              else if (field == FIELD_BLUE) {
-//                targetBeacon = BEACON_ID_B;
-//              }
-//
-//              if ((targetBeacon != BEACON_ID_NONE) && (id == targetBeacon)) {
-//                DB_printf("Target beacon found: %u\r\n", (unsigned)id);
-//                DoRotate(PackRotateParam(ROT_90, ROT_CW));
-//                /* needs to turn slightly so it is pointing straight
-//                going to try this with an encoder and switch to timer
-//                if encoder doesn't work
-//                */
-//                cmdEvent.EventParam = CMD_ENCODER_FIRST_ALIGN;
-//                PostSPIFollowerService(cmdEvent);
-//                //ES_Timer_InitTimer(MOTOR_TIMER, ROTATE_FIRST_COLLECT_MS);
-//              }
-//              break;
-//            }
 
             case ES_MOVE_DONE:
 //              StopMotors();
@@ -437,12 +389,6 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
       {
         tape_t_count++;
         DB_printf("incrementing tape t count! t count %d\r\n", tape_t_count);
-//        if (tape_t_count == 1)
-//        {
-//            StopMotors();
-//            SquareUpOnT(ThisEvent);
-//            DB_printf("First T detected ? squaring up\r\n");
-//        }
         
         if (tape_t_count >= 2) {
             cmdEvent.EventParam = CMD_FWD_AFTER_T;
@@ -450,6 +396,14 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
             DoTranslate(PackTranslateParam(TRANS_HALF, DIR_FWD));
         }
       }
+     
+//    if (ThisEvent.EventType == ES_TAPE_DETECT) {
+//        if (tape_t_count == 1)
+//            {
+//                SquareUpOnT(ThisEvent);
+//                DB_printf("First T detected ? squaring up\r\n");
+//            }
+//    }
 
       if (ThisEvent.EventType == ES_MOVE_DONE) {
         /* move forward to dispenser */
@@ -467,7 +421,6 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
             DoTranslate(PackTranslateParam(TRANS_HALF, DIR_FWD));
         }
         
-//        if (!PORTAbits.RA3) {
         if (ThisEvent.EventType == ES_IR_TRIGGER) {
                 // front sensor sees a wall!
             cmdEvent.EventParam = CMD_ALIGN_COLLECT;
@@ -937,25 +890,25 @@ static void SquareUpOnT(ES_Event_t ThisEvent)
             switch (ThisEvent.EventParam)
             {
                 case TAPE_CENTERED:
-                    // we're straight but not fully square yet
+                    // creep forward
                     SetMotor1(-DUTY_TRANS_TAPE_DET);
                     SetMotor2(-DUTY_TRANS_TAPE_DET);
                     break;
 
                 case TAPE_OFF_CENTER_LEFT:
-                    // tape more on left ? rotate left
-                    SetMotor1(-(DUTY_ROTATE));
-                    SetMotor2((DUTY_ROTATE));
+                    // rotate LEFT (CCW)
+                    SetMotor1(DUTY_ROTATE);      // left backward
+                    SetMotor2(-DUTY_ROTATE);     // right forward
                     break;
 
                 case TAPE_OFF_CENTER_RIGHT:
-                    // tape more on right ? rotate right
-                    SetMotor1((DUTY_ROTATE));
-                    SetMotor2(-(DUTY_ROTATE));
+                    // rotate RIGHT (CW)
+                    SetMotor1(-DUTY_ROTATE);     // left forward
+                    SetMotor2(DUTY_ROTATE);      // right backward
                     break;
 
                 case NO_TAPE:
-                    // slow rotate to reacquire
+                    // slow rotate to reacquire (pick a direction)
                     SetMotor1(DUTY_ROTATE);
                     SetMotor2(-DUTY_ROTATE);
                     break;
@@ -970,7 +923,6 @@ static void SquareUpOnT(ES_Event_t ThisEvent)
         {
             if (ThisEvent.EventParam == FULL_T)
             {
-                // ALL 5 sensors see tape
                 StopMotors();
                 DB_printf("Squared up on FULL T!\r\n");
             }

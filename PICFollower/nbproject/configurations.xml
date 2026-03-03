@@ -82,7 +82,6 @@
       <itemPath>ProjectSource/ReflectiveSenseService.c</itemPath>
       <itemPath>ProjectSource/SPIFollowerService.c</itemPath>
       <itemPath>ProjectSource/NavigateService.c</itemPath>
-      <itemPath>ProjectSource/InitService.c</itemPath>
       <itemPath>../PICLeader/ProjectSource/InitService.c</itemPath>
     </logicalFolder>
   </logicalFolder>
@@ -103,7 +102,7 @@
         <targetPluginBoard></targetPluginBoard>
         <platformTool>snap</platformTool>
         <languageToolchain>XC32</languageToolchain>
-        <languageToolchainVersion>4.60</languageToolchainVersion>
+        <languageToolchainVersion>5.00</languageToolchainVersion>
         <platform>4</platform>
       </toolsSet>
       <packs>
@@ -391,22 +390,6 @@
         </C32Global>
       </item>
       <item path="ProjectSource/BeaconService.c" ex="false" overriding="false">
-        <C32>
-        </C32>
-        <C32-AR>
-        </C32-AR>
-        <C32-AS>
-        </C32-AS>
-        <C32-CO>
-        </C32-CO>
-        <C32-LD>
-        </C32-LD>
-        <C32CPP>
-        </C32CPP>
-        <C32Global>
-        </C32Global>
-      </item>
-      <item path="ProjectSource/InitService.c" ex="true" overriding="false">
         <C32>
         </C32>
         <C32-AR>
