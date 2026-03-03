@@ -84,7 +84,7 @@
 // the name of the run function
 #define SERV_2_RUN RunCollectService
 // How big should this services Queue be?
-#define SERV_2_QUEUE_SIZE 4
+#define SERV_2_QUEUE_SIZE 6
 #endif
 
 /****************************************************************************/
@@ -97,7 +97,7 @@
 // the name of the run function
 #define SERV_3_RUN RunDispenseService
 // How big should this services Queue be?
-#define SERV_3_QUEUE_SIZE 4
+#define SERV_3_QUEUE_SIZE 6
 #endif
 
 /****************************************************************************/
@@ -110,7 +110,7 @@
 // the name of the run function
 #define SERV_4_RUN RunEncoderService
 // How big should this services Queue be?
-#define SERV_4_QUEUE_SIZE 5
+#define SERV_4_QUEUE_SIZE 6
 #endif
 
 /****************************************************************************/

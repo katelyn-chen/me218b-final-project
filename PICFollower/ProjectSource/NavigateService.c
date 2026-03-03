@@ -199,27 +199,37 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
     {
       switch (orientState)
       {
+        /* START SWITCHING ON ORIENT STATE */
         case ORIENT_IDLE:
         {
+            /* Move from idle to turning for beacon upon start button press */
             if (ThisEvent.EventType == ES_INIT) {
-                StopMotors();
+            StopMotors();
             }
-          if (ThisEvent.EventType == ES_ALIGN_ULTRASONICS)
-          {
-            DB_printf("Starting search for beacons to determine side\r\n");
-            orientState = ORIENT_BEACON_SWEEP;
-            field = FIELD_UNKNOWN;
-            ResetBeaconSequence();
-            StartBeaconAlignSearch();
-            PostBeaconService(startBeaconSearch);
-            ES_Timer_InitTimer(BEACON_TIMER, SEARCH_TIME);
-          }
-          break;
+            
+            if (ThisEvent.EventType == ES_ALIGN_ULTRASONICS)
+            {
+                DB_printf("Starting search for beacons to determine side\r\n");
+                orientState = ORIENT_BEACON_SWEEP;
+                field = FIELD_UNKNOWN;
+                ResetBeaconSequence();
+                StartBeaconAlignSearch();
+                PostBeaconService(startBeaconSearch);
+                ES_Timer_InitTimer(BEACON_TIMER, SEARCH_TIME);
+            }
+            break;
+            /* END ORIENT IDLE */
         }
 
         case ORIENT_BEACON_SWEEP:
         {
+            /* Continues turning to search for the beacon until beacon is found.
+             * Reacts to the front left and front right limit switches being hit */
+            
+            
+            /* LIMIT SWITCH REACTIONS!! */
             if (ThisEvent.EventType == ES_FRONT_LEFT_LIMIT_TRIGGER) {
+                /* Hit front left limit switch */
                 if (PORTAbits.RA3) {
                     DB_printf("The front left limit switch was hit but no wall detected in front! veering fwd and right\r\n");
                     SetMotor1(-(int16_t)DUTY_TRANS_HALF*0.5);
@@ -227,17 +237,15 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
                     ES_Timer_InitTimer(MOTOR_TIMER, VEER_AWAY_FROM_WALL);
                 
                 } else {
-                    /* Hit front left limit switch*/
                     DB_printf("The front left limit switch was hit and a wall was detected in front! veering back and right\r\n");
                     SetMotor1((int16_t)DUTY_TRANS_HALF*0.5);
                     SetMotor2((int16_t)DUTY_TRANS_FULL*0.8);
                     ES_Timer_InitTimer(MOTOR_TIMER, VEER_AWAY_FROM_WALL);
                 }
-                        
-                
             }
             
             if (ThisEvent.EventType == ES_BACK_RIGHT_LIMIT_TRIGGER) {
+                /* Hit back right limit switch*/
                 if (PORTAbits.RA3) {
                     DB_printf("The back right limit switch was hit but no wall detected in front! veering fwd and left\r\n");
                     SetMotor1(-(int16_t)DUTY_TRANS_HALF*0.5);
@@ -245,33 +253,37 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
                     ES_Timer_InitTimer(MOTOR_TIMER, VEER_AWAY_FROM_WALL);
                 
                 } else {
-                    /* Hit front left limit switch*/
                     DB_printf("The back right limit switch was hit and a wall was detected in front! veering back and right\r\n");
                     SetMotor1((int16_t)DUTY_TRANS_HALF*0.5);
                     SetMotor2((int16_t)DUTY_TRANS_FULL*0.8);
                     ES_Timer_InitTimer(MOTOR_TIMER, VEER_AWAY_FROM_WALL);
                 }
             }
+            /* END LIMIT SWITCH REACTIONS!! */
             
+            /* Motor timer to resume beacon search after reacting to limit switches
+             * by veering!! */
             if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == MOTOR_TIMER) {
                 StartBeaconAlignSearch();
                 PostBeaconService(startBeaconSearch);
             }
             
+            /* Beacon timer that tells bot to drive forward if we ever get stuck in a
+             * beacon search loop so do we don't spin endlessly!! */
             if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == BEACON_TIMER) {
                 DoTranslate(PackTranslateParam(TRANS_HALF, DIR_FWD));
                 ES_Timer_InitTimer(MOTOR_TIMER, 1000);
                 
             }
             
+            /* DEBUGGING KEY PRESSES */
             if (ThisEvent.EventType == ES_NEW_KEY && ThisEvent.EventParam == '1') {
                 orientState = ORIENT_DONE;
                 DB_printf("Moving to orient done state because key pressed\r\n");
                 DB_printf("L detected from button press! We are on GREEN field\r\n");
                 field = FIELD_BLUE;
                 cmdEvent.EventParam = CMD_SIDE_FOUND_BLUE;
-                PostSPIFollowerService(cmdEvent);
-                
+                PostSPIFollowerService(cmdEvent); 
             }
             
             if (ThisEvent.EventType == ES_NEW_KEY && ThisEvent.EventParam == '2') {
@@ -289,11 +301,15 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
                 curState = COLLECT_ALIGN;
                 collectState = COLLECT_START;
             }
+            
             if (ThisEvent.EventType == ES_NEW_KEY && ThisEvent.EventParam == '4') {
                 DB_printf("Testing line following, jumping to first collect\r\n");
                 curState = FIRST_DISPENSE;
             }
+            /* END DEBUGGING KEY PRESSES */
             
+            /* Moves toward beacon and tells leader to move the flag to
+             * indicate the beacon has been found! */
             if (ThisEvent.EventType == ES_BEACON_FOUND)
             {
               BeaconId_t id;
@@ -303,7 +319,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
               DB_printf("Beacon found event posted from nav service, id: %d\r\n", id);
                 if (id != BEACON_ID_NONE)
                 {
-                    /*Trying a new side id strategy because we aren't seeing all the beacons*/
+                    /*Identifies side based on if it sees L/R, ignores other frequencies*/
                     if (id == BEACON_ID_L) {
                         DB_printf("L detected! We are on GREEN field\r\n");
                         field = FIELD_GREEN;
@@ -319,68 +335,58 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
                     if (field != FIELD_UNKNOWN)
                     {
                         DB_printf("Field determined: %u\r\n", (unsigned)field);
-                      // somewhere we have to turn the indicator servo (leader)!!
                         DB_printf("Moving towards L/R beacon\r\n");
+                        // move towards the beacon
                         DoTranslate(PackTranslateParam(DUTY_TRANS_HALF, DIR_FWD));
                         PostSPIFollowerService(cmdEvent);
                     }
+                }
             }
-          }
+            /* END BEACON RESPONSE */
+
+            /* Once the encoder says the bot is done moving towards the beacon,
+             * the bot begins to turn to face straight */
+            if (ThisEvent.EventType == ES_MOVE_DONE)
+            {
+              orientState = ORIENT_DONE;
+              DB_printf("ORIENT_DONE: Rotating to face straight along line\r\n");
+              DoRotate(PackRotateParam(ROT_90, ROT_CCW));
+              cmdEvent.EventParam = CMD_ENCODER_FIRST_ALIGN;
+              PostSPIFollowerService(cmdEvent);
+            }
             
-          if (ThisEvent.EventType == ES_MOVE_DONE)
-          {
-            orientState = ORIENT_DONE;
-            DB_printf("ORIENT_DONE: Rotating to face straight along line\r\n");
-            DoRotate(PackRotateParam(ROT_90, ROT_CCW));
-            cmdEvent.EventParam = CMD_ENCODER_FIRST_ALIGN;
-            PostSPIFollowerService(cmdEvent);
-            }
-          break;
+            break;
         }
+        /* END ORIENT BEACON SWEEP */
 
         case ORIENT_DONE:
         {
-          /*
-            Rotate until target beacon detected, then do a small settle rotate, then
-            translate forward for first collect.
-          */
-          switch (ThisEvent.EventType)
-          {
-            case ES_NEW_KEY:
-              if (ThisEvent.EventParam == '2') {
-                orientState = ORIENT_DONE;
-                DB_printf("posing to encoder service because key pressed\r\n");
-                cmdEvent.EventParam = CMD_ENCODER_FIRST_ALIGN;
-                PostSPIFollowerService(cmdEvent);
-                StopMotors();
-                DoRotate(PackRotateParam(ROT_90, ROT_CCW));
+          /* Once facing straight, move forward until two T's are detected */
+            if (ThisEvent.EventType ==  ES_MOVE_DONE) {
+                /* Once facing straight, move forward to start detected the tape */ 
+                DB_printf("Begin tape detect\r\n");
+                curState = INIT_COAL_DISP_SEARCH;
+                
+                /* Manually setting motors here because we want to modify the duty cycles
+                 a bit for driving straight */
+                SetMotor1(-DUTY_TRANS_TAPE_DET);
+                SetMotor2(-1.1*DUTY_TRANS_TAPE_DET);
             }
-
-            case ES_MOVE_DONE:
-//              StopMotors();
-              DB_printf("Begin tape detect\r\n");
-              curState = INIT_COAL_DISP_SEARCH;
-//              DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_FWD));
-              SetMotor1(-DUTY_TRANS_TAPE_DET);
-              SetMotor2(-1.1*DUTY_TRANS_TAPE_DET);
-              break;
-
-            default:
-              break;
-          }
-          break;
+                break;
         }
-
+        
         default:
           break;
-      }
-      break;
+          
+        }
+        break;
     }
+    /* END SWITCHING CASES ON ORIENT STATE!! */
 
     case INIT_COAL_DISP_SEARCH:
     {
-        static uint8_t tape_t_count = 0;
-      /* drive forward and line follow until T detected */
+        /* drive forward until T detected */
+      static uint8_t tape_t_count = 0;
       if (ThisEvent.EventType == ES_TAPE_DETECT)
       {
 //        LineFollow(ThisEvent);
