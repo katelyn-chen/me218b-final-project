@@ -36,7 +36,7 @@
 
 
 #define TAPE_CONFIRM_COUNT        5
-#define NEXT_T_WAIT               1500        // 1.5 second
+#define NEXT_T_WAIT               1000        // 1.5 second
 
 /*============================== STATE ==============================*/
 static uint8_t MyPriority;

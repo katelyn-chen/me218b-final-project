@@ -57,7 +57,7 @@
 #define INIT_ROT_ADJUST         12 
 #define COLLECT_FWD_ALIGN       20 
 #define RIGHT_FULL_ROTATE       60      // tuned! one full wheel rotation
-#define SIDE_INDICATE_FIRST_FWD 20
+#define SIDE_INDICATE_FIRST_FWD 25      // this has become the first back after seeing the wall
 #define COLLECT_NUDGE_FWD       18
 #define COLLECT_NUDGE_BACK      18
 #define COLLECT_FWD_AFTER_T     10

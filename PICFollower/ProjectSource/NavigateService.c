@@ -34,11 +34,11 @@
 
 /* duty presets (percent 0..100) */
 #define DUTY_STOP           0u
-#define DUTY_TRANS_TAPE_DET 20u
+#define DUTY_TRANS_TAPE_DET 35u
 #define DUTY_TRANS_HALF     30u
 #define DUTY_TRANS_FULL     85u
 #define DUTY_ROTATE         30u
-#define DUTY_SEARCH         35u
+#define DUTY_SEARCH         25u
 #define TAPE_BASE_DUTY      DUTY_TRANS_TAPE_DET
 #define TAPE_CORR_DUTY      10u   // steering correction amount
 #define TAPE_LOST_DUTY      15u   // slow search when tape lost
@@ -49,6 +49,7 @@
 #define ROTATE_90_TIME_MS         1100u
 #define ROTATE_FIRST_COLLECT_MS   400u
 #define VEER_AWAY_FROM_WALL       2000u
+#define BACKUP_RAMPUP_MS          500
 
 
 #ifndef MOTOR_TIMER
@@ -136,6 +137,7 @@ static Field_t DetermineFieldFromSequence(void);
 
 /* Tape functions */
 static void LineFollow(ES_Event_t ThisEvent);
+static void SquareUpOnT(ES_Event_t ThisEvent);
 
 /*------------------------------ Module Code ------------------------------*/
 
@@ -214,17 +216,17 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         case ORIENT_BEACON_SWEEP:
         {
             if (ThisEvent.EventType == ES_FRONT_LEFT_LIMIT_TRIGGER) {
-                if (!PORTAbits.RA3) {
+                if (PORTAbits.RA3) {
                     DB_printf("The front left limit switch was hit but no wall detected in front! veering fwd and right\r\n");
-                    SetMotor1((int16_t)DUTY_TRANS_HALF*0.7);
-                    SetMotor2((int16_t)DUTY_TRANS_HALF*1.6);
+                    SetMotor1(-(int16_t)DUTY_TRANS_HALF*0.5);
+                    SetMotor2(-(int16_t)DUTY_TRANS_FULL*0.8);
                     ES_Timer_InitTimer(MOTOR_TIMER, VEER_AWAY_FROM_WALL);
                 
                 } else {
                     /* Hit front left limit switch*/
-                    DB_printf("The front left limit switch was hit and a wall was detected in front! veering fwd and right\r\n");
-                    SetMotor1(-(int16_t)DUTY_TRANS_HALF*0.8);
-                    SetMotor2(-(int16_t)DUTY_TRANS_HALF*1.4);
+                    DB_printf("The front left limit switch was hit and a wall was detected in front! veering back and right\r\n");
+                    SetMotor1((int16_t)DUTY_TRANS_HALF*0.5);
+                    SetMotor2((int16_t)DUTY_TRANS_FULL*0.8);
                     ES_Timer_InitTimer(MOTOR_TIMER, VEER_AWAY_FROM_WALL);
                 }
                         
@@ -232,17 +234,17 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
             }
             
             if (ThisEvent.EventType == ES_BACK_RIGHT_LIMIT_TRIGGER) {
-                if (!PORTAbits.RA3) {
+                if (PORTAbits.RA3) {
                     DB_printf("The back right limit switch was hit but no wall detected in front! veering fwd and left\r\n");
-                    SetMotor1((int16_t)DUTY_TRANS_HALF*0.9);
-                    SetMotor2((int16_t)DUTY_TRANS_HALF*1.5);
+                    SetMotor1(-(int16_t)DUTY_TRANS_HALF*0.5);
+                    SetMotor2(-(int16_t)DUTY_TRANS_FULL*0.8);
                     ES_Timer_InitTimer(MOTOR_TIMER, VEER_AWAY_FROM_WALL);
                 
                 } else {
                     /* Hit front left limit switch*/
                     DB_printf("The back right limit switch was hit and a wall was detected in front! veering back and right\r\n");
-                    SetMotor1(-(int16_t)DUTY_TRANS_HALF*0.9);
-                    SetMotor2(-(int16_t)DUTY_TRANS_HALF*1.5);
+                    SetMotor1((int16_t)DUTY_TRANS_HALF*0.5);
+                    SetMotor2((int16_t)DUTY_TRANS_FULL*0.8);
                     ES_Timer_InitTimer(MOTOR_TIMER, VEER_AWAY_FROM_WALL);
                 }
             }
@@ -258,8 +260,8 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
 //                PostBeaconService(startBeaconSearch);
 //                field = FIELD_BLUE;
                 DB_printf("L detected from button press! We are on GREEN field\r\n");
-                field = FIELD_GREEN;
-                cmdEvent.EventParam = CMD_SIDE_FOUND_GREEN;
+                field = FIELD_BLUE;
+                cmdEvent.EventParam = CMD_SIDE_FOUND_BLUE;
                 PostSPIFollowerService(cmdEvent);
                 
 //                DoRotate(PackRotateParam(ROT_90, ROT_CW));
@@ -304,10 +306,12 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
                         DB_printf("L detected! We are on GREEN field\r\n");
                         field = FIELD_GREEN;
                         cmdEvent.EventParam = CMD_SIDE_FOUND_GREEN;
+                        PostSPIFollowerService(cmdEvent);
                     } else if (id == BEACON_ID_R) {
                         DB_printf("R detected! We are on BLUE field\r\n");
                         field = FIELD_BLUE;
                         cmdEvent.EventParam = CMD_SIDE_FOUND_BLUE;
+                        PostSPIFollowerService(cmdEvent);
                     } else {
                         DB_printf("Other beacon detected, id = %d. Will keep rotating.\r\n", id);
                     }
@@ -390,8 +394,8 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
               DB_printf("Begin tape detect\r\n");
               curState = INIT_COAL_DISP_SEARCH;
 //              DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_FWD));
-              SetMotor1(DUTY_TRANS_TAPE_DET);
-              SetMotor2(1.1*DUTY_TRANS_TAPE_DET);
+              SetMotor1(-DUTY_TRANS_TAPE_DET);
+              SetMotor2(-1.1*DUTY_TRANS_TAPE_DET);
               break;
 
             default:
@@ -419,6 +423,13 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
       {
         tape_t_count++;
         DB_printf("incrementing tape t count! t count %d\r\n", tape_t_count);
+//        if (tape_t_count == 1)
+//        {
+//            StopMotors();
+//            SquareUpOnT(ThisEvent);
+//            DB_printf("First T detected ? squaring up\r\n");
+//        }
+        
         if (tape_t_count >= 2) {
             cmdEvent.EventParam = CMD_FWD_AFTER_T;
             PostSPIFollowerService(cmdEvent);
@@ -438,29 +449,46 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
     
       case COLLECT_POST_T: {
         if (ThisEvent.EventType == ES_MOVE_DONE) {
-            /* move forward to dispenser */
+            /* move forward initially to dispenser */
+            DoTranslate(PackTranslateParam(TRANS_HALF, DIR_FWD));
+        }
+        
+        if (!PORTAbits.RA3) {
+                // front sensor sees a wall!
             cmdEvent.EventParam = CMD_ALIGN_COLLECT;
             PostSPIFollowerService(cmdEvent);
-            DoTranslate(PackTranslateParam(TRANS_HALF, DIR_FWD));
+            DoTranslate(PackTranslateParam(TRANS_HALF, DIR_REV));
             curState = COLLECT_ALIGN;
             collectState = COLLECT_START;
-      }
+        }
+            
         break;
     }
 
     case COLLECT_ALIGN:
     {
         if (ThisEvent.EventType == ES_COLLECT_BACK) {
+            /*Moving back from the ball dispenser*/
             cmdEvent.EventParam = CMD_COLLECT_BACK;
             PostSPIFollowerService(cmdEvent);
-            DoTranslate(PackTranslateParam(TRANS_FULL, DIR_REV));
+//            DoTranslate(PackTranslateParam(TRANS_FULL, DIR_REV));
+            ES_Timer_InitTimer(MOTOR_TIMER, BACKUP_RAMPUP_MS);
+            
+            SetMotor1(DUTY_TRANS_FULL*1.1*0.5);
+            SetMotor2(DUTY_TRANS_FULL*0.8*0.5);
             collectState = COLLECT_BACK;
         }
         if (ThisEvent.EventType == ES_COLLECT_FWD) {
+           /*Moving fwd to the ball dispenser*/
             cmdEvent.EventParam = CMD_COLLECT_FWD;
             PostSPIFollowerService(cmdEvent);
             DoTranslate(PackTranslateParam(TRANS_HALF, DIR_FWD));
             collectState = COLLECT_FWD;
+        }
+        
+        if (ThisEvent.EventType == ES_TIMEOUT) {
+            SetMotor1(DUTY_TRANS_FULL*1.1);
+            SetMotor2(DUTY_TRANS_FULL*0.8);
         }
             
         if (ThisEvent.EventType == ES_MOVE_DONE) {
@@ -659,7 +687,7 @@ static void SetMotor2(int16_t dutySignedPercent)
   uint16_t mag = (dutySignedPercent < 0) ? (uint16_t)(-dutySignedPercent) : (uint16_t)dutySignedPercent;
   uint16_t ocrs = DutyPercentToOCrs(mag);
   DB_printf("Duty*PR2: %d\r\n", ocrs);
-  DB_printf("Duty: %d\r\n", dutySignedPercent);
+  DB_printf("Motor2 Duty: %d\r\n", dutySignedPercent);
 
   if (dutySignedPercent > 0)
   {
@@ -684,6 +712,7 @@ static void DoTranslate(uint16_t translateParam)
   TransSpeed_t spd;
   TransDir_t dir;
   UnpackTranslateParam(translateParam, &spd, &dir);
+  
 
   switch (spd)
   {
@@ -861,4 +890,58 @@ static Field_t DetermineFieldFromSequence(void)
   if (blueOK  && !greenOK) return FIELD_BLUE;
 
   return FIELD_UNKNOWN;
+}
+
+static void SquareUpOnT(ES_Event_t ThisEvent)
+{
+    switch (ThisEvent.EventType)
+    {
+        case ES_TAPE_DETECT:
+        {
+            switch (ThisEvent.EventParam)
+            {
+                case TAPE_CENTERED:
+                    // we're straight but not fully square yet
+                    SetMotor1(-DUTY_TRANS_TAPE_DET);
+                    SetMotor2(-DUTY_TRANS_TAPE_DET);
+                    break;
+
+                case TAPE_OFF_CENTER_LEFT:
+                    // tape more on left ? rotate left
+                    SetMotor1(-(DUTY_ROTATE));
+                    SetMotor2((DUTY_ROTATE));
+                    break;
+
+                case TAPE_OFF_CENTER_RIGHT:
+                    // tape more on right ? rotate right
+                    SetMotor1((DUTY_ROTATE));
+                    SetMotor2(-(DUTY_ROTATE));
+                    break;
+
+                case NO_TAPE:
+                    // slow rotate to reacquire
+                    SetMotor1(DUTY_ROTATE);
+                    SetMotor2(-DUTY_ROTATE);
+                    break;
+
+                default:
+                    break;
+            }
+            break;
+        }
+
+        case ES_T_DETECTED:
+        {
+            if (ThisEvent.EventParam == FULL_T)
+            {
+                // ALL 5 sensors see tape
+                StopMotors();
+                DB_printf("Squared up on FULL T!\r\n");
+            }
+            break;
+        }
+
+        default:
+            break;
+    }
 }
