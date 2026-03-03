@@ -407,7 +407,8 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
 //            }
 //    }
 
-      if (ThisEvent.EventType == ES_MOVE_DONE) {
+      if (ThisEvent.EventType == ES_MOVE_DONE && coalSearchFlag) {
+        coalSearchFlag = 0;
         /* move forward to dispenser */
         cmdEvent.EventParam = CMD_ROT_CCW_90;
         PostSPIFollowerService(cmdEvent);
