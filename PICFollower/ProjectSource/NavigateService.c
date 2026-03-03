@@ -36,7 +36,7 @@
 #define DUTY_STOP           0u
 #define DUTY_TRANS_TAPE_DET 20u
 #define DUTY_TRANS_HALF     30u
-#define DUTY_TRANS_FULL     50u
+#define DUTY_TRANS_FULL     70u
 #define DUTY_ROTATE         30u
 #define DUTY_SEARCH         25u
 #define TAPE_BASE_DUTY      DUTY_TRANS_TAPE_DET
@@ -61,6 +61,7 @@ typedef enum {
   INIT_ORIENT,
   WAITING_FOR_SIDE,
   INIT_COAL_DISP_SEARCH,
+  COLLECT_POST_T,
   COLLECT_ALIGN,
   FIRST_DISPENSE,
   INIT_FIND_MIDDLE,
@@ -215,15 +216,15 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
             if (ThisEvent.EventType == ES_FRONT_LEFT_LIMIT_TRIGGER) {
                 if (PORTAbits.RA3) {
                     DB_printf("The front left limit switch was hit but no wall detected in front! veering fwd and right\r\n");
-                    SetMotor1(DUTY_TRANS_HALF*0.75);
-                    SetMotor2(DUTY_TRANS_HALF);
+                    SetMotor1((int16_t)DUTY_TRANS_HALF*0.7);
+                    SetMotor2((int16_t)DUTY_TRANS_HALF*1.6);
                     ES_Timer_InitTimer(MOTOR_TIMER, VEER_AWAY_FROM_WALL);
                 
                 } else {
                     /* Hit front left limit switch*/
                     DB_printf("The front left limit switch was hit and a wall was detected in front! veering fwd and right\r\n");
-                    SetMotor1(-DUTY_TRANS_HALF*0.75);
-                    SetMotor2(-DUTY_TRANS_HALF);
+                    SetMotor1(-(int16_t)DUTY_TRANS_HALF*0.8);
+                    SetMotor2(-(int16_t)DUTY_TRANS_HALF*1.4);
                     ES_Timer_InitTimer(MOTOR_TIMER, VEER_AWAY_FROM_WALL);
                 }
                         
@@ -231,17 +232,17 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
             }
             
             if (ThisEvent.EventType == ES_BACK_RIGHT_LIMIT_TRIGGER) {
-                if (PORTAbits.RA3) {
-                    DB_printf("The front left limit switch was hit but no wall detected in front! veering fwd and left\r\n");
-                    SetMotor1(DUTY_TRANS_HALF);
-                    SetMotor2(DUTY_TRANS_HALF*0.75);
+                if (!PORTAbits.RA3) {
+                    DB_printf("The back right limit switch was hit but no wall detected in front! veering fwd and left\r\n");
+                    SetMotor1((int16_t)DUTY_TRANS_HALF*0.8);
+                    SetMotor2((int16_t)DUTY_TRANS_HALF*1.4);
                     ES_Timer_InitTimer(MOTOR_TIMER, VEER_AWAY_FROM_WALL);
                 
                 } else {
                     /* Hit front left limit switch*/
-                    DB_printf("The front left limit switch was hit and a wall was detected in front! veering fwd and right\r\n");
-                    SetMotor1(-DUTY_TRANS_HALF);
-                    SetMotor2(-DUTY_TRANS_HALF*0.75);
+                    DB_printf("The back right limit switch was hit and a wall was detected in front! veering back and right\r\n");
+                    SetMotor1(-(int16_t)DUTY_TRANS_HALF*0.8);
+                    SetMotor2(-(int16_t)DUTY_TRANS_HALF*1.4);
                     ES_Timer_InitTimer(MOTOR_TIMER, VEER_AWAY_FROM_WALL);
                 }
             }
@@ -417,21 +418,32 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         tape_t_count++;
         DB_printf("incrementing tape t count! t count %d\r\n", tape_t_count);
         if (tape_t_count >= 2) {
-            cmdEvent.EventParam = CMD_ROT_CCW_90;
+            cmdEvent.EventParam = CMD_FWD_AFTER_T;
             PostSPIFollowerService(cmdEvent);
-            DoRotate(PackRotateParam(ROT_90, ROT_CCW)); /* turn 90 to face dispenser */
+            DoTranslate(PackTranslateParam(TRANS_HALF, DIR_FWD));
         }
       }
 
       if (ThisEvent.EventType == ES_MOVE_DONE) {
         /* move forward to dispenser */
-        cmdEvent.EventParam = CMD_ALIGN_COLLECT;
+        cmdEvent.EventParam = CMD_ROT_CCW_90;
         PostSPIFollowerService(cmdEvent);
-        DoTranslate(PackTranslateParam(TRANS_HALF, DIR_FWD));
-        curState = COLLECT_ALIGN;
-        collectState = COLLECT_START;
+        DoRotate(PackRotateParam(ROT_90, ROT_CCW)); /* turn 90 to face dispenser */
+        curState = COLLECT_POST_T;
       }
       break;
+    }
+    
+      case COLLECT_POST_T: {
+        if (ThisEvent.EventType == ES_MOVE_DONE) {
+            /* move forward to dispenser */
+            cmdEvent.EventParam = CMD_ALIGN_COLLECT;
+            PostSPIFollowerService(cmdEvent);
+            DoTranslate(PackTranslateParam(TRANS_HALF, DIR_FWD));
+            curState = COLLECT_ALIGN;
+            collectState = COLLECT_START;
+      }
+        break;
     }
 
     case COLLECT_ALIGN:
@@ -439,7 +451,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         if (ThisEvent.EventType == ES_COLLECT_BACK) {
             cmdEvent.EventParam = CMD_COLLECT_BACK;
             PostSPIFollowerService(cmdEvent);
-            DoTranslate(PackTranslateParam(TRANS_HALF, DIR_REV));
+            DoTranslate(PackTranslateParam(TRANS_FULL, DIR_REV));
             collectState = COLLECT_BACK;
         }
         if (ThisEvent.EventType == ES_COLLECT_FWD) {
@@ -693,7 +705,7 @@ static void DoTranslate(uint16_t translateParam)
   {
     int16_t signedDuty = (dir == DIR_FWD) ? -(int16_t)duty : (int16_t)duty;
     SetMotor1(signedDuty);
-    SetMotor2(signedDuty);
+    SetMotor2(1.03*signedDuty);
   }
 }
 

@@ -52,14 +52,15 @@
 #define SPI_CLK_PERIOD_NS      50000u
 
 /* Pulse values need to be tuned!! */
-#define ROT_90_PULSES           20
+#define ROT_90_PULSES           22
 #define ROT_180_PULSES          ROT_90_PULSES*2
-#define INIT_ROT_ADJUST         15 
-#define COLLECT_FWD_ALIGN       45 
+#define INIT_ROT_ADJUST         12 
+#define COLLECT_FWD_ALIGN       20 
 #define RIGHT_FULL_ROTATE       60      // tuned! one full wheel rotation
-#define SIDE_INDICATE_FIRST_FWD 30
+#define SIDE_INDICATE_FIRST_FWD 20
 #define COLLECT_NUDGE_FWD       20
 #define COLLECT_NUDGE_BACK      20
+#define COLLECT_FWD_AFTER_T     16
 
 /*---------------------------- Module Types -------------------------------*/
 typedef enum {
@@ -289,6 +290,7 @@ static bool IsKnownFollowerStatus(uint8_t cmd)
     case CMD_FIRST_COLLECT_ARM_UP:
     case CMD_FIRST_COLLECT_GRAB:
     case CMD_ALIGN_COLLECT:
+    case CMD_FWD_AFTER_T:
       return true;
 
     default:
@@ -435,6 +437,14 @@ static void HandleFollowerStatus(uint8_t statusByte)
         cmdEvent.EventType = ES_COLLECT_FWD_DONE;
         PostCollectService(cmdEvent);
         break;
+    
+    case CMD_FWD_AFTER_T:
+        DB_printf("Moving fwd after seeing the second tape\r\n");
+        cmdEvent.EventType = ES_ENCODER_TARGET_STRAIGHT;
+        cmdEvent.EventParam = COLLECT_FWD_AFTER_T;
+        PostEncoderService(cmdEvent);
+        break;
+          
 
 
     default:

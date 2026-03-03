@@ -82,6 +82,7 @@ typedef enum {
 #define CMD_ENCODER_FIRST_FWD     0x24
 #define CMD_COLLECT_BACK          0x25
 #define CMD_COLLECT_FWD           0x26
+#define CMD_FWD_AFTER_T           0x27
 
 #define CMD_END_GAME              0x99
 #define CMD_QUERY                 0xAA

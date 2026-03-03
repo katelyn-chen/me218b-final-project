@@ -55,7 +55,7 @@
 
 /* Arm (OC4 -> RA4): ready/down */
 #define ARM_UP_TICKS           1540u // tested!!! DONT CHANGE VALUES
-#define ARM_DOWN_TICKS         3400u
+#define ARM_DOWN_TICKS         3324u
 // 1540, 3300 is 90 degree 
 
 #define BUCKET_ARM_DISPENSE_TICKS    3000u 
