@@ -219,8 +219,8 @@ static bool IsKnownCommand(uint8_t cmd)
         case CMD_TRANS_BWD:
         case CMD_ROT_CW_90:
         case CMD_ROT_CCW_90:
-        case CMD_ROT_CCW_45:
-        case CMD_ROT_CW_45:
+//        case CMD_ROT_CCW_45:
+//        case CMD_ROT_CW_45:
         case CMD_TAPE_T_DETECT:
         case CMD_LINE_FOLLOW:
         case CMD_GET_BEACON_FREQ:
@@ -293,20 +293,20 @@ static void HandleCommandByte(uint8_t cmd)
         break;
     }
 
-
-    case CMD_ROT_CW_45: {
-        DB_printf("Received CW 45 rotation command\r\n");
-        cmdEvent.EventType = ES_ROTATE;
-        cmdEvent.EventParam = PackRotateParam(ROT_45, ROT_CW);
-        break;
-    }
-
-    case CMD_ROT_CCW_45: {
-        DB_printf("Received CCW 45 rotation command\r\n");
-        cmdEvent.EventType = ES_ROTATE;
-        cmdEvent.EventParam = PackRotateParam(ROT_45, ROT_CCW);
-        break;
-    }
+//
+//    case CMD_ROT_CW_45: {
+//        DB_printf("Received CW 45 rotation command\r\n");
+//        cmdEvent.EventType = ES_ROTATE;
+//        cmdEvent.EventParam = PackRotateParam(ROT_45, ROT_CW);
+//        break;
+//    }
+//
+//    case CMD_ROT_CCW_45: {
+//        DB_printf("Received CCW 45 rotation command\r\n");
+//        cmdEvent.EventType = ES_ROTATE;
+//        cmdEvent.EventParam = PackRotateParam(ROT_45, ROT_CCW);
+//        break;
+//    }
 
     case CMD_TAPE_T_DETECT: {
         DB_printf("Received TAPE detect command\r\n");

@@ -51,6 +51,7 @@
 #define VEER_AWAY_FROM_WALL       1000u
 #define BACKUP_RAMPUP_MS          500
 #define SEARCH_TIME               10000
+#define TURN_DELAY_PRE_LF         1000 // turn before starting to line follow
 
 
 #ifndef MOTOR_TIMER
@@ -103,15 +104,22 @@ typedef enum {
   FIELD_BLUE    = 2
 } Field_t;
 
+typedef enum {
+    FOLLOW_FWD,
+    FOLLOW_REV
+} FollowDir_t;
 /*---------------------------- Module Variables --------------------------*/
 static uint8_t             MyPriority;
 static NavigateState_t     curState;
 static InitOrientState_t   orientState;
 static InitCollectState_t  collectState;
 static Field_t             field = FIELD_UNKNOWN;
+static FollowDir_t followDir;
 static uint16_t            duty = DUTY_STOP;
-static int8_t LineFollowDirection = 1;   // +1 = forward, -1 = reverse
+//static int8_t LineFollowDirection = 1;   // +1 = forward, -1 = reverse
 static bool coalSearchFlag  = 0;
+static bool following = 1;
+static bool collectStarted = 0;
 
 /* beacon sweep history (store unique transitions only) */
 #define BEACON_SEQ_MAX 8u
@@ -139,7 +147,7 @@ static bool PushBeaconIfNew(BeaconId_t id);
 static Field_t DetermineFieldFromSequence(void);
 
 /* Tape functions */
-static void LineFollow(ES_Event_t ThisEvent);
+static void LineFollow(ES_Event_t ThisEvent, FollowDir_t followDirection);
 static void SquareUpOnT(ES_Event_t ThisEvent);
 
 /*------------------------------ Module Code ------------------------------*/
@@ -319,7 +327,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
               DB_printf("Beacon found event posted from nav service, id: %d\r\n", id);
                 if (id != BEACON_ID_NONE)
                 {
-                    /*Identifies side based on if it sees L/R, ignores other frequencies*/
+                    /* Identifies side based on if it sees L/R, ignores other frequencies */
                     if (id == BEACON_ID_L) {
                         DB_printf("L detected! We are on GREEN field\r\n");
                         field = FIELD_GREEN;
@@ -363,17 +371,19 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         {
           /* Once facing straight, move forward until two T's are detected */
             if (ThisEvent.EventType ==  ES_MOVE_DONE) {
-                /* Once facing straight, move forward to start detected the tape */ 
+                /* Done rotating to tape after beacon */ 
                 DB_printf("Begin tape detect\r\n");
                 curState = INIT_COAL_DISP_SEARCH;
                 
                 /* Manually setting motors here because we want to modify the duty cycles
                  a bit for driving straight */
-                SetMotor1(-DUTY_TRANS_TAPE_DET);
-                SetMotor2(-1.1*DUTY_TRANS_TAPE_DET);
+                DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_FWD));
+//                SetMotor1(-DUTY_TRANS_TAPE_DET);
+//                SetMotor2(-1.1*DUTY_TRANS_TAPE_DET);
             }
                 break;
         }
+        /* END ORIENT DONE */
         
         default:
           break;
@@ -381,98 +391,112 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         }
         break;
     }
-    /* END SWITCHING CASES ON ORIENT STATE!! */
+    /* END SWITCHING CASES ON ORIENT STATE!! END INIT ORIENT */
 
     case INIT_COAL_DISP_SEARCH:
     {
-        /* drive forward until T detected */
-      static uint8_t tape_t_count = 0;
+      /* drive forward until T detected */
+      
+//      static uint8_t tape_t_count = 0;
+      
       if (ThisEvent.EventType == ES_TAPE_DETECT)
       {
-//        LineFollow(ThisEvent);
+        LineFollow(ThisEvent, FOLLOW_FWD);
       }
 
-      if (ThisEvent.EventType == ES_T_DETECTED && !coalSearchFlag)
+      if (ThisEvent.EventType == ES_T_DETECTED && ThisEvent.EventParam == FULL_T)
       {
-        tape_t_count++;
-        DB_printf("incrementing tape t count! t count %d\r\n", tape_t_count);
-        
-        if (tape_t_count >= 2) {
-            coalSearchFlag = 1;
-            cmdEvent.EventParam = CMD_FWD_AFTER_T;
-            PostSPIFollowerService(cmdEvent);
-            DoTranslate(PackTranslateParam(TRANS_HALF, DIR_FWD));
-        }
+        // rotate clockwise to face away from dispenser, start timer before line following
+        DoRotate(PackRotateParam(ROT_90, ROT_CW));
+        ES_Timer_InitTimer(MOTOR_TIMER, TURN_DELAY_PRE_LF);
       }
-     
-//    if (ThisEvent.EventType == ES_TAPE_DETECT) {
-//        if (tape_t_count == 1)
-//            {
-//                SquareUpOnT(ThisEvent);
-//                DB_printf("First T detected ? squaring up\r\n");
-//            }
-//    }
+      
+      if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == MOTOR_TIMER) {
+          // keep rotating, but now change state so we can start line following
+          curState = COLLECT_POST_T;
+      }
 
-      if (ThisEvent.EventType == ES_MOVE_DONE && coalSearchFlag) {
-        coalSearchFlag = 0;
-        /* move forward to dispenser */
-        cmdEvent.EventParam = CMD_ROT_CCW_90;
-        PostSPIFollowerService(cmdEvent);
-        DoRotate(PackRotateParam(ROT_90, ROT_CCW)); /* turn 90 to face dispenser */
-        curState = COLLECT_POST_T;
-      }
+//      if (ThisEvent.EventType == ES_MOVE_DONE && coalSearchFlag) {
+//        coalSearchFlag = 0;
+//        /* move forward to dispenser */
+//        cmdEvent.EventParam = CMD_ROT_CCW_90;
+//        PostSPIFollowerService(cmdEvent);
+//        DoRotate(PackRotateParam(ROT_90, ROT_CCW)); /* turn 90 to face dispenser */
+//        curState = COLLECT_POST_T;
+//      }
       break;
     }
     
     case COLLECT_POST_T: {
-        if (ThisEvent.EventType == ES_MOVE_DONE) {
-            /* move forward initially to dispenser */
-            DoTranslate(PackTranslateParam(TRANS_HALF, DIR_FWD));
+        if (ThisEvent.EventType == ES_TAPE_DETECT && following)
+        {
+            LineFollow(ThisEvent, FOLLOW_FWD);
         }
         
-        if (ThisEvent.EventType == ES_IR_TRIGGER) {
-                // front sensor sees a wall!
-            cmdEvent.EventParam = CMD_ALIGN_COLLECT;
+        if (ThisEvent.EventType == ES_T_DETECTED) {
+            // rotate 180
+            cmdEvent.EventParam = CMD_ROT_CW_180;
             PostSPIFollowerService(cmdEvent);
-            DoTranslate(PackTranslateParam(TRANS_HALF, DIR_REV));
+            DoRotate(PackRotateParam(ROT_90, ROT_CW));
+            following = 0;
+        }
+        
+        if (ThisEvent.EventType == ES_MOVE_DONE) {
+            /* move forward to dispenser */
+            DoTranslate(PackTranslateParam(TRANS_HALF, DIR_FWD));
             curState = COLLECT_ALIGN;
             collectState = COLLECT_START;
-        }
-            
+            following = 1;
+        }  
         break;
     }
 
     case COLLECT_ALIGN:
     {
+        if (ThisEvent.EventType == ES_T_DETECTED && ThisEvent.EventType == LEFT_CORNER) {
+            if (!collectStarted) {
+                /* Once the T has been detected, bot moves back and lowers arm
+                 I added this flag because I only want this code to run once */
+                collectStarted = 1;
+                DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_REV));
+                followDir = FOLLOW_FWD;
+                cmdEvent.EventParam = CMD_ALIGN_COLLECT;
+                PostSPIFollowerService(cmdEvent);
+            }
+        }
+        
+        if (ThisEvent.EventType == ES_TAPE_DETECT && following)
+        {
+          LineFollow(ThisEvent, followDir);
+        }
+        
         if (ThisEvent.EventType == ES_COLLECT_BACK) {
-            /*Moving back from the ball dispenser*/
+            /* Moving back from the ball dispenser */
             cmdEvent.EventParam = CMD_COLLECT_BACK;
             PostSPIFollowerService(cmdEvent);
-//            DoTranslate(PackTranslateParam(TRANS_FULL, DIR_REV));
+            DoTranslate(PackTranslateParam(TRANS_FULL, DIR_REV));
+            /* Initiating backup ramp up - half the backup speed */
             ES_Timer_InitTimer(MOTOR_TIMER, BACKUP_RAMPUP_MS);
-            
             SetMotor1(DUTY_TRANS_FULL*1.1*0.5);
             SetMotor2(DUTY_TRANS_FULL*0.8*0.5);
             collectState = COLLECT_BACK;
-            LineFollowDirection = -1;
+            followDir = FOLLOW_REV;
         }
+        
         if (ThisEvent.EventType == ES_COLLECT_FWD) {
-           /*Moving fwd to the ball dispenser*/
+           /* Moving fwd to the ball dispenser */
             cmdEvent.EventParam = CMD_COLLECT_FWD;
             PostSPIFollowerService(cmdEvent);
-            DoTranslate(PackTranslateParam(TRANS_HALF, DIR_FWD));
+            DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_FWD));
             collectState = COLLECT_FWD;
-            LineFollowDirection = 1;
+            followDir = FOLLOW_FWD;
         }
         
-        if (ThisEvent.EventType == ES_TAPE_DETECT)
-        {
-          LineFollow(ThisEvent);
-        }
-        
-        if (ThisEvent.EventType == ES_TIMEOUT) {
+        if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == MOTOR_TIMER) {
+            /* This is for the backup ramp up - moving to full backup speed*/
             SetMotor1(DUTY_TRANS_FULL*1.1);
             SetMotor2(DUTY_TRANS_FULL*0.8);
+            ES_Timer_StopTimer(MOTOR_TIMER);
         }
             
         if (ThisEvent.EventType == ES_MOVE_DONE) {
@@ -513,8 +537,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
       /* drive backwards and line follow until T detected */
       if (ThisEvent.EventType == ES_TAPE_DETECT)
       {
-        LineFollowDirection = -1;
-        LineFollow(ThisEvent);
+        LineFollow(ThisEvent, FOLLOW_REV);
       }
       if (ThisEvent.EventType == ES_T_DETECTED)
       {
@@ -750,7 +773,7 @@ static void StartTapeDetect(void)
   SetMotor2((int16_t)DUTY_TRANS_HALF);
 }
 
-static void LineFollow(ES_Event_t ThisEvent)
+static void LineFollow(ES_Event_t ThisEvent, FollowDir_t followDirection)
 {
     int16_t leftDuty  = 0;
     int16_t rightDuty = 0;
@@ -791,13 +814,16 @@ static void LineFollow(ES_Event_t ThisEvent)
              * Motor convention:
              *   NEGATIVE = forward
              *   POSITIVE = backward
-             *
-             * So:
-             *   Forward line-follow  ? multiply by -1
-             *   Reverse line-follow  ? multiply by +1
              */
-
-            int8_t motorSign = (LineFollowDirection == 1) ? -1 : +1;
+            int8_t motorSign;
+            
+            if (followDirection == FOLLOW_FWD) {
+                motorSign = 1;
+            } else if (followDirection == FOLLOW_REV) {
+                motorSign = -1;
+            } else {
+                motorSign = 0;
+            }
 
             SetMotor1(leftDuty  * motorSign);
             SetMotor2(rightDuty * motorSign);

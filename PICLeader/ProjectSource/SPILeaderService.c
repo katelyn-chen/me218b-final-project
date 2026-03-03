@@ -54,13 +54,13 @@
 /* Pulse values need to be tuned!! */
 #define ROT_90_PULSES           25
 #define ROT_180_PULSES          ROT_90_PULSES*2
-#define INIT_ROT_ADJUST         14 
-#define COLLECT_FWD_ALIGN       20 
+#define COLLECT_FWD_ALIGN       20      // first fwd towards beacon 
+#define INIT_ROT_ADJUST         23      // first rotation after seeing beacon
 #define RIGHT_FULL_ROTATE       60      // tuned! one full wheel rotation
 #define SIDE_INDICATE_FIRST_FWD 25      // this has become the first back after seeing the wall
-#define COLLECT_NUDGE_FWD       18
-#define COLLECT_NUDGE_BACK      18
-#define COLLECT_FWD_AFTER_T     15
+#define COLLECT_NUDGE_FWD       18      // nudging fwd to dispenser
+#define COLLECT_NUDGE_BACK      18      // nudging back from dispenser
+#define COLLECT_FWD_AFTER_T     15      // moving forward after the T
 
 /*---------------------------- Module Types -------------------------------*/
 typedef enum {
@@ -280,6 +280,9 @@ static bool IsKnownFollowerStatus(uint8_t cmd)
     case CMD_BEACON_B_FOUND:
     case CMD_ENCODER_FIRST_ALIGN:
     case CMD_ROT_CCW_90:
+    case CMD_ROT_CW_180:
+    case CMD_ROT_CCW_180:
+    case CMD_ROT_CW_90:
     case CMD_FIRST_COLLECT_START:
     case CMD_SECOND_COLLECT_START:
     case CMD_OTHER_COLLECT_START:
@@ -457,8 +460,14 @@ static void HandleFollowerStatus(uint8_t statusByte)
         cmdEvent.EventParam = COLLECT_FWD_AFTER_T;
         PostEncoderService(cmdEvent);
         break;
-          
-
+        
+      case CMD_ROT_CW_180:
+        DB_printf("Rotating 180 degrees clockwise\r\n");
+        cmdEvent.EventType = ES_ENCODER_TARGET_ROT;
+        cmdEvent.EventParam = ROT_180_PULSES;
+        PostEncoderService(cmdEvent);
+        break;
+         
 
     default:
       break;

@@ -56,8 +56,8 @@ typedef enum {
 #define CMD_TRANS_BWD             0x02
 #define CMD_ROT_CW_90             0x03
 #define CMD_ROT_CCW_90            0x04
-#define CMD_ROT_CCW_45            0x05
-#define CMD_ROT_CW_45             0x06
+#define CMD_ROT_CCW_180           0x05
+#define CMD_ROT_CW_180            0x06
 #define CMD_TAPE_T_DETECT         0x07
 #define CMD_LINE_FOLLOW           0x08
 
