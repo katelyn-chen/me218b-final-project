@@ -277,9 +277,9 @@ void InitPinHardware(void)
 {
   // Sets the TRIS bits = 1 and makes pins digital
   PIN_MapPinInput(LeftEncoderA);
-  PIN_MapPinInput(LeftEncoderB);
+//  PIN_MapPinInput(LeftEncoderB);
   PIN_MapPinInput(RightEncoderA);
-  PIN_MapPinInput(RightEncoderB);
+//  PIN_MapPinInput(RightEncoderB);
 //  TRISBbits.TRISB5 = 1;
 
   // PPS Mapping

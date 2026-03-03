@@ -18,9 +18,9 @@ ES_Event_t RunEncoderService(ES_Event_t ThisEvent);
 
 // Pin Definitions
 #define LeftEncoderA SPI_RPB11
-#define LeftEncoderB SPI_RPB9
+//#define LeftEncoderB SPI_RPB9
 #define RightEncoderA SPI_RPB2
-#define RightEncoderB SPI_RPB3
+//#define RightEncoderB SPI_RPB3
 
 #endif /* ServEncoder_H */
 

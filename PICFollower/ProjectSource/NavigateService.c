@@ -36,9 +36,9 @@
 #define DUTY_STOP           0u
 #define DUTY_TRANS_TAPE_DET 20u
 #define DUTY_TRANS_HALF     30u
-#define DUTY_TRANS_FULL     70u
+#define DUTY_TRANS_FULL     85u
 #define DUTY_ROTATE         30u
-#define DUTY_SEARCH         25u
+#define DUTY_SEARCH         35u
 #define TAPE_BASE_DUTY      DUTY_TRANS_TAPE_DET
 #define TAPE_CORR_DUTY      10u   // steering correction amount
 #define TAPE_LOST_DUTY      15u   // slow search when tape lost
@@ -389,7 +389,9 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
 //              StopMotors();
               DB_printf("Begin tape detect\r\n");
               curState = INIT_COAL_DISP_SEARCH;
-              DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_FWD));
+//              DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_FWD));
+              SetMotor1(TRANS_TAPE);
+              SetMotor2(1.1*TRANS_TAPE);
               break;
 
             default:
@@ -705,7 +707,7 @@ static void DoTranslate(uint16_t translateParam)
   {
     int16_t signedDuty = (dir == DIR_FWD) ? -(int16_t)duty : (int16_t)duty;
     SetMotor1(signedDuty);
-    SetMotor2(1.03*signedDuty);
+    SetMotor2(signedDuty);
   }
 }
 
