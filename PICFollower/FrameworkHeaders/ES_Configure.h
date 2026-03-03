@@ -300,9 +300,8 @@ typedef enum
   /* Events for ReflectiveSenseService */
   ES_TAPE_CHANGE,
   // event checker limit switch
-  ES_RIGHT_LIMIT_TRIGGER,
-  ES_LEFT_LIMIT_TRIGGER,
-  ES_BACK_LIMIT_TRIGGER
+  ES_FRONT_LEFT_LIMIT_TRIGGER,
+  ES_BACK_RIGHT_LIMIT_TRIGGER
 }ES_EventType_t; // changed to be event type
 
 /****************************************************************************/

@@ -212,7 +212,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
 
         case ORIENT_BEACON_SWEEP:
         {
-            if (ThisEvent.EventType == ES_LEFT_LIMIT_TRIGGER) {
+            if (ThisEvent.EventType == ES_FRONT_LEFT_LIMIT_TRIGGER) {
                 if (PORTAbits.RA3) {
                     DB_printf("The front left limit switch was hit but no wall detected in front! veering fwd and right\r\n");
                     SetMotor1(DUTY_TRANS_HALF*0.75);
@@ -230,7 +230,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
                 
             }
             
-            if (ThisEvent.EventType == ES_RIGHT_LIMIT_TRIGGER) {
+            if (ThisEvent.EventType == ES_BACK_RIGHT_LIMIT_TRIGGER) {
                 if (PORTAbits.RA3) {
                     DB_printf("The front left limit switch was hit but no wall detected in front! veering fwd and left\r\n");
                     SetMotor1(DUTY_TRANS_HALF);

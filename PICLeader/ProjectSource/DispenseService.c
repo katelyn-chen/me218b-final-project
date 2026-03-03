@@ -182,6 +182,7 @@ static void FlagSetPulseUs(uint16_t us)
 void __ISR(_TIMER_4_VECTOR, IPL4SOFT) T4Handler(void)
 {
   IFS0CLR = _IFS0_T4IF_MASK;
+//  DB_printf("I \r\n");
 
   if (FlagPhase == FLAG_PHASE_PULSE)
   {

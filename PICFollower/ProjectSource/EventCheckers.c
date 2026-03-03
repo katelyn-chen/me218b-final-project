@@ -205,7 +205,7 @@ bool Check4LimitSwitchChange(void) {
         ES_Event_t NewEvent;
         if (CurrentFrontLeftLimitState == true) { // Button pressed
             ReturnVal = true;
-            NewEvent.EventType = ES_LEFT_LIMIT_TRIGGER;
+            NewEvent.EventType = ES_FRONT_LEFT_LIMIT_TRIGGER;
             DB_printf("Left Limit Pressed Detected!\r\n");
             PostNavigateService(NewEvent);
         }
@@ -214,7 +214,7 @@ bool Check4LimitSwitchChange(void) {
         ES_Event_t NewEvent;
         if (CurrentBackRightLimitState == true) { // Button pressed
             ReturnVal = true;
-            NewEvent.EventType = ES_BACK_LIMIT_TRIGGER;
+            NewEvent.EventType = ES_BACK_RIGHT_LIMIT_TRIGGER;
             DB_printf("Back Limit Pressed Detected!\r\n");
             PostNavigateService(NewEvent);
         }
@@ -223,3 +223,20 @@ bool Check4LimitSwitchChange(void) {
     LastBackRightLimitState = CurrentBackRightLimitState; 
     return ReturnVal;
 }
+
+// SPI_RPA3
+//bool Check4IRDistance (void) {
+//    bool ReturnVal = false;
+//    static bool LastDistanceState = true;
+//    static bool CurrDistanceState;
+//    CurrDistanceState = PORTBbits.RB3;
+//    
+//    if ((LastDistanceState != CurrDistanceState) && (CurrDistanceState == false)) {
+//        ReturnVal = true;
+//        NewEvent.EventType = ES_IR_TRIGGER;
+//        DB_printf("IR sensor triggered \r\n");
+//        PostNavigateService(NewEvent);
+//    }
+//    LastDistanceState = CurrDistanceState;
+//    return ReturnVal;
+//}
