@@ -332,7 +332,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
                     if (field != FIELD_UNKNOWN)
                     {
                         DB_printf("Field determined: %u\r\n", (unsigned)field);
-                        PostSPIFollowerService(cmdEvent);
+                        // PostSPIFollowerService(cmdEvent);
                       // somewhere we have to turn the indicator servo (leader)!!
                         DB_printf("Moving towards L/R beacon\r\n");
                         DoTranslate(PackTranslateParam(DUTY_TRANS_HALF, DIR_FWD));
