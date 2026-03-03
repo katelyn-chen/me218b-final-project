@@ -60,7 +60,7 @@
 #define SIDE_INDICATE_FIRST_FWD 25      // this has become the first back after seeing the wall
 #define COLLECT_NUDGE_FWD       18
 #define COLLECT_NUDGE_BACK      18
-#define COLLECT_FWD_AFTER_T     10
+#define COLLECT_FWD_AFTER_T     15
 
 /*---------------------------- Module Types -------------------------------*/
 typedef enum {
@@ -393,7 +393,7 @@ static void HandleFollowerStatus(uint8_t statusByte)
       cmdEvent.EventType = ES_ENCODER_TARGET_STRAIGHT;
       cmdEvent.EventParam = COLLECT_FWD_ALIGN;
       PostEncoderService(cmdEvent);
-      LATAbits.LATA3 = 0;
+//      LATAbits.LATA3 = 0;
       break;
 
     case CMD_FIRST_COLLECT_START:

@@ -111,6 +111,7 @@ static InitCollectState_t  collectState;
 static Field_t             field = FIELD_UNKNOWN;
 static uint16_t            duty = DUTY_STOP;
 static int8_t LineFollowDirection = 1;   // +1 = forward, -1 = reverse
+static bool coalSearchFlag  = 0;
 
 /* beacon sweep history (store unique transitions only) */
 #define BEACON_SEQ_MAX 8u
@@ -385,12 +386,13 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
 //        LineFollow(ThisEvent);
       }
 
-      if (ThisEvent.EventType == ES_T_DETECTED)
+      if (ThisEvent.EventType == ES_T_DETECTED && !coalSearchFlag)
       {
         tape_t_count++;
         DB_printf("incrementing tape t count! t count %d\r\n", tape_t_count);
         
-        if (tape_t_count = 2) {
+        if (tape_t_count >= 2) {
+            coalSearchFlag = 1;
             cmdEvent.EventParam = CMD_FWD_AFTER_T;
             PostSPIFollowerService(cmdEvent);
             DoTranslate(PackTranslateParam(TRANS_HALF, DIR_FWD));
@@ -415,7 +417,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
       break;
     }
     
-      case COLLECT_POST_T: {
+    case COLLECT_POST_T: {
         if (ThisEvent.EventType == ES_MOVE_DONE) {
             /* move forward initially to dispenser */
             DoTranslate(PackTranslateParam(TRANS_HALF, DIR_FWD));
@@ -884,51 +886,32 @@ static Field_t DetermineFieldFromSequence(void)
 static void SquareUpOnT(ES_Event_t ThisEvent)
 {
     switch (ThisEvent.EventType)
-    {
+    {  
+     
         case ES_T_DETECTED:
-        {
-         break;   
-        }
-        case ES_TAPE_DETECT:
         {
             switch (ThisEvent.EventParam)
             {
-                case TAPE_CENTERED:
+                case FULL_T:
                     // creep forward
                     SetMotor1(-DUTY_TRANS_TAPE_DET);
                     SetMotor2(-DUTY_TRANS_TAPE_DET);
                     break;
 
-                case TAPE_OFF_CENTER_LEFT:
+                case RIGHT_CORNER:
                     // rotate LEFT (CCW)
                     SetMotor1(DUTY_ROTATE);      // left backward
                     SetMotor2(-DUTY_ROTATE);     // right forward
                     break;
 
-                case TAPE_OFF_CENTER_RIGHT:
+                case LEFT_CORNER:
                     // rotate RIGHT (CW)
                     SetMotor1(-DUTY_ROTATE);     // left forward
                     SetMotor2(DUTY_ROTATE);      // right backward
                     break;
 
-                case NO_TAPE:
-                    // slow rotate to reacquire (pick a direction)
-                    SetMotor1(DUTY_ROTATE);
-                    SetMotor2(-DUTY_ROTATE);
-                    break;
-
                 default:
                     break;
-            }
-            break;
-        }
-
-        case ES_T_DETECTED:
-        {
-            if (ThisEvent.EventParam == FULL_T)
-            {
-                StopMotors();
-                DB_printf("Squared up on FULL T!\r\n");
             }
             break;
         }
