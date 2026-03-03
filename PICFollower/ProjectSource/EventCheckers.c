@@ -235,7 +235,7 @@ bool Check4IRDistance (void) {
         ReturnVal = true;
         ES_Event_t NewEvent;
         NewEvent.EventType = ES_IR_TRIGGER;
-        DB_printf("IR sensor triggered \r\n");
+//        DB_printf("IR sensor triggered \r\n");
         PostNavigateService(NewEvent);
     }
     LastDistanceState = CurrDistanceState;

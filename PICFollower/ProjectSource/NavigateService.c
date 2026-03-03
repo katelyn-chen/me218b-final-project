@@ -48,7 +48,7 @@
 #define ROTATE_45_TIME_MS         550u
 #define ROTATE_90_TIME_MS         1100u
 #define ROTATE_FIRST_COLLECT_MS   400u
-#define VEER_AWAY_FROM_WALL       2000u
+#define VEER_AWAY_FROM_WALL       1000u
 #define BACKUP_RAMPUP_MS          500
 #define SEARCH_TIME               10000
 
@@ -110,6 +110,7 @@ static InitOrientState_t   orientState;
 static InitCollectState_t  collectState;
 static Field_t             field = FIELD_UNKNOWN;
 static uint16_t            duty = DUTY_STOP;
+static int8_t LineFollowDirection = 1;   // +1 = forward, -1 = reverse
 
 /* beacon sweep history (store unique transitions only) */
 #define BEACON_SEQ_MAX 8u
@@ -319,12 +320,12 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
                         DB_printf("L detected! We are on GREEN field\r\n");
                         field = FIELD_GREEN;
                         cmdEvent.EventParam = CMD_SIDE_FOUND_GREEN;
-                        PostSPIFollowerService(cmdEvent);
+//                        PostSPIFollowerService(cmdEvent);
                     } else if (id == BEACON_ID_R) {
                         DB_printf("R detected! We are on BLUE field\r\n");
                         field = FIELD_BLUE;
                         cmdEvent.EventParam = CMD_SIDE_FOUND_BLUE;
-                        PostSPIFollowerService(cmdEvent);
+//                        PostSPIFollowerService(cmdEvent);
                     } else {
                         DB_printf("Other beacon detected, id = %d. Will keep rotating.\r\n", id);
                     }
@@ -332,12 +333,12 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
                     if (field != FIELD_UNKNOWN)
                     {
                         DB_printf("Field determined: %u\r\n", (unsigned)field);
-                        // PostSPIFollowerService(cmdEvent);
                       // somewhere we have to turn the indicator servo (leader)!!
                         DB_printf("Moving towards L/R beacon\r\n");
                         DoTranslate(PackTranslateParam(DUTY_TRANS_HALF, DIR_FWD));
-                        cmdEvent.EventParam = CMD_ENCODER_FIRST_FWD;
                         PostSPIFollowerService(cmdEvent);
+//                        cmdEvent.EventParam = CMD_ENCODER_FIRST_FWD;
+//                        PostSPIFollowerService(cmdEvent);
                     }
             }
           }
@@ -491,6 +492,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
             SetMotor1(DUTY_TRANS_FULL*1.1*0.5);
             SetMotor2(DUTY_TRANS_FULL*0.8*0.5);
             collectState = COLLECT_BACK;
+            LineFollowDirection = -1;
         }
         if (ThisEvent.EventType == ES_COLLECT_FWD) {
            /*Moving fwd to the ball dispenser*/
@@ -498,6 +500,12 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
             PostSPIFollowerService(cmdEvent);
             DoTranslate(PackTranslateParam(TRANS_HALF, DIR_FWD));
             collectState = COLLECT_FWD;
+            LineFollowDirection = 1;
+        }
+        
+        if (ThisEvent.EventType == ES_TAPE_DETECT)
+        {
+          LineFollow(ThisEvent);
         }
         
         if (ThisEvent.EventType == ES_TIMEOUT) {
@@ -543,6 +551,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
       /* drive backwards and line follow until T detected */
       if (ThisEvent.EventType == ES_TAPE_DETECT)
       {
+        LineFollowDirection = -1;
         LineFollow(ThisEvent);
       }
       if (ThisEvent.EventType == ES_T_DETECTED)
@@ -796,19 +805,18 @@ static void LineFollow(ES_Event_t ThisEvent)
                     break;
 
                 case TAPE_OFF_CENTER_LEFT:
-                    // robot is drifting LEFT → steer RIGHT
+                    // drifting LEFT ? steer RIGHT
                     leftDuty  =  TAPE_BASE_DUTY + TAPE_CORR_DUTY;
                     rightDuty =  TAPE_BASE_DUTY - TAPE_CORR_DUTY;
                     break;
 
                 case TAPE_OFF_CENTER_RIGHT:
-                    // robot is drifting RIGHT → steer LEFT
+                    // drifting RIGHT ? steer LEFT
                     leftDuty  =  TAPE_BASE_DUTY - TAPE_CORR_DUTY;
                     rightDuty =  TAPE_BASE_DUTY + TAPE_CORR_DUTY;
                     break;
 
                 case NO_TAPE:
-                    // lost tape — slow spin to reacquire
                     leftDuty  =  TAPE_LOST_DUTY;
                     rightDuty = -TAPE_LOST_DUTY;
                     break;
@@ -817,10 +825,24 @@ static void LineFollow(ES_Event_t ThisEvent)
                     break;
             }
 
-            SetMotor1(leftDuty);
-            SetMotor2(rightDuty);
+            /*
+             * Motor convention:
+             *   NEGATIVE = forward
+             *   POSITIVE = backward
+             *
+             * So:
+             *   Forward line-follow  ? multiply by -1
+             *   Reverse line-follow  ? multiply by +1
+             */
+
+            int8_t motorSign = (LineFollowDirection == 1) ? -1 : +1;
+
+            SetMotor1(leftDuty  * motorSign);
+            SetMotor2(rightDuty * motorSign);
+
             break;
         }
+
         default:
             break;
     }

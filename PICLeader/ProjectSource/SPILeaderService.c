@@ -320,20 +320,31 @@ static void HandleFollowerStatus(uint8_t statusByte)
     case CMD_SIDE_FOUND_BLUE:
     {
       // move indicator servo to blue
+      LATAbits.LATA2 = 0;
       DB_printf("Side indicated: BLUE\r\n");
       cmdEvent.EventType = ES_INDICATE_SIDE;
       cmdEvent.EventParam = FIELD_BLUE;
       PostDispenseService(cmdEvent);
+      DB_printf("Moving towards L/R beacon! \r\n");
+      ES_Event_t encoderEvent;
+      encoderEvent.EventType = ES_ENCODER_TARGET_STRAIGHT;
+      encoderEvent.EventParam = SIDE_INDICATE_FIRST_FWD;
+      PostEncoderService(cmdEvent);
       break;
     }
 
     case CMD_SIDE_FOUND_GREEN:
     {
       // move indicator servo to green
+      LATAbits.LATA2 = 0;
       DB_printf("Side indicated: GREEN\r\n");
       cmdEvent.EventType = ES_INDICATE_SIDE;
       cmdEvent.EventParam = FIELD_GREEN;
       PostDispenseService(cmdEvent);
+      ES_Event_t encoderEvent;
+      encoderEvent.EventType = ES_ENCODER_TARGET_STRAIGHT;
+      encoderEvent.EventParam = SIDE_INDICATE_FIRST_FWD;
+      PostEncoderService(cmdEvent);
       break;
     }
 
@@ -388,6 +399,7 @@ static void HandleFollowerStatus(uint8_t statusByte)
       cmdEvent.EventType = ES_COLLECT_START;
       cmdEvent.EventParam = FIRST_COLLECT;
       PostCollectService(cmdEvent);
+      LATAbits.LATA2 = 1;
       break;
     
     case CMD_SECOND_COLLECT_START:
@@ -395,6 +407,7 @@ static void HandleFollowerStatus(uint8_t statusByte)
       cmdEvent.EventType = ES_COLLECT_START;
       cmdEvent.EventParam = SECOND_COLLECT;
       PostCollectService(cmdEvent);
+      LATAbits.LATA2 = 1;
       break;
     
     case CMD_OTHER_COLLECT_START:

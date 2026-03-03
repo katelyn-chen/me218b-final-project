@@ -127,7 +127,7 @@ ES_Event_t RunSPIFollowerService(ES_Event_t ThisEvent)
                     break;
                     
                 case BEACON_ID_R:
-                    outgoingCmd = CMD_BEACON_L_FOUND;
+                    outgoingCmd = CMD_BEACON_R_FOUND;
                     break;
                     
                 case BEACON_ID_L:
