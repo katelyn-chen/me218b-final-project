@@ -54,7 +54,7 @@
 #define GRAB_CLOSE_TICKS       1200u
 
 /* Arm (OC4 -> RA4): ready/down */
-#define ARM_UP_TICKS           1540u // tested!!! originally 1540 DONT CHANGE VALUES
+#define ARM_UP_TICKS           1530u // tested!!! originally 1540 DONT CHANGE VALUES
 #define ARM_DOWN_TICKS         3330u
 #define ARM_MIDDLE_TICKS       1750u
 // 1540, 3300 is 90 degree 

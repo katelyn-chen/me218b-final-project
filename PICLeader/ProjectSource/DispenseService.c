@@ -47,7 +47,7 @@
 #define T_BUCKET_ARM_SETTLE_MS      150u   /* small settle delay after bucket arm move */
 
 #define T_ROTATE_BUCKET_90_MS       200u   /* tuned 90 degree rotation */
-#define T_ROTATE_BUCKET_180_MS      400u
+#define T_ROTATE_BUCKET_180_MS      420u
 #define T_DISPENSE_WAIT_MS          1200u
 #define T_PUSH_ARM_UP_MS            1500u
 #define T_BUCKET_ARM_RETURN_MS      900u   /* return bucket arm to initialized pose */
