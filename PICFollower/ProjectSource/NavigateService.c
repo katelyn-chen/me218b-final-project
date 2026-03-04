@@ -51,7 +51,7 @@
 #define VEER_AWAY_FROM_WALL       1000u
 #define BACKUP_RAMPUP_MS          500
 #define SEARCH_TIME               10000
-#define TURN_DELAY_PRE_LF         1000 // turn before starting to line follow
+#define TURN_DELAY_PRE_LF         4000 // turn before starting to line follow
 #define FIND_T_TIMER_BLOCK        4500
 #define LINE_FOLLOWING_BLOCKING_TIMER   500 // DO NOT CHANGE
 
@@ -426,12 +426,10 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         // rotate clockwise to face away from dispenser, start timer before line following
 //        DoRotate(PackRotateParam(ROT_90, ROT_CW));
         cmdEvent.EventParam = CMD_ROT_CW_180;
+        ES_Timer_InitTimer(MOTOR_TIMER, VEER_AWAY_FROM_WALL);
         PostSPIFollowerService(cmdEvent);
-        SetMotor1((int16_t)DUTY_TRANS_HALF*0.8);
+        SetMotor1(-(int16_t)DUTY_TRANS_HALF*0.6);
         SetMotor2(-(int16_t)DUTY_TRANS_HALF);
-        curState = START_LOOKING_FOR_T;
-        following = 0;
-        ES_Timer_InitTimer(MOTOR_TIMER, TURN_DELAY_PRE_LF);
       }
       
       break;
@@ -458,6 +456,14 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
           /* keep rotating, but now change state so we can start line following
            * now that the timer had expired */
             ES_Timer_StopTimer(MOTOR_TIMER);
+            SetMotor1((int16_t)DUTY_TRANS_HALF*0.8);
+            SetMotor2(-(int16_t)DUTY_TRANS_HALF);
+            following = 0;
+            ES_Timer_InitTimer(BEACON_TIMER, TURN_DELAY_PRE_LF);
+        }
+        
+        if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == BEACON_TIMER) {
+            ES_Timer_StopTimer(BEACON_TIMER);
             DoTranslate(PackTranslateParam(TRANS_HALF, DIR_FWD));
             curState = COLLECT_ALIGN;
             collectState = COLLECT_START;
