@@ -58,6 +58,9 @@
 #define BACK_COLLECT_TIME          700
 #define FWD_ADJUST_COLLECT         300
 
+#define BUCKET_APPROACH_MS    1500u   // SOY  tune this
+#define BUCKET_TIMER          MOTOR_TIMER  // reuse MOTOR_TIMER (14u)
+
   
 #ifndef MOTOR_TIMER
 #define MOTOR_TIMER               14u
@@ -127,6 +130,9 @@ static uint16_t            duty = DUTY_STOP;
 static bool coalSearchFlag  = 0;
 static bool following = 1;
 static bool collectStarted = 0;
+static bool dispenseRequested = false;
+static bool bucketApproachActive = false;
+
 static bool lookingForT = 0;
 
 static TapeStatus_t prevTapeState = NO_TAPE;
@@ -595,7 +601,12 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
             cmdEvent.EventParam = CMD_COLLECT_BACK;
             PostSPIFollowerService(cmdEvent);
             ES_Timer_InitTimer(MOTOR_TIMER, BACK_COLLECT_TIME);
-            DoTranslate(PackTranslateParam(TRANS_FULL, DIR_REV));
+//            DoTranslate(PackTranslateParam(TRANS_FULL, DIR_REV));
+            
+            /* Initiating backup ramp up - half the backup speed */
+//            ES_Timer_InitTimer(MOTOR_TIMER, BACKUP_RAMPUP_MS);
+//            SetMotor1((int16_t)DUTY_TRANS_FULL*1.15);
+//            SetMotor2((int16_t)DUTY_TRANS_FULL*0.7);
             following = 1;
             collectState = COLLECT_BACK;
             followDir = FOLLOW_REV;
@@ -628,25 +639,62 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
       break;
     }
 
+
     case FIRST_DISPENSE:
+{
+  /* Reverse line follow toward first bucket */
+  if (ThisEvent.EventType == ES_TAPE_DETECT && following)
+  {
+    LineFollow(ThisEvent, FOLLOW_REV);
+  }
+
+  /* Start the 1.5s approach window ONCE when you enter this behavior */
+  if (!bucketApproachActive)
+  {
+    DB_printf("FIRST bucket: starting timed approach\r\n");
+    bucketApproachActive = true;
+    dispenseRequested = false;
+
+    following = 1;
+    followDir = FOLLOW_REV;
+    DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_REV));
+
+    ES_Timer_InitTimer(BUCKET_TIMER, BUCKET_APPROACH_MS);
+  }
+
+  /* When the timer expires, stop and dispense */
+  if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == BUCKET_TIMER)
+  {
+    StopMotors();
+    following = 0;
+    ES_Timer_StopTimer(BUCKET_TIMER);
+
+    if (!dispenseRequested)
     {
-      /* drive backwards and line follow until T detected */
-      if (ThisEvent.EventType == ES_TAPE_DETECT)
-      {
-        LineFollow(ThisEvent, FOLLOW_REV);
-      }
-      if (ThisEvent.EventType == ES_T_DETECTED)
-      {
-        StopMotors();
-        DB_printf("T detected! Ready to start dispensing\r\n");
-        //Post to dispense service!
-      }
-      if (ThisEvent.EventType == ES_DISPENSE_COMPLETE)
-      {
-        curState = INIT_FIND_MIDDLE;
-      }
-      break;
+      dispenseRequested = true;
+      DB_printf("FIRST bucket: timed stop -> request dispense\r\n");
+      SendDispenseStart();
     }
+  }
+
+  /* After dispensing, transition to middle bucket search */
+  if (ThisEvent.EventType == ES_DISPENSE_COMPLETE)
+  {
+    DB_printf("Dispense complete (first). Going to middle bucket.\r\n");
+
+    dispenseRequested = false;
+    bucketApproachActive = false;   // reset for next approach
+
+    /* begin moving toward middle bucket (your existing behavior) */
+    followDir = FOLLOW_REV;
+    following = 1;
+    DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_REV));
+
+    curState = ALIGN_MID_BUCKET;
+  }
+
+  break;
+}
 
     case INIT_FIND_MIDDLE:
     {
@@ -658,13 +706,54 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
     }
 
     case ALIGN_MID_BUCKET:
+{
+  /* Reverse line follow toward middle bucket */
+  if (ThisEvent.EventType == ES_TAPE_DETECT && following)
+  {
+    LineFollow(ThisEvent, FOLLOW_REV);
+  }
+
+  /* Start timed approach ONCE */
+  if (!bucketApproachActive)
+  {
+    DB_printf("MIDDLE bucket: starting timed approach\r\n");
+    bucketApproachActive = true;
+    dispenseRequested = false;
+
+    following = 1;
+    followDir = FOLLOW_REV;
+    DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_REV));
+
+    ES_Timer_InitTimer(BUCKET_TIMER, BUCKET_APPROACH_MS);
+  }
+
+  /* Timer expiry -> stop and dispense */
+  if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == BUCKET_TIMER)
+  {
+    StopMotors();
+    following = 0;
+    ES_Timer_StopTimer(BUCKET_TIMER);
+
+    if (!dispenseRequested)
     {
-      if (ThisEvent.EventType == ES_DISPENSE_COMPLETE)
-      {
-        curState = INIT_FIND_END;
-      }
-      break;
+      dispenseRequested = true;
+      DB_printf("MIDDLE bucket: timed stop -> request dispense\r\n");
+      SendDispenseStart();   // same command, leader toggles 90/180 internally
     }
+  }
+
+  if (ThisEvent.EventType == ES_DISPENSE_COMPLETE)
+  {
+    DB_printf("Dispense complete (middle).\r\n");
+
+    dispenseRequested = false;
+    bucketApproachActive = false;
+
+    curState = INIT_FIND_END;  // or next phase
+  }
+
+  break;
+}
 
     case INIT_FIND_END:
     {
@@ -745,6 +834,14 @@ static void InitOCsForPWM(void)
   OC2CON = 0; OC2R = 0; OC2RS = 0; OC2CONbits.OCTSEL = 0; OC2CONbits.OCM = 0b110; OC2CONbits.ON = 1;
   OC3CON = 0; OC3R = 0; OC3RS = 0; OC3CONbits.OCTSEL = 0; OC3CONbits.OCM = 0b110; OC3CONbits.ON = 1;
   OC4CON = 0; OC4R = 0; OC4RS = 0; OC4CONbits.OCTSEL = 0; OC4CONbits.OCM = 0b110; OC4CONbits.ON = 1;
+}
+
+static void SendDispenseStart(void)
+{
+  ES_Event_t e;
+  e.EventType  = ES_CMD_REQ;
+  e.EventParam = CMD_DISPENSE_START;
+  PostSPIFollowerService(e);
 }
 
 /*=========================== MOTOR OUTPUT ============================*/
