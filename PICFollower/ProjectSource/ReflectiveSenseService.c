@@ -42,7 +42,7 @@
 
 #define TAPE_CONFIRM_COUNT        5
 #define NEXT_T_WAIT               1000        // 1.5 second
-#define LF_POSTING_DELAY          50
+#define LF_POSTING_DELAY          20
 
 /*============================== STATE ==============================*/
 static uint8_t MyPriority;
@@ -134,8 +134,8 @@ ES_Event_t RunReflectiveSenseService(ES_Event_t ThisEvent)
                   PostNavigateService(NewEvent);
               }
         }
-        break;
         ES_Timer_InitTimer(LF_POSTING_TIMER, LF_POSTING_DELAY);
+        break;
     }
           
 
