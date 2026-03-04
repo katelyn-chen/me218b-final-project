@@ -17,11 +17,18 @@
          6) Wait for balls
          7) Raise lower arm
          8) Return bucket arm to initialized position
+
+ Notes (my notes):
+   - Positional servos (OC5/OC4) were snapping too fast because I was stepping
+     directly to the target pulse/ticks in one write.
+   - Fix: I slew the commands (small increments every ~20ms) so motion looks smooth.
+   - I kept the same state machine logic/timing; the move durations come from the
+     same timers I already had (T_PUSH_ARM_DOWN_MS, etc.).
 ****************************************************************************/
 
 #include "DispenseService.h"
 #include "SPILeaderService.h"
-#include "CollectService.h"   
+#include "CollectService.h"
 
 #include <xc.h>
 #include <sys/attribs.h>
@@ -48,20 +55,28 @@
 /*=========================== SERVO POSITIONS ============================*/
 /* OC5 : lower arm (RB6) */
 #define US_PUSH_ARM_UP              2500u
-#define US_PUSH_ARM_DOWN            600u  /* tuned */
+#define US_PUSH_ARM_DOWN            600u   /* tuned */
 
 /* OC3 : continuous rotation bucket bottom (RB10) */
-#define US_BUCKET_STOP              1400u /* tuned */
-#define US_BUCKET_ROTATE_CW         1700u
+#define US_BUCKET_STOP              1400u  /* tuned */
+#define US_BUCKET_ROTATE_CW         1700u  /* speed command; reduce closer to STOP if too fast */
 
 /* OC4 : bucket arm (RA4) -- tick values copied from CollectService */
 #define BUCKET_ARM_INIT_TICKS       5500u
 #define BUCKET_ARM_DISPENSE_TICKS   3000u
 
-/*============================== TIMER ==============================*/
+/*============================== TIMERS ==============================*/
 #ifndef DISPENSE_TIMER
 #define DISPENSE_TIMER              2u
 #endif
+
+/* Slew update timer (if this conflicts with your project, change the number) */
+#ifndef SERVO_TIMER
+#define SERVO_TIMER                 13u
+#endif
+
+/* update servos at ~50Hz so the motion is smooth */
+#define SERVO_UPDATE_MS             20u
 
 /*============================== STATE ==============================*/
 typedef enum {
@@ -95,15 +110,168 @@ static void Servo_OC3(uint16_t us);        /* bucket bottom */
 static void Servo_OC5(uint16_t us);        /* lower arm */
 static void Servo_OC4_Ticks(uint16_t t);   /* bucket arm (ticks) */
 
+/*=========================== SERVO SLEW (SLOW MOTION) ============================*/
+/* current commanded positions (what I last wrote to the OC regs) */
+static uint16_t CurPushArmUs       = US_PUSH_ARM_UP;             /* OC5 */
+static uint16_t CurBucketBottomUs  = US_BUCKET_STOP;             /* OC3 */
+static uint16_t CurBucketArmTicks  = BUCKET_ARM_INIT_TICKS;      /* OC4 */
+
+/* targets + per-update step sizes */
+static uint16_t TargetPushArmUs       = US_PUSH_ARM_UP;
+static uint16_t TargetBucketBottomUs  = US_BUCKET_STOP;
+static uint16_t TargetBucketArmTicks  = BUCKET_ARM_INIT_TICKS;
+
+static uint16_t StepPushArmUs         = 1u;
+static uint16_t StepBucketBottomUs    = 1u;
+static uint16_t StepBucketArmTicks    = 1u;
+
+static bool SlewPushArmActive      = false;
+static bool SlewBucketBottomActive = false;
+static bool SlewBucketArmActive    = false;
+
+static uint16_t AbsDiffU16(uint16_t a, uint16_t b)
+{
+  return (a > b) ? (a - b) : (b - a);
+}
+
+static uint16_t ComputeStepU16(uint16_t cur, uint16_t tgt, uint16_t durationMs)
+{
+  /* how many updates during the move */
+  uint32_t nSteps = (durationMs + SERVO_UPDATE_MS - 1u) / SERVO_UPDATE_MS;
+  if (nSteps < 1u) nSteps = 1u;
+
+  uint32_t diff = AbsDiffU16(cur, tgt);
+
+  /* ceil(diff / nSteps), never 0 */
+  uint32_t step = (diff + nSteps - 1u) / nSteps;
+  if (step < 1u) step = 1u;
+
+  return (uint16_t)step;
+}
+
+static void StartServoTimerIfNeeded(void)
+{
+  if (SlewPushArmActive || SlewBucketBottomActive || SlewBucketArmActive)
+  {
+    ES_Timer_InitTimer(SERVO_TIMER, SERVO_UPDATE_MS);
+  }
+}
+
+static void StopServoTimerIfDone(void)
+{
+  if (!SlewPushArmActive && !SlewBucketBottomActive && !SlewBucketArmActive)
+  {
+    ES_Timer_StopTimer(SERVO_TIMER);
+  }
+}
+
+/* start a smooth move for the push arm (OC5, positional servo) */
+static void PushArmMoveTo(uint16_t targetUs, uint16_t durationMs)
+{
+  TargetPushArmUs   = targetUs;
+  StepPushArmUs     = ComputeStepU16(CurPushArmUs, TargetPushArmUs, durationMs);
+  SlewPushArmActive = true;
+  StartServoTimerIfNeeded();
+}
+
+/* start a smooth move for the bucket arm (OC4, positional servo, ticks) */
+static void BucketArmMoveToTicks(uint16_t targetTicks, uint16_t durationMs)
+{
+  TargetBucketArmTicks = targetTicks;
+  StepBucketArmTicks   = ComputeStepU16(CurBucketArmTicks, TargetBucketArmTicks, durationMs);
+  SlewBucketArmActive  = true;
+  StartServoTimerIfNeeded();
+}
+
+/* optional: smooth the continuous rotation command too so it doesn't slam */
+static void BucketBottomMoveTo(uint16_t targetUs, uint16_t durationMs)
+{
+  TargetBucketBottomUs   = targetUs;
+  StepBucketBottomUs     = ComputeStepU16(CurBucketBottomUs, TargetBucketBottomUs, durationMs);
+  SlewBucketBottomActive = true;
+  StartServoTimerIfNeeded();
+}
+
+/* update all active slews; called every SERVO_UPDATE_MS */
+static void ServoSlewUpdate(void)
+{
+  /* ---------- push arm OC5 ---------- */
+  if (SlewPushArmActive)
+  {
+    if (CurPushArmUs == TargetPushArmUs)
+    {
+      SlewPushArmActive = false;
+    }
+    else if (CurPushArmUs < TargetPushArmUs)
+    {
+      uint16_t next = (uint16_t)(CurPushArmUs + StepPushArmUs);
+      CurPushArmUs = (next > TargetPushArmUs) ? TargetPushArmUs : next;
+      Servo_OC5(CurPushArmUs);
+    }
+    else
+    {
+      uint16_t next = (CurPushArmUs > StepPushArmUs) ? (uint16_t)(CurPushArmUs - StepPushArmUs) : 0u;
+      CurPushArmUs = (next < TargetPushArmUs) ? TargetPushArmUs : next;
+      Servo_OC5(CurPushArmUs);
+    }
+  }
+
+  /* ---------- bucket arm OC4 ---------- */
+  if (SlewBucketArmActive)
+  {
+    if (CurBucketArmTicks == TargetBucketArmTicks)
+    {
+      SlewBucketArmActive = false;
+    }
+    else if (CurBucketArmTicks < TargetBucketArmTicks)
+    {
+      uint16_t next = (uint16_t)(CurBucketArmTicks + StepBucketArmTicks);
+      CurBucketArmTicks = (next > TargetBucketArmTicks) ? TargetBucketArmTicks : next;
+      Servo_OC4_Ticks(CurBucketArmTicks);
+    }
+    else
+    {
+      uint16_t next = (CurBucketArmTicks > StepBucketArmTicks) ? (uint16_t)(CurBucketArmTicks - StepBucketArmTicks) : 0u;
+      CurBucketArmTicks = (next < TargetBucketArmTicks) ? TargetBucketArmTicks : next;
+      Servo_OC4_Ticks(CurBucketArmTicks);
+    }
+  }
+
+  /* ---------- bucket bottom OC3 ---------- */
+  if (SlewBucketBottomActive)
+  {
+    if (CurBucketBottomUs == TargetBucketBottomUs)
+    {
+      SlewBucketBottomActive = false;
+    }
+    else if (CurBucketBottomUs < TargetBucketBottomUs)
+    {
+      uint16_t next = (uint16_t)(CurBucketBottomUs + StepBucketBottomUs);
+      CurBucketBottomUs = (next > TargetBucketBottomUs) ? TargetBucketBottomUs : next;
+      Servo_OC3(CurBucketBottomUs);
+    }
+    else
+    {
+      uint16_t next = (CurBucketBottomUs > StepBucketBottomUs) ? (uint16_t)(CurBucketBottomUs - StepBucketBottomUs) : 0u;
+      CurBucketBottomUs = (next < TargetBucketBottomUs) ? TargetBucketBottomUs : next;
+      Servo_OC3(CurBucketBottomUs);
+    }
+  }
+
+  StopServoTimerIfDone();
+}
+
 /*====================== ACTION HELPERS =====================*/
-static void PushArmDown(void){ Servo_OC5(US_PUSH_ARM_DOWN); }
-static void PushArmUp(void){   Servo_OC5(US_PUSH_ARM_UP);   }
+/* same action names as before; now they do smooth moves */
+static void PushArmDown(void) { PushArmMoveTo(US_PUSH_ARM_DOWN, T_PUSH_ARM_DOWN_MS); }
+static void PushArmUp(void)   { PushArmMoveTo(US_PUSH_ARM_UP,   T_PUSH_ARM_UP_MS);   }
 
-static void BucketRotateStart(void){ Servo_OC3(US_BUCKET_ROTATE_CW); }
-static void BucketRotateStop(void){  Servo_OC3(US_BUCKET_STOP);      }
+/* continuous rotation servo: ramp a little so it doesn't jerk */
+static void BucketRotateStart(void) { BucketBottomMoveTo(US_BUCKET_ROTATE_CW, 120u); }
+static void BucketRotateStop(void)  { BucketBottomMoveTo(US_BUCKET_STOP,      120u); }
 
-static void BucketArmInit(void){     Servo_OC4_Ticks(BUCKET_ARM_INIT_TICKS);     }
-static void BucketArmDispense(void){ Servo_OC4_Ticks(BUCKET_ARM_DISPENSE_TICKS); }
+static void BucketArmInit(void)     { BucketArmMoveToTicks(BUCKET_ARM_INIT_TICKS,     T_BUCKET_ARM_RETURN_MS); }
+static void BucketArmDispense(void) { BucketArmMoveToTicks(BUCKET_ARM_DISPENSE_TICKS, T_BUCKET_ARM_MOVE_MS);   }
 
 /*====================== SPI HELPERS =====================*/
 static void RequestCmd(uint8_t cmdByte)
@@ -226,10 +394,21 @@ bool InitDispenseService(uint8_t Priority)
   InitFlagServoRB3();
   FlagSetPulseUs(US_FLAG_CENTER);
 
-  /* safe startup poses */
-  BucketRotateStop();
-  PushArmUp();
-  BucketArmInit();
+  /* safe startup poses (and sync my "current" vars to match what I write) */
+  CurBucketBottomUs = US_BUCKET_STOP;
+  Servo_OC3(CurBucketBottomUs);
+
+  CurPushArmUs = US_PUSH_ARM_UP;
+  Servo_OC5(CurPushArmUs);
+
+  CurBucketArmTicks = BUCKET_ARM_INIT_TICKS;
+  Servo_OC4_Ticks(CurBucketArmTicks);
+
+  /* clear any leftover slews */
+  SlewPushArmActive = false;
+  SlewBucketBottomActive = false;
+  SlewBucketArmActive = false;
+  ES_Timer_StopTimer(SERVO_TIMER);
 
   CurState = DISP_IDLE;
   ES_Timer_StopTimer(DISPENSE_TIMER);
@@ -266,6 +445,14 @@ ES_Event_t RunDispenseService(ES_Event_t ThisEvent)
       FlagSetPulseUs(US_FLAG_CENTER);
     }
 
+    return ReturnEvent;
+  }
+
+  /* servo slew updates happen "in the background" using SERVO_TIMER */
+  if ((ThisEvent.EventType == ES_TIMEOUT) && (ThisEvent.EventParam == SERVO_TIMER))
+  {
+    ServoSlewUpdate();
+    StartServoTimerIfNeeded(); /* keep it periodic while anything is still moving */
     return ReturnEvent;
   }
 
@@ -395,10 +582,16 @@ ES_Event_t RunDispenseService(ES_Event_t ThisEvent)
 /*=========================== PWM ============================*/
 static void InitServoPWM(void)
 {
+  /*
+    Servo PWM base:
+      PBCLK=20MHz
+      prescale=1:8 -> tick=0.4us -> 2.5 ticks/us
+      PR2=49999 -> period = 50000 ticks = 20,000us = 50Hz
+  */
   if (T2CONbits.ON == 0u)
   {
     T2CON = 0;
-    T2CONbits.TCKPS = 0b011u;
+    T2CONbits.TCKPS = 0b011u; /* 1:8 */
     TMR2 = 0;
     PR2 = 49999u;
     T2CONbits.ON = 1;
@@ -437,7 +630,7 @@ static void InitServoPWM(void)
 
 static uint16_t UsToOCrs(uint16_t us)
 {
-  return (uint16_t)((us * 25u) / 10u); /* PBCLK=20MHz, prescale=1:8 => 2.5 ticks/us */
+  return (uint16_t)((us * 25u) / 10u); /* 2.5 ticks/us */
 }
 
 static void Servo_OC3(uint16_t us){ OC3RS = UsToOCrs(us); }
