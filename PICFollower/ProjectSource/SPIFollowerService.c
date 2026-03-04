@@ -1,4 +1,3 @@
-
 /****************************************************************************
   Module
     SPIFollowerService.c
@@ -80,6 +79,13 @@ bool InitSPIFollowerService(uint8_t Priority)
 {
   MyPriority = Priority;
   curState = RECEIVE;
+
+  /* safe init values so we don't accidentally spam a stale byte */
+  outgoingCmd = CMD_NOOP;
+  curCmd      = CMD_NOOP;
+  prevCmd     = CMD_NOOP;
+  incomingCmd = CMD_NOOP;
+
   InitSPIHardware();
   InitPinHardware();
   DB_printf("SPIFollowerService initialized\r\n");
@@ -98,55 +104,79 @@ bool PostSPIFollowerService(ES_Event_t ThisEvent)
 ES_Event_t RunSPIFollowerService(ES_Event_t ThisEvent)
 {
   ES_Event_t ReturnEvent = { ES_NO_EVENT, 0 };
-    switch (ThisEvent.EventType) {
-        case ES_SPI_RECEIVED:
-        {
-            DB_printf("Received from byte leader %d\r\n", ThisEvent.EventParam);
 
-            /* ignore unknown bytes */
-            if (!IsKnownCommand(ThisEvent.EventParam))
-            {
-                DB_printf("SPIService: unknown leaderCmd 0x%02X\r\n", ThisEvent.EventParam);
-                return ReturnEvent;
-            }
-            HandleCommandByte(ThisEvent.EventParam);
-            break;
-        }
-        
-        case ES_BEACON_FOUND:
-        {
-            uint8_t id = ThisEvent.EventParam;
-            DB_printf("Beacon found! ID: %d\r\n", id);
-            switch (id) {
-                case BEACON_ID_G:
-                    outgoingCmd = CMD_BEACON_G_FOUND;
-                    break;
-                    
-                case BEACON_ID_B:
-                    outgoingCmd = CMD_BEACON_B_FOUND;
-                    break;
-                    
-                case BEACON_ID_R:
-                    outgoingCmd = CMD_BEACON_R_FOUND;
-                    break;
-                    
-                case BEACON_ID_L:
-                    outgoingCmd = CMD_BEACON_L_FOUND;
-                    break;                
-            }
-            break;
-        }
+  switch (ThisEvent.EventType)
+  {
+    case ES_SPI_RECEIVED:
+    {
+      DB_printf("Received from byte leader %d\r\n", ThisEvent.EventParam);
 
-        case ES_CMD_REQ:
-        {
-            outgoingCmd = ThisEvent.EventParam;
-            if (outgoingCmd == CMD_SIDE_FOUND_GREEN) {
-                 DB_printf("TEST CONFIRM\r\n");
-            }
-        }
-            
-            
+      /* ignore unknown bytes */
+      if (!IsKnownCommand((uint8_t)ThisEvent.EventParam))
+      {
+        DB_printf("SPIService: unknown leaderCmd 0x%02X\r\n", (uint8_t)ThisEvent.EventParam);
+        return ReturnEvent;
+      }
+
+      HandleCommandByte((uint8_t)ThisEvent.EventParam);
+      break;
     }
+
+    case ES_BEACON_FOUND:
+    {
+      uint8_t id = (uint8_t)ThisEvent.EventParam;
+      DB_printf("Beacon found! ID: %d\r\n", id);
+
+      /*
+        NOTE:
+          outgoingCmd is a 1-byte latched status to the leader.
+          It stays "sticky" until the leader sends CMD_QUERY, at which point
+          we clear it in the SPI ISR (see SPI1_Handler).
+      */
+      switch (id)
+      {
+        case BEACON_ID_G:
+          outgoingCmd = CMD_BEACON_G_FOUND;
+          break;
+
+        case BEACON_ID_B:
+          outgoingCmd = CMD_BEACON_B_FOUND;
+          break;
+
+        case BEACON_ID_R:
+          outgoingCmd = CMD_BEACON_R_FOUND;
+          break;
+
+        case BEACON_ID_L:
+          outgoingCmd = CMD_BEACON_L_FOUND;
+          break;
+
+        default:
+          break;
+      }
+      break;
+    }
+
+    case ES_CMD_REQ:
+    {
+      /*
+        This is how Navigate/Beacon/etc tell SPI follower to "report" a status byte
+        to the leader. This byte will be returned on the NEXT SPI transfer and then
+        kept latched until leader sends CMD_QUERY (then we clear it).
+      */
+      outgoingCmd = (uint8_t)ThisEvent.EventParam;
+
+      if (outgoingCmd == CMD_SIDE_FOUND_GREEN)
+      {
+        DB_printf("TEST CONFIRM\r\n");
+      }
+      break;
+    }
+
+    default:
+      break;
+  }
+
   return ReturnEvent;
 }
 
@@ -159,7 +189,8 @@ static void InitSPIHardware(void)
     Leader SCK (RB14, pin 25) --> Follower SCK1  (RB14, pin 25)
     Leader SS (RB15, pin 26) --> Follower CS (RB15, pin 26)*/
 
-  DB_printf("Follower SPI Setup\n"); 
+  DB_printf("Follower SPI Setup\n");
+
   /* HAL SPI setup */
   SPISetup_BasicConfig(CG_SPI_MODULE);
   SPISetup_SetFollower(CG_SPI_MODULE);
@@ -168,7 +199,7 @@ static void InitSPIHardware(void)
   ANSELBbits.ANSB14 = 0; // sets clock as input
   //TRISAbits.TRISRA3 = 0;  // SDO to output
 
-   /* map data pins */
+  /* map data pins */
   SPISetup_MapSDOutput(CG_SPI_MODULE, SDOPin);
   SPISetup_MapSDInput(CG_SPI_MODULE,  SDIPin);
   SPISetup_MapSSInput(CG_SPI_MODULE, SSPin);
@@ -176,15 +207,17 @@ static void InitSPIHardware(void)
   /* clock mode settings */
   SPISetup_SetClockIdleState(CG_SPI_MODULE, SPI_CLK_HI);    // CKP = 1
   SPISetup_SetActiveEdge(CG_SPI_MODULE, SPI_SECOND_EDGE);   // CKE = 0
-  
+
   SPISetEnhancedBuffer(CG_SPI_MODULE, false);
   SPISetup_SetXferWidth(CG_SPI_MODULE, SPI_8BIT);
 
   /* set SPI bit time (ns) */
   //SPISetup_SetBitTime(CG_SPI_MODULE, SPI_CLK_PERIOD_NS);
   SPISetup_EnableSPI(CG_SPI_MODULE);
-  
-  SPI1BUF = CMD_NOOP;   // preload first response
+
+  /* preload first response */
+  SPI1BUF = outgoingCmd;
+
   SPISetup_ConfigureInterrupts(CG_SPI_MODULE);
 
   /* clear any stale data */
@@ -194,238 +227,252 @@ static void InitSPIHardware(void)
 static uint8_t Leader_QueryByte(uint8_t outByte)
 {
   /* send one byte and read back the received byte */
+  (void)outByte;
   return (uint8_t)SPIOperate_ReadData(CG_SPI_MODULE);
 }
 
 static void InitPinHardware(void)
 {
-    PIN_MapPinInput(TapeSensor1);
-    PIN_MapPinInput(TapeSensor2);
-    PIN_MapPinInput(TapeSensor3);
-    PIN_MapPinInput(TapeSensor4);
-    PIN_MapPinInput(TapeSensor5);
-    PIN_MapPinInput(IRFrontSensor);
-    PIN_MapPinInput(LimitFrontLeft);
-    PIN_MapPinInput(LimitBackRight);
+  PIN_MapPinInput(TapeSensor1);
+  PIN_MapPinInput(TapeSensor2);
+  PIN_MapPinInput(TapeSensor3);
+  PIN_MapPinInput(TapeSensor4);
+  PIN_MapPinInput(TapeSensor5);
+  PIN_MapPinInput(IRFrontSensor);
+  PIN_MapPinInput(LimitFrontLeft);
+  PIN_MapPinInput(LimitBackRight);
 }
 
 /*======================= COMMAND -> EVENT MAP =======================*/
 static bool IsKnownCommand(uint8_t cmd)
 {
-    switch (cmd)
-    {
-        case CMD_STOP:
-        case CMD_TRANS_FWD:
-        case CMD_TRANS_BWD:
-        case CMD_ROT_CW_90:
-        case CMD_ROT_CCW_90:
-//        case CMD_ROT_CCW_45:
-//        case CMD_ROT_CW_45:
-        case CMD_TAPE_T_DETECT:
-        case CMD_LINE_FOLLOW:
-        case CMD_GET_BEACON_FREQ:
-        case CMD_QUERY:
-        case CMD_NOOP:
-        case CMD_TESTING:
-        case CMD_INIT_ORIENT:
-        case CMD_END_GAME:
-        case CMD_SIDE_FOUND_BLUE:
-        case CMD_SIDE_FOUND_GREEN:
-        case CMD_MOVE_DONE:
-        case CMD_FIRST_COLLECT_DONE:
-        case CMD_SECOND_COLLECT_DONE:
-        case CMD_OTHER_COLLECT_DONE:
-        case CMD_DISPENSE_DONE:
-        case CMD_COLLECT_BACK:
-        case CMD_COLLECT_FWD:
-            return true;
+  /*
+    These are commands coming FROM the leader TO the follower.
+    If we don't whitelist it here, ES_SPI_RECEIVED will ignore it.
+  */
+  switch (cmd)
+  {
+    case CMD_STOP:
+    case CMD_TRANS_FWD:
+    case CMD_TRANS_BWD:
+    case CMD_ROT_CW_90:
+    case CMD_ROT_CCW_90:
+    case CMD_TAPE_T_DETECT:
+    case CMD_LINE_FOLLOW:
+    case CMD_GET_BEACON_FREQ:
+    case CMD_QUERY:
+    case CMD_NOOP:
+    case CMD_TESTING:
+    case CMD_INIT_ORIENT:
+    case CMD_END_GAME:
+    case CMD_SIDE_FOUND_BLUE:
+    case CMD_SIDE_FOUND_GREEN:
+    case CMD_MOVE_DONE:
+    case CMD_FIRST_COLLECT_DONE:
+    case CMD_SECOND_COLLECT_DONE:
+    case CMD_OTHER_COLLECT_DONE:
+    case CMD_DISPENSE_DONE:
+    case CMD_DISPENSE_START:   /* leader sometimes sends this (for sync/debug) */
+    case CMD_COLLECT_BACK:
+    case CMD_COLLECT_FWD:
+      return true;
 
-        default:
-            return false;
-    }
+    default:
+      return false;
+  }
 }
 
 static void HandleCommandByte(uint8_t cmd)
 {
   DB_printf("handling cmd from leader: %d\r\n", cmd);
+
   ES_Event_t cmdEvent;
-  if (cmd != prevCmd) {
+  cmdEvent.EventType  = ES_NO_EVENT;
+  cmdEvent.EventParam = 0;
+
+  /*
+    I only want to act on new commands (don't re-run motion because leader is polling).
+    NOTE: this is independent from the "outgoingCmd latch" which we clear on CMD_QUERY.
+  */
+  if (cmd != prevCmd)
+  {
     switch (cmd)
     {
-    case CMD_END_GAME: {
+      case CMD_END_GAME:
         DB_printf("Received game end command \r\n");
         cmdEvent.EventType = ES_END_GAME;
         break;
-    }
-    case CMD_TRANS_FWD: {
+
+      case CMD_TRANS_FWD:
         DB_printf("Received forward command \r\n");
         cmdEvent.EventType = ES_TRANSLATE;
         cmdEvent.EventParam = PackTranslateParam(TRANS_FULL, DIR_FWD);
         break;
-    }
 
-      case CMD_STOP: {
+      case CMD_STOP:
         DB_printf("Received STOP command\r\n");
-        //outgoingCmd = CMD_STOP;
         cmdEvent.EventType = ES_STOP;
         break;
-    }
 
-    case CMD_TRANS_BWD: {
+      case CMD_TRANS_BWD:
         DB_printf("Received backwards command\r\n");
         cmdEvent.EventType = ES_TRANSLATE;
         cmdEvent.EventParam = PackTranslateParam(TRANS_FULL, DIR_REV);
         break;
-    }
 
-    case CMD_ROT_CW_90: {
+      case CMD_ROT_CW_90:
         DB_printf("Received CW 90 rotation command\r\n");
         cmdEvent.EventType = ES_ROTATE;
         cmdEvent.EventParam = PackRotateParam(ROT_90, ROT_CW);
         break;
-    }
 
-
-    case CMD_ROT_CCW_90: {
+      case CMD_ROT_CCW_90:
         DB_printf("Received CCW 90 rotation command\r\n");
         cmdEvent.EventType = ES_ROTATE;
         cmdEvent.EventParam = PackRotateParam(ROT_90, ROT_CCW);
         break;
-    }
 
-//
-//    case CMD_ROT_CW_45: {
-//        DB_printf("Received CW 45 rotation command\r\n");
-//        cmdEvent.EventType = ES_ROTATE;
-//        cmdEvent.EventParam = PackRotateParam(ROT_45, ROT_CW);
-//        break;
-//    }
-//
-//    case CMD_ROT_CCW_45: {
-//        DB_printf("Received CCW 45 rotation command\r\n");
-//        cmdEvent.EventType = ES_ROTATE;
-//        cmdEvent.EventParam = PackRotateParam(ROT_45, ROT_CCW);
-//        break;
-//    }
-
-    case CMD_TAPE_T_DETECT: {
+      case CMD_TAPE_T_DETECT:
         DB_printf("Received TAPE detect command\r\n");
         cmdEvent.EventType = ES_TAPE_DETECT;
         break;
-    }
 
-    case CMD_LINE_FOLLOW: {
+      case CMD_LINE_FOLLOW:
         DB_printf("Received LINE FOLLOW command\r\n");
         cmdEvent.EventType = ES_LINE_FOLLOW;
         break;
-    }
 
-    case CMD_GET_BEACON_FREQ: {
+      case CMD_GET_BEACON_FREQ:
         DB_printf("Received GET BEACON FREQ command\r\n");
         cmdEvent.EventType = ES_BEACON_SIGNAL;
-        //cmdEvent.EventType = ES_ALIGN_ULTRASONICS;
         break;
-    }
 
-    case CMD_TESTING: {
+      case CMD_TESTING:
         DB_printf("Received TESTING command\r\n");
-        //outgoingCmd = CMD_TESTING;
         break;
-    }
 
-    case CMD_QUERY: {
+      case CMD_QUERY:
         DB_printf("Received QUERY command from SPILeaderService!\r\n");
-        //outgoingCmd = CMD_TESTING;
-        DB_printf("Sending Testing Cmd to Leader!\r\n");
+        /* nothing to post; ISR clears outgoingCmd latch on CMD_QUERY */
         break;
-    }
 
-    case CMD_INIT_ORIENT: {
+      case CMD_INIT_ORIENT:
         DB_printf("Received INIT ORIENT command from SPILeaderService!\r\n");
         cmdEvent.EventType = ES_ALIGN_ULTRASONICS;
         DB_printf("Posting align ultrasonics command to nav service!\r\n");
         break;
-    }
-    
-    case CMD_NOOP: {
+
+      case CMD_NOOP:
         DB_printf("Received NOOP command from SPILeaderService!\r\n");
         break;
-    }
 
-    case CMD_MOVE_DONE: {
+      case CMD_MOVE_DONE:
         DB_printf("Received MOVE DONE command from SPILeaderService!\r\n");
         cmdEvent.EventType = ES_MOVE_DONE;
         break;
-    }
 
-    case CMD_FIRST_COLLECT_DONE: {
+      case CMD_FIRST_COLLECT_DONE:
         DB_printf("Received FIRST COLLECT DONE command from SPILeaderService!\r\n");
         cmdEvent.EventType = ES_FIND_BUCKET;
         cmdEvent.EventParam = FIRST_COLLECT;
         break;
-    }
 
-    case CMD_SECOND_COLLECT_DONE: {
+      case CMD_SECOND_COLLECT_DONE:
         DB_printf("Received SECOND COLLECT DONE command from SPILeaderService!\r\n");
         cmdEvent.EventType = ES_FIND_BUCKET;
         cmdEvent.EventParam = SECOND_COLLECT;
         break;
-    }
 
-    case CMD_OTHER_COLLECT_DONE: {
+      case CMD_OTHER_COLLECT_DONE:
         DB_printf("Received OTHER COLLECT DONE command from SPILeaderService!\r\n");
         cmdEvent.EventType = ES_FIND_BUCKET;
         cmdEvent.EventParam = OTHER_COLLECT;
         break;
-    }
-    
-    case CMD_COLLECT_FWD:
+
+      case CMD_COLLECT_FWD:
         DB_printf("Telling nav to nudge forward to dispenser \r\n");
         cmdEvent.EventType = ES_COLLECT_FWD;
         PostNavigateService(cmdEvent);
-        break;
-        
-    case CMD_COLLECT_BACK:
+        prevCmd = cmd;
+        return; /* I already posted it */
+
+      case CMD_COLLECT_BACK:
         DB_printf("Nudging nav to nudge back from dispenser \r\n");
         cmdEvent.EventType = ES_COLLECT_BACK;
         PostNavigateService(cmdEvent);
-        break; 
-        
-    case CMD_DISPENSE_DONE:
+        prevCmd = cmd;
+        return; /* I already posted it */
+
+      case CMD_DISPENSE_DONE:
         cmdEvent.EventType = ES_DISPENSE_COMPLETE;
         break;
 
-    default:
+      case CMD_DISPENSE_START:
+        /*
+          Leader might send this just as a "hey I'm dispensing now" byte.
+          Follower doesn't need to do anything motion-wise, so we just accept it
+          (and avoid printing unknown cmd).
+        */
+        DB_printf("Received DISPENSE START (sync)\r\n");
         break;
 
+      default:
+        break;
     }
-    PostNavigateService(cmdEvent);
+
+    /* post to NavigateService if we actually created an event */
+    if (cmdEvent.EventType != ES_NO_EVENT)
+    {
+      PostNavigateService(cmdEvent);
+    }
+
     prevCmd = cmd;
-  } 
+  }
 }
 
-void __ISR(_SPI1_VECTOR, IPL7SOFT) SPI1_Handler(void) {
-    //__builtin_disable_interrupts();
-    ES_Event_t NewEvent;
-    if (SPI1STATbits.SPIROV) {
-        SPI1STATCLR = _SPI1STAT_SPIROV_MASK;
+/*=========================== SPI ISR ============================*/
+void __ISR(_SPI1_VECTOR, IPL7SOFT) SPI1_Handler(void)
+{
+  ES_Event_t NewEvent;
+
+  if (SPI1STATbits.SPIROV)
+  {
+    SPI1STATCLR = _SPI1STAT_SPIROV_MASK;
+  }
+
+  if (IFS1bits.SPI1RXIF)
+  {
+    incomingCmd = (uint8_t)SPI1BUF;   /* what leader sent */
+
+    /*
+      Always respond with our current latched status.
+      This is how the leader "polls" us without us running a timer here.
+    */
+    SPI1BUF = outgoingCmd;
+
+    /*
+      IMPORTANT:
+        outgoingCmd is sticky by design.
+        We clear it ONLY when the leader explicitly sends CMD_QUERY.
+        This prevents the leader from seeing the same status forever.
+    */
+    if (incomingCmd == CMD_QUERY)
+    {
+      outgoingCmd = CMD_NOOP;
     }
-    if (IFS1bits.SPI1RXIF) {
-        incomingCmd = SPI1BUF;     // what leader sent
-        //DB_printf("%d\r\n", incomingCmd);
-        SPI1BUF = outgoingCmd;
-        if (incomingCmd == CMD_QUERY) {
-        outgoingCmd = CMD_NOOP;
+
+    /*
+      Only post ES_SPI_RECEIVED when leader's command changes.
+      (Prevents re-running the same action due to polling)
+    */
+    if (incomingCmd != curCmd)
+    {
+      NewEvent.EventType  = ES_SPI_RECEIVED;
+      curCmd              = incomingCmd;
+      NewEvent.EventParam = curCmd;
+      (void)PostSPIFollowerService(NewEvent);
     }
-        if (incomingCmd != curCmd) {
-           NewEvent.EventType = ES_SPI_RECEIVED;
-           curCmd = incomingCmd;
-           NewEvent.EventParam = curCmd;
-           bool test = PostSPIFollowerService(NewEvent);
-           //DB_printf("%d\r\n", curCmd);
-           //DB_printf("%d\r\n", test);
-        }
-    }
-    IFS1CLR = _IFS1_SPI1RXIF_MASK;
-    //__builtin_enable_interrupts();
+  }
+
+  IFS1CLR = _IFS1_SPI1RXIF_MASK;
 }
