@@ -68,7 +68,7 @@
 #define BUCKET_APPROACH_MS    800u   // SOY  tune this
 
 #ifndef BUCKET_TIMER
-#define BUCKET_TIMER          12u
+#define BUCKET_TIMER          48u
 #endif
 
 /*---------------------------- Module Types -------------------------------*/

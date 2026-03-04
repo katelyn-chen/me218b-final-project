@@ -54,8 +54,9 @@
 #define GRAB_CLOSE_TICKS       1200u
 
 /* Arm (OC4 -> RA4): ready/down */
-#define ARM_UP_TICKS           1540u // tested!!! DONT CHANGE VALUES
+#define ARM_UP_TICKS           1680u // tested!!! DONT CHANGE VALUES
 #define ARM_DOWN_TICKS         3330u
+#define ARM_MIDDLE_TICKS       1650u
 // 1540, 3300 is 90 degree 
 
 #define BUCKET_ARM_DISPENSE_TICKS    3000u 
@@ -73,6 +74,7 @@
 
 /* optional nudges */
 #define T_NUDGE_MS             550u
+
 
 #ifndef CMD_NUDGE_BACK
 #define CMD_NUDGE_BACK         0x22u
@@ -240,7 +242,7 @@ ES_Event_t RunCollectService(ES_Event_t ThisEvent)
 
       /* safe final pose */
       SetGrabber(GRAB_OPEN_TICKS);
-      SetArm(ARM_UP_TICKS);
+      SetArm(ARM_MIDDLE_TICKS);
 
       PostCollectDoneHandshake();
 
