@@ -670,28 +670,11 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
 
     case FIRST_DISPENSE:
         {
-        /* Reverse line follow toward first bucket */
-        /* After dispensing, transition to middle bucket search */
-        if (ThisEvent.EventType == ES_DISPENSE_COMPLETE)
-        {
-          DB_printf("Dispense complete (first). Going to middle bucket.\r\n");
-
-          dispenseRequested = false;
-          bucketApproachActive = false;   // reset for next approach
-
-          /* begin moving toward middle bucket (your existing behavior) */
-          followDir = FOLLOW_REV;
-          following = 1;
-          DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_REV));
-
-          curState = ALIGN_MID_BUCKET;
-        }
-
-
-        /* Start the 1.5s approach window ONCE when you enter this behavior */
+            
         if (!bucketApproachActive)
         {
-          ES_Timer_StopTimer(BUCKET_TIMER);
+            /* We want to start line following backwards here*/
+//          ES_Timer_StopTimer(BUCKET_TIMER);
           DB_printf("FIRST bucket: starting timed approach\r\n");
           bucketApproachActive = true;
           dispenseRequested = false;
@@ -702,6 +685,26 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
 
           ES_Timer_InitTimer(BUCKET_TIMER, BUCKET_APPROACH_MS);
         }
+        
+        /* Reverse line follow toward first bucket */
+        /* After dispensing, transition to middle bucket search */
+        if (ThisEvent.EventType == ES_DISPENSE_COMPLETE)
+        {
+          DB_printf("Dispense complete (first). Going to middle bucket.\r\n");
+
+          dispenseRequested = false;
+          bucketApproachActive = false;   // reset for next approach
+
+          /* begin moving toward end bucket (your existing behavior) */
+          followDir = FOLLOW_REV;
+          following = 1;
+          DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_REV));
+
+          curState = ALIGN_MID_BUCKET;
+        }
+
+
+        /* Start the 1.5s approach window ONCE when you enter this behavior */
 
         /* When the timer expires, stop and dispense */
         if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == BUCKET_TIMER)

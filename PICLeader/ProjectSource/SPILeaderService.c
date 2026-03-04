@@ -249,7 +249,7 @@ static void InitSPIHardware(void)
 static uint8_t XferByte(uint8_t outByte)
 {
     if (outByte!= CMD_QUERY) {
-        DB_printf("SPILeaderService sending byte: %d\r\n", outByte);
+//        DB_printf("SPILeaderService sending byte: %d\r\n", outByte);
     }
   SPIOperate_SPI1_Send8Wait(outByte);
   return (uint8_t)SPIOperate_ReadData(CG_SPI_MODULE);
