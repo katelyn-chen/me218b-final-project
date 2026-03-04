@@ -58,13 +58,15 @@
 #define BACK_COLLECT_TIME          700
 #define FWD_ADJUST_COLLECT         300
 
-#define BUCKET_APPROACH_MS    1500u   // SOY  tune this
-#define BUCKET_TIMER          MOTOR_TIMER  // reuse MOTOR_TIMER (14u)
+
 
   
 #ifndef MOTOR_TIMER
 #define MOTOR_TIMER               14u
 #endif
+
+#define BUCKET_APPROACH_MS    1500u   // SOY  tune this
+#define BUCKET_TIMER          MOTOR_TIMER  // reuse MOTOR_TIMER (14u)
 
 /*---------------------------- Module Types -------------------------------*/
 typedef enum {
@@ -147,6 +149,8 @@ static void InitPinsAndPPS(void);
 static void InitTimer2ForPWM(void);
 static void InitOCsForPWM(void);
 
+static void SendDispenseStart(void);
+
 static void StopMotors(void);
 static void SetMotor1(int16_t dutySignedPercent); /* left motor */
 static void SetMotor2(int16_t dutySignedPercent); /* right motor */
@@ -165,7 +169,6 @@ static Field_t DetermineFieldFromSequence(void);
 /* Tape functions */
 static void LineFollow(ES_Event_t ThisEvent, FollowDir_t followDirection);
 static void SquareUpOnT(ES_Event_t ThisEvent);
-static void SendDispenseStart(void);
 
 /*------------------------------ Module Code ------------------------------*/
 
@@ -504,8 +507,8 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == BEACON_TIMER) {
             /* can start moving forward! */
             collectStarted = 1; // mark collect as started
-//            SetMotor1(-(int16_t)DUTY_TRANS_HALF*1.5);
-//            SetMotor2(-(int16_t)DUTY_TRANS_HALF*0.5);
+            SetMotor1(-(int16_t)DUTY_TRANS_HALF*1.5);
+            SetMotor2(-(int16_t)DUTY_TRANS_HALF*0.5);
             followDir = FOLLOW_FWD;
             cmdEvent.EventParam = CMD_FIRST_COLLECT_START;
             PostSPIFollowerService(cmdEvent);
@@ -560,7 +563,6 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
             ES_Timer_InitTimer(BEACON_TIMER, FWD_ADJUST_COLLECT);
             SetMotor1((int16_t)-DUTY_TRANS_HALF);
             SetMotor2((int16_t)-1.5*DUTY_TRANS_HALF);
-            
             break;
         }
         
@@ -574,7 +576,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         }
         
         if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == BEACON_TIMER
-                && collectState == COLLECT_FWD) {
+                && collectState == COLLECT_BACK) {
             ES_Timer_StopTimer(BEACON_TIMER);
             StopMotors();
             following = 0;
@@ -630,17 +632,21 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
               
            
       if (ThisEvent.EventType == ES_FIND_BUCKET)
-      {
-        if (ThisEvent.EventParam == FIRST_COLLECT) {
-          curState = FIRST_DISPENSE;
-          DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_REV));
-        }
-        else if (ThisEvent.EventParam == SECOND_COLLECT) curState = INIT_FIND_MIDDLE;
-        else if (ThisEvent.EventParam == OTHER_COLLECT)    curState = INIT_FIND_END;
-      }
-      break;
-    }
-
+{
+  if (ThisEvent.EventParam == FIRST_COLLECT) {
+    bucketApproachActive = false;
+    dispenseRequested = false;
+    curState = FIRST_DISPENSE;
+    DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_REV));
+  }
+  else if (ThisEvent.EventParam == SECOND_COLLECT) {
+    curState = INIT_FIND_MIDDLE;
+  }
+  else if (ThisEvent.EventParam == OTHER_COLLECT) {
+    curState = INIT_FIND_END;
+  }
+  break;
+}
 
     case FIRST_DISPENSE:
 {
@@ -653,6 +659,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
   /* Start the 1.5s approach window ONCE when you enter this behavior */
   if (!bucketApproachActive)
   {
+    ES_Timer_StopTimer(BUCKET_TIMER);
     DB_printf("FIRST bucket: starting timed approach\r\n");
     bucketApproachActive = true;
     dispenseRequested = false;
@@ -718,6 +725,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
   /* Start timed approach ONCE */
   if (!bucketApproachActive)
   {
+    ES_Timer_StopTimer(BUCKET_TIMER);
     DB_printf("MIDDLE bucket: starting timed approach\r\n");
     bucketApproachActive = true;
     dispenseRequested = false;
