@@ -3,14 +3,7 @@
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
-            <file>file:/U:/_ME218bTeams/TEAM9/FinalProjectNEW/PICLeader/ProjectSource/EncoderService.c</file>
-            <file>file:/U:/_ME218bTeams/TEAM9/FinalProjectNEW/PICLeader/ProjectHeaders/SPILeaderService.h</file>
-            <file>file:/U:/_ME218bTeams/TEAM9/FinalProjectNEW/PICLeader/FrameworkHeaders/ES_Configure.h</file>
-            <file>file:/U:/_ME218bTeams/TEAM9/FinalProjectNEW/PICLeader/ProjectSource/SPILeaderService.c</file>
-            <file>file:/U:/_ME218bTeams/TEAM9/FinalProjectNEW/PICLeader/ProjectHeaders/EncoderService.h</file>
-            <file>file:/U:/_ME218bTeams/TEAM9/FinalProjectNEW/PICLeader/ProjectSource/CollectService.c</file>
-            <file>file:/U:/_ME218bTeams/TEAM9/FinalProjectNEW/PICLeader/ProjectSource/DispenseService.c</file>
-            <file>file:/U:/_ME218bTeams/TEAM9/FinalProjectNEW/PICLeader/ProjectSource/EventCheckers.c</file>
+            <file>file:/Users/heath/me218b-finalproject/PICLeader/ProjectSource/SPILeaderService.c</file>
         </group>
     </open-files>
 </project-private>

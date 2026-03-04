@@ -1,0 +1,1 @@
+ $(MP_EXTRA_CC_PRE) -g -D__DEBUG   -fframe-base-loclist  -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -I"FrameworkHeaders" -I"ProjectHeaders" -fno-common -I"ProjectHeaders" -I"ProjectSource" -I"FrameworkHeaders" -I"FrameworkSource"   -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)  -mdfp="${DFP_DIR}"  /Users/heath/me218b-finalproject/PICLeader/FrameworkSource/dbprintf.c

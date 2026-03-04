@@ -34,7 +34,7 @@
 
 /* duty presets (percent 0..100) */
 #define DUTY_STOP           0u
-#define DUTY_TRANS_TAPE_DET 30u
+#define DUTY_TRANS_TAPE_DET 25u
 #define DUTY_TRANS_HALF     30u
 #define DUTY_TRANS_FULL     85u
 #define DUTY_ROTATE         40u
@@ -51,7 +51,7 @@
 #define VEER_AWAY_FROM_WALL       1000u
 #define BACKUP_RAMPUP_MS          500
 #define SEARCH_TIME               10000
-#define TURN_DELAY_PRE_LF         4000 // turn before starting to line follow
+#define TURN_DELAY_PRE_LF         5000 // turn before starting to line follow
 #define FIND_T_TIMER_BLOCK        4500
 #define LINE_FOLLOWING_BLOCKING_TIMER   500 // DO NOT CHANGE
 
@@ -426,10 +426,11 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         // rotate clockwise to face away from dispenser, start timer before line following
 //        DoRotate(PackRotateParam(ROT_90, ROT_CW));
         cmdEvent.EventParam = CMD_ROT_CW_180;
-        ES_Timer_InitTimer(MOTOR_TIMER, VEER_AWAY_FROM_WALL);
+        ES_Timer_InitTimer(MOTOR_TIMER, VEER_AWAY_FROM_WALL*1.2);
         PostSPIFollowerService(cmdEvent);
-        SetMotor1(-(int16_t)DUTY_TRANS_HALF*0.6);
-        SetMotor2(-(int16_t)DUTY_TRANS_HALF);
+        SetMotor1(-(int16_t)DUTY_TRANS_HALF*0.8);
+        SetMotor2(-(int16_t)DUTY_TRANS_HALF*1.2);
+        curState = START_LOOKING_FOR_T;
       }
       
       break;
@@ -456,15 +457,15 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
           /* keep rotating, but now change state so we can start line following
            * now that the timer had expired */
             ES_Timer_StopTimer(MOTOR_TIMER);
-            SetMotor1((int16_t)DUTY_TRANS_HALF*0.8);
-            SetMotor2(-(int16_t)DUTY_TRANS_HALF);
+            SetMotor1((int16_t)DUTY_TRANS_HALF);
+            SetMotor2(-(int16_t)DUTY_TRANS_HALF*1.2);
             following = 0;
             ES_Timer_InitTimer(BEACON_TIMER, TURN_DELAY_PRE_LF);
         }
         
         if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == BEACON_TIMER) {
             ES_Timer_StopTimer(BEACON_TIMER);
-            DoTranslate(PackTranslateParam(TRANS_HALF, DIR_FWD));
+            DoTranslate(PackTranslateParam(TRANS_HALF, DIR_REV));
             curState = COLLECT_ALIGN;
             collectState = COLLECT_START;
             following = 1;
@@ -515,8 +516,8 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
             
             /* Initiating backup ramp up - half the backup speed */
             ES_Timer_InitTimer(MOTOR_TIMER, BACKUP_RAMPUP_MS);
-            SetMotor1((int16_t)DUTY_TRANS_FULL*1.1*0.5);
-            SetMotor2((int16_t)DUTY_TRANS_FULL*0.8*0.5);
+            SetMotor1((int16_t)DUTY_TRANS_FULL*1.2*0.5);
+            SetMotor2((int16_t)DUTY_TRANS_FULL*0.7*0.5);
             collectState = COLLECT_BACK;
             followDir = FOLLOW_REV;
         }
@@ -534,8 +535,8 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == MOTOR_TIMER) {
             
             /* This is for the backup ramp up - moving to full backup speed */
-            SetMotor1((int16_t)DUTY_TRANS_FULL*1.1);
-            SetMotor2((int16_t)DUTY_TRANS_FULL*0.8);
+            SetMotor1((int16_t)DUTY_TRANS_FULL*1.2);
+            SetMotor2((int16_t)DUTY_TRANS_FULL*0.7);
             ES_Timer_StopTimer(MOTOR_TIMER);
         }
             
@@ -854,28 +855,37 @@ static void LineFollow(ES_Event_t ThisEvent, FollowDir_t followDirection)
                 case TAPE_EXTREME_OFF_CENTER_RIGHT:
                     leftDuty  =  TAPE_BASE_DUTY + 2*TAPE_CORR_DUTY;
                     rightDuty =  TAPE_BASE_DUTY - 2*TAPE_CORR_DUTY;
+                    break;
 
                 default:
                     break;
             }
 
             /*
-             * Motor convention:
-             *   NEGATIVE = forward
-             *   POSITIVE = backward
-             */
-            int8_t motorSign;
-            
-            if (followDirection == FOLLOW_FWD) {
-                motorSign = -1;
-            } else if (followDirection == FOLLOW_REV) {
-                motorSign = 1;
-            } else {
-                motorSign = 0;
-            }
+            * If reversing, swap steering correction
+            */
+           if (followDirection == FOLLOW_REV)
+           {
+               int16_t temp = leftDuty;
+               leftDuty  = rightDuty;
+               rightDuty = temp;
+           }
 
-            SetMotor1((int16_t)leftDuty  * motorSign);
-            SetMotor2((int16_t)rightDuty * motorSign);
+           /*
+            * Motor convention:
+            * NEGATIVE = forward
+            * POSITIVE = backward
+            */
+           int8_t motorSign;
+
+           if (followDirection == FOLLOW_FWD) {
+               motorSign = -1;
+           } else {
+               motorSign = 1;
+           }
+
+           SetMotor1(leftDuty  * motorSign);
+           SetMotor2(rightDuty * motorSign);
 
             break;
         }
