@@ -66,7 +66,10 @@
 #endif
 
 #define BUCKET_APPROACH_MS    1500u   // SOY  tune this
-#define BUCKET_TIMER          MOTOR_TIMER  // reuse MOTOR_TIMER (14u)
+
+#ifndef BUCKET_TIMER
+#define BUCKET_TIMER          12u
+#endif
 
 /*---------------------------- Module Types -------------------------------*/
 typedef enum {
@@ -825,7 +828,6 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
   }
 
   return ReturnEvent;
-}
 }
 
 /*=========================== INIT HELPERS ============================*/
