@@ -42,12 +42,14 @@
 
 #define TAPE_CONFIRM_COUNT        5
 #define NEXT_T_WAIT               1000        // 1.5 second
+#define LF_POSTING_DELAY          20
 
 /*============================== STATE ==============================*/
 static uint8_t MyPriority;
 static uint8_t lastConfirmedState;
 static uint8_t debounceCounter;
 static uint8_t T_count = 0;
+static bool posting = 1;
 
 /*====================== PRIVATE FUNCTION PROTOS =====================*/
 
@@ -77,58 +79,66 @@ ES_Event_t RunReflectiveSenseService(ES_Event_t ThisEvent)
         DB_printf("ReflectiveSenseService received ES_INIT\r\n");
         break;
     }
+    
     case ES_TAPE_CHANGE:
     {
-//        DB_printf("Tape change detected! Sensor bitfield: %d\r\n", ThisEvent.EventParam);
-        uint8_t tapeState = (uint8_t)ThisEvent.EventParam;
-          ES_Event_t NewEvent;
-          if (tapeState == ALL_TAPE_BITFIELD && T_count == 0 
-                  || tapeState == RIGHT_CORNER_BITFIELD_4 || tapeState == LEFT_CORNER_BITFIELD_4 || tapeState == MIDDLE_BITS) { 
-              NewEvent.EventType = ES_T_DETECTED;
-              NewEvent.EventParam = FULL_T;
-              DB_printf("all tape detected, full T \n");
-              PostNavigateService(NewEvent);
-              T_count++;
-              ES_Timer_InitTimer(LINE_TIMER, NEXT_T_WAIT);
-          } else if ((tapeState == RIGHT_CORNER_BITFIELD) && T_count == 0) {
-              NewEvent.EventType = ES_T_DETECTED;
-              NewEvent.EventParam = RIGHT_CORNER;
-              DB_printf("right corner bitfield detected \n");
-              PostNavigateService(NewEvent);
-              T_count++;
-              ES_Timer_InitTimer(LINE_TIMER, NEXT_T_WAIT);
-          } else if ((tapeState == LEFT_CORNER_BITFIELD ) && T_count == 0) {
-              NewEvent.EventType = ES_T_DETECTED;
-              NewEvent.EventParam = LEFT_CORNER;
-              DB_printf("left corner bitfield detected \n");
-              PostNavigateService(NewEvent);
-              T_count++;
-              ES_Timer_InitTimer(LINE_TIMER, NEXT_T_WAIT);
-          } else if (tapeState == CENTER_BITFIELD) { 
-              NewEvent.EventType = ES_TAPE_DETECT;
-              NewEvent.EventParam = TAPE_CENTERED; 
-//              DB_printf("center tape detect \n");
-              PostNavigateService(NewEvent);
-          } else if (tapeState == OFFCENTER_RIGHT_BITFIELD) {
-              NewEvent.EventType = ES_TAPE_DETECT;
-              NewEvent.EventParam = TAPE_OFF_CENTER_RIGHT; 
-              PostNavigateService(NewEvent);
-          } else if (tapeState == OFFCENTER_LEFT_BITFIELD) {
-              NewEvent.EventType = ES_TAPE_DETECT;
-              NewEvent.EventParam = TAPE_OFF_CENTER_LEFT; 
-              PostNavigateService(NewEvent);
-          } else if (tapeState == LEFT_TWO_BITS || tapeState == LEFT_BIT_ONLY) {
-              NewEvent.EventType = ES_TAPE_DETECT;
-              NewEvent.EventParam = TAPE_EXTREME_OFF_CENTER_LEFT; 
-              PostNavigateService(NewEvent);
-          } else if (tapeState == RIGHT_TWO_BITS || tapeState == RIGHT_BIT_ONLY) {
-              NewEvent.EventType = ES_TAPE_DETECT;
-              NewEvent.EventParam = TAPE_EXTREME_OFF_CENTER_RIGHT ;
-              PostNavigateService(NewEvent);
-          }
-          
-      break;
+        if (posting) {
+            //        DB_printf("Tape change detected! Sensor bitfield: %d\r\n", ThisEvent.EventParam);
+            posting = 0; // don't post until timer expires
+            uint8_t tapeState = (uint8_t)ThisEvent.EventParam;
+            ES_Event_t NewEvent;
+              if (tapeState == ALL_TAPE_BITFIELD && T_count == 0 
+                      || tapeState == RIGHT_CORNER_BITFIELD_4 
+                      || tapeState == LEFT_CORNER_BITFIELD_4 
+                      || tapeState == MIDDLE_BITS) { 
+                  NewEvent.EventType = ES_T_DETECTED;
+                  NewEvent.EventParam = FULL_T;
+                  DB_printf("all tape detected, full T \n");
+                  PostNavigateService(NewEvent);
+                  T_count++;
+                  ES_Timer_InitTimer(LINE_TIMER, NEXT_T_WAIT);
+              } else if ((tapeState == RIGHT_CORNER_BITFIELD) && T_count == 0) {
+                  NewEvent.EventType = ES_T_DETECTED;
+                  NewEvent.EventParam = RIGHT_CORNER;
+                  DB_printf("right corner bitfield detected \n");
+                  PostNavigateService(NewEvent);
+                  T_count++;
+                  ES_Timer_InitTimer(LINE_TIMER, NEXT_T_WAIT);
+              } else if ((tapeState == LEFT_CORNER_BITFIELD ) && T_count == 0) {
+                  NewEvent.EventType = ES_T_DETECTED;
+                  NewEvent.EventParam = LEFT_CORNER;
+                  DB_printf("left corner bitfield detected \n");
+                  PostNavigateService(NewEvent);
+                  T_count++;
+                  ES_Timer_InitTimer(LINE_TIMER, NEXT_T_WAIT);
+              } else if (tapeState == CENTER_BITFIELD) { 
+                  NewEvent.EventType = ES_TAPE_DETECT;
+                  NewEvent.EventParam = TAPE_CENTERED; 
+    //              DB_printf("center tape detect \n");
+                  PostNavigateService(NewEvent);
+              } else if (tapeState == OFFCENTER_RIGHT_BITFIELD) {
+                  NewEvent.EventType = ES_TAPE_DETECT;
+                  NewEvent.EventParam = TAPE_OFF_CENTER_RIGHT; 
+                  PostNavigateService(NewEvent);
+              } else if (tapeState == OFFCENTER_LEFT_BITFIELD) {
+                  NewEvent.EventType = ES_TAPE_DETECT;
+                  NewEvent.EventParam = TAPE_OFF_CENTER_LEFT; 
+                  PostNavigateService(NewEvent);
+              } else if (tapeState == LEFT_TWO_BITS || tapeState == LEFT_BIT_ONLY) {
+                  NewEvent.EventType = ES_TAPE_DETECT;
+                  NewEvent.EventParam = TAPE_EXTREME_OFF_CENTER_LEFT; 
+                  PostNavigateService(NewEvent);
+              } else if (tapeState == RIGHT_TWO_BITS || tapeState == RIGHT_BIT_ONLY) {
+                  NewEvent.EventType = ES_TAPE_DETECT;
+                  NewEvent.EventParam = TAPE_EXTREME_OFF_CENTER_RIGHT ;
+                  PostNavigateService(NewEvent);
+              }
+        }
+        ES_Timer_InitTimer(LF_POSTING_TIMER, LF_POSTING_DELAY);
+        break;
     }
+          
+
     case ES_TIMEOUT:
     {
         if (ThisEvent.EventParam == LINE_TIMER) {
@@ -136,7 +146,12 @@ ES_Event_t RunReflectiveSenseService(ES_Event_t ThisEvent)
             T_count = 0;
             ES_Timer_StopTimer(LINE_TIMER);
         }
+        
+        if (ThisEvent.EventParam == LF_POSTING_TIMER) {
+            posting = 1;
+        }
         break;
+        
     }
   }
   return ReturnEvent;
