@@ -55,7 +55,7 @@
 #define FIND_T_TIMER_BLOCK        5000
 #define LINE_FOLLOWING_BLOCKING_TIMER   500 // DO NOT CHANGE
 #define BACK_UP_PRE_COLLECT_ACTIVE 3500
-#define BACK_COLLECT_TIME          700
+#define BACK_COLLECT_TIME          900
 #define FWD_ADJUST_COLLECT         300
 
 
@@ -338,6 +338,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
                 DB_printf("Testing line following, jumping to first collect\r\n");
                 curState = FIRST_DISPENSE;
             }
+
             /* END DEBUGGING KEY PRESSES */
             
             /* Moves toward beacon and tells leader to move the flag to
@@ -734,33 +735,49 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
     {
       if (ThisEvent.EventType == ES_T_DETECTED)
       {
-        curState = ALIGN_MID_BUCKET;
+//        curState = MOVE_TO_MID_BUCKET;
+          curState = ALIGN_MID_BUCKET;
       }
       break;
     }
+    
+//      case MOVE_TO_MID_BUCKET:
+//      {
+//         // here after found T
+//          // turn 90 degrees right
+//          // find tape and tape follow until find left corner / full T
+//          // turn 90 left 
+//          // 
+//          
+//      }
 
     case ALIGN_MID_BUCKET:
-{
-  /* Reverse line follow toward middle bucket */
-  if (ThisEvent.EventType == ES_TAPE_DETECT && following)
-  {
-    LineFollow(ThisEvent, FOLLOW_REV);
-  }
+    {
 
-  /* Start timed approach ONCE */
-  if (!bucketApproachActive)
-  {
-    ES_Timer_StopTimer(BUCKET_TIMER);
-    DB_printf("MIDDLE bucket: starting timed approach\r\n");
-    bucketApproachActive = true;
-    dispenseRequested = false;
+    if (ThisEvent.EventType == ES_DISPENSE_COMPLETE)
+        {
+          DB_printf("Dispense complete (middle).\r\n");
 
-    following = 1;
-    followDir = FOLLOW_REV;
-    DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_REV));
+          dispenseRequested = false;
+          bucketApproachActive = false;
 
-    ES_Timer_InitTimer(BUCKET_TIMER, BUCKET_APPROACH_MS);
-  }
+          curState = INIT_FIND_END;  // or next phase
+        }
+    
+    /* Start timed approach ONCE */
+    if (!bucketApproachActive)
+    {
+      ES_Timer_StopTimer(BUCKET_TIMER);
+      DB_printf("MIDDLE bucket: starting timed approach\r\n");
+      bucketApproachActive = true;
+      dispenseRequested = false;
+
+      following = 1;
+      followDir = FOLLOW_REV;
+      DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_REV));
+
+      ES_Timer_InitTimer(BUCKET_TIMER, BUCKET_APPROACH_MS);
+    }
 
   /* Timer expiry -> stop and dispense */
   if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == BUCKET_TIMER)
@@ -776,15 +793,11 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
       SendDispenseStart();   // same command, leader toggles 90/180 internally
     }
   }
-
-  if (ThisEvent.EventType == ES_DISPENSE_COMPLETE)
+  
+    /* Reverse line follow toward middle bucket */
+  if (ThisEvent.EventType == ES_TAPE_DETECT && following)
   {
-    DB_printf("Dispense complete (middle).\r\n");
-
-    dispenseRequested = false;
-    bucketApproachActive = false;
-
-    curState = INIT_FIND_END;  // or next phase
+    LineFollow(ThisEvent, FOLLOW_REV);
   }
 
   break;
