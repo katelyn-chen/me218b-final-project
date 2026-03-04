@@ -165,6 +165,7 @@ static Field_t DetermineFieldFromSequence(void);
 /* Tape functions */
 static void LineFollow(ES_Event_t ThisEvent, FollowDir_t followDirection);
 static void SquareUpOnT(ES_Event_t ThisEvent);
+static void SendDispenseStart(void);
 
 /*------------------------------ Module Code ------------------------------*/
 
@@ -503,8 +504,8 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == BEACON_TIMER) {
             /* can start moving forward! */
             collectStarted = 1; // mark collect as started
-            SetMotor1(-(int16_t)DUTY_TRANS_HALF*1.5);
-            SetMotor2(-(int16_t)DUTY_TRANS_HALF*0.5);
+//            SetMotor1(-(int16_t)DUTY_TRANS_HALF*1.5);
+//            SetMotor2(-(int16_t)DUTY_TRANS_HALF*0.5);
             followDir = FOLLOW_FWD;
             cmdEvent.EventParam = CMD_FIRST_COLLECT_START;
             PostSPIFollowerService(cmdEvent);
