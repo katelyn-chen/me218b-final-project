@@ -107,7 +107,7 @@ ES_Event_t RunReflectiveSenseService(ES_Event_t ThisEvent)
           } else if (tapeState == CENTER_BITFIELD) { 
               NewEvent.EventType = ES_TAPE_DETECT;
               NewEvent.EventParam = TAPE_CENTERED; 
-              DB_printf("center tape detect \n");
+//              DB_printf("center tape detect \n");
               PostNavigateService(NewEvent);
           } else if (tapeState == OFFCENTER_RIGHT_BITFIELD) {
               NewEvent.EventType = ES_TAPE_DETECT;

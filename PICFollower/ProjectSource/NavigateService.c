@@ -667,6 +667,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         /* Reverse line follow toward first bucket */
         if (ThisEvent.EventType == ES_TAPE_DETECT && following)
         {
+          DB_printf("telling collect to grab!\r\n");
           LineFollow(ThisEvent, FOLLOW_REV);
         }
 

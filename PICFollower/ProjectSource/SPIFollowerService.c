@@ -390,6 +390,10 @@ static void HandleCommandByte(uint8_t cmd)
         cmdEvent.EventType = ES_COLLECT_BACK;
         PostNavigateService(cmdEvent);
         break; 
+        
+    case CMD_DISPENSE_DONE:
+        cmdEvent.EventType = ES_DISPENSE_COMPLETE;
+        break;
 
     default:
         break;

@@ -461,12 +461,17 @@ static void HandleFollowerStatus(uint8_t statusByte)
         PostEncoderService(cmdEvent);
         break;
         
-      case CMD_ROT_CW_180:
+    case CMD_ROT_CW_180:
         DB_printf("Rotating 180 degrees clockwise\r\n");
         cmdEvent.EventType = ES_ENCODER_TARGET_ROT;
         cmdEvent.EventParam = ROT_180_PULSES;
         PostEncoderService(cmdEvent);
         LATAbits.LATA3 = 1;
+        break;
+        
+    case CMD_DISPENSE_START:
+        cmdEvent.EventType = ES_DISPENSE_START;
+        PostDispenseService(cmdEvent);
         break;
          
 
