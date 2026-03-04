@@ -136,6 +136,7 @@ static bool dispenseRequested = false;
 static bool bucketApproachActive = false;
 
 static bool lookingForT = 0;
+static bool beginfwd = 0;
 
 static TapeStatus_t prevTapeState = NO_TAPE;
 
@@ -392,7 +393,6 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
           /* Once facing straight, move forward until two T's are detected */
             if (ThisEvent.EventType ==  ES_MOVE_DONE) {
                 /* Done rotating to tape after beacon */ 
-                DB_printf("Begin tape detect\r\n");
                 curState = INIT_COAL_DISP_SEARCH;
                 
                 /* Manually setting motors here because we want to modify the duty cycles
@@ -419,6 +419,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
       /* drive forward until T detected */
            
       if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == BEACON_TIMER) {
+            DB_printf("Begin tape detect\r\n");
             following = 1;
             lookingForT = 0;
             ES_Timer_StopTimer(BEACON_TIMER);
@@ -426,6 +427,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
       }
       
       if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == MOTOR_TIMER) {
+            DB_printf("Begin looking for T\r\n");
             lookingForT = 1;
             ES_Timer_StopTimer(MOTOR_TIMER);
       }
@@ -435,6 +437,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
       {
         // rotate clockwise to face away from dispenser, start timer before line following
 //        DoRotate(PackRotateParam(ROT_90, ROT_CW));
+        DB_printf("T found!! veering initially to start turning clockwise\r\n");
         following = 0;
         cmdEvent.EventParam = CMD_ROT_CW_180;
         ES_Timer_InitTimer(MOTOR_TIMER, VEER_AWAY_FROM_WALL*1.3);
@@ -471,6 +474,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == MOTOR_TIMER) {
           /* keep rotating, but now change state so we can start line following
            * now that the timer had expired */
+            DB_printf("Done veering - turning on centroid now\r\n");
             ES_Timer_StopTimer(MOTOR_TIMER);
             SetMotor1((int16_t)DUTY_TRANS_HALF);
             SetMotor2(-(int16_t)DUTY_TRANS_HALF*1.2);
@@ -480,6 +484,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         
         if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == BEACON_TIMER) {
             ES_Timer_InitTimer(BEACON_TIMER, BACK_UP_PRE_COLLECT_ACTIVE);
+            DB_printf("Starting back up\r\n");
             DoTranslate(PackTranslateParam(TRANS_HALF*0.8, DIR_REV));
             followDir = FOLLOW_REV;
             collectState = COLLECT_START;
@@ -506,6 +511,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         /* Bot should be moving backwards when it enters this state! */
         if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == BEACON_TIMER) {
             /* can start moving forward! */
+            DB_printf("Timer expired for backup - now moving forward. Posting start collect\r\n");
             collectStarted = 1; // mark collect as started
             SetMotor1(-(int16_t)DUTY_TRANS_HALF*1.5);
             SetMotor2(-(int16_t)DUTY_TRANS_HALF*0.5);
@@ -556,10 +562,12 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
          * this state! (timer based in collect service) */
         
         /* Checking if we should stop moving back/forth */
-        if (ThisEvent.EventType == ES_T_DETECTED && collectState == COLLECT_FWD)
+        if (ThisEvent.EventType == ES_T_DETECTED && collectState == COLLECT_FWD && beginfwd)
         {
           /* we are looking for the left corner MAYBE change to FULL_T */
           /* need to start grabbing here! */
+            beginfwd = 0;
+            DB_printf("adjusting collect fwd alignment a bit!\r\n");
             ES_Timer_InitTimer(BEACON_TIMER, FWD_ADJUST_COLLECT);
             SetMotor1((int16_t)-DUTY_TRANS_HALF);
             SetMotor2((int16_t)-1.5*DUTY_TRANS_HALF);
@@ -568,6 +576,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         
         if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == MOTOR_TIMER
                 && collectState == COLLECT_BACK) {
+            DB_printf("telling collect to move arm up\r\n");
             StopMotors();
             following = 0;
             cmdEvent.EventParam = CMD_FIRST_COLLECT_ARM_UP;
@@ -576,7 +585,8 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         }
         
         if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == BEACON_TIMER
-                && collectState == COLLECT_BACK) {
+                && collectState == COLLECT_FWD) {
+            DB_printf("telling collect to grab!\r\n");
             ES_Timer_StopTimer(BEACON_TIMER);
             StopMotors();
             following = 0;
@@ -592,16 +602,19 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         if (ThisEvent.EventType == ES_COLLECT_FWD) {
            /* Moving fwd to the ball dispenser needs to stop
             when it sees the t*/
+            DB_printf("collect requesting forward!\r\n");
             cmdEvent.EventParam = CMD_COLLECT_FWD;
             PostSPIFollowerService(cmdEvent);
             DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_FWD));
             following = 1;
             collectState = COLLECT_FWD;
             followDir = FOLLOW_FWD;
+            beginfwd = 1;
         }
         
         if (ThisEvent.EventType == ES_COLLECT_BACK) {
             /* Moving back from the ball dispenser */
+            DB_printf("collect requesting backup!\r\n");
             cmdEvent.EventParam = CMD_COLLECT_BACK;
             PostSPIFollowerService(cmdEvent);
             ES_Timer_InitTimer(MOTOR_TIMER, BACK_COLLECT_TIME);
@@ -632,78 +645,79 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
               
            
       if (ThisEvent.EventType == ES_FIND_BUCKET)
-{
-  if (ThisEvent.EventParam == FIRST_COLLECT) {
-    bucketApproachActive = false;
-    dispenseRequested = false;
-    curState = FIRST_DISPENSE;
-    DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_REV));
-  }
-  else if (ThisEvent.EventParam == SECOND_COLLECT) {
-    curState = INIT_FIND_MIDDLE;
-  }
-  else if (ThisEvent.EventParam == OTHER_COLLECT) {
-    curState = INIT_FIND_END;
-  }
-  break;
-}
+        {
+          DB_printf("exiting collect\r\n");
+          if (ThisEvent.EventParam == FIRST_COLLECT) {
+            bucketApproachActive = false;
+            dispenseRequested = false;
+            curState = FIRST_DISPENSE;
+            DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_REV));
+          }
+          else if (ThisEvent.EventParam == SECOND_COLLECT) {
+            curState = INIT_FIND_MIDDLE;
+          }
+          else if (ThisEvent.EventParam == OTHER_COLLECT) {
+            curState = INIT_FIND_END;
+          }
+          break;
+        }
 
     case FIRST_DISPENSE:
-{
-  /* Reverse line follow toward first bucket */
-  if (ThisEvent.EventType == ES_TAPE_DETECT && following)
-  {
-    LineFollow(ThisEvent, FOLLOW_REV);
-  }
+        {
+        /* Reverse line follow toward first bucket */
+        if (ThisEvent.EventType == ES_TAPE_DETECT && following)
+        {
+          LineFollow(ThisEvent, FOLLOW_REV);
+        }
 
-  /* Start the 1.5s approach window ONCE when you enter this behavior */
-  if (!bucketApproachActive)
-  {
-    ES_Timer_StopTimer(BUCKET_TIMER);
-    DB_printf("FIRST bucket: starting timed approach\r\n");
-    bucketApproachActive = true;
-    dispenseRequested = false;
+        /* Start the 1.5s approach window ONCE when you enter this behavior */
+        if (!bucketApproachActive)
+        {
+          ES_Timer_StopTimer(BUCKET_TIMER);
+          DB_printf("FIRST bucket: starting timed approach\r\n");
+          bucketApproachActive = true;
+          dispenseRequested = false;
 
-    following = 1;
-    followDir = FOLLOW_REV;
-    DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_REV));
+          following = 1;
+          followDir = FOLLOW_REV;
+          DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_REV));
 
-    ES_Timer_InitTimer(BUCKET_TIMER, BUCKET_APPROACH_MS);
-  }
+          ES_Timer_InitTimer(BUCKET_TIMER, BUCKET_APPROACH_MS);
+        }
 
-  /* When the timer expires, stop and dispense */
-  if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == BUCKET_TIMER)
-  {
-    StopMotors();
-    following = 0;
-    ES_Timer_StopTimer(BUCKET_TIMER);
+        /* When the timer expires, stop and dispense */
+        if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == BUCKET_TIMER)
+        {
+          StopMotors();
+          following = 0;
+          ES_Timer_StopTimer(BUCKET_TIMER);
 
-    if (!dispenseRequested)
-    {
-      dispenseRequested = true;
-      DB_printf("FIRST bucket: timed stop -> request dispense\r\n");
-      SendDispenseStart();
-    }
-  }
+          if (!dispenseRequested)
+          {
+            dispenseRequested = true;
+            DB_printf("FIRST bucket: timed stop -> request dispense\r\n");
+            SendDispenseStart();
+          }
+        }
 
-  /* After dispensing, transition to middle bucket search */
-  if (ThisEvent.EventType == ES_DISPENSE_COMPLETE)
-  {
-    DB_printf("Dispense complete (first). Going to middle bucket.\r\n");
+        /* After dispensing, transition to middle bucket search */
+        if (ThisEvent.EventType == ES_DISPENSE_COMPLETE)
+        {
+          DB_printf("Dispense complete (first). Going to middle bucket.\r\n");
 
-    dispenseRequested = false;
-    bucketApproachActive = false;   // reset for next approach
+          dispenseRequested = false;
+          bucketApproachActive = false;   // reset for next approach
 
-    /* begin moving toward middle bucket (your existing behavior) */
-    followDir = FOLLOW_REV;
-    following = 1;
-    DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_REV));
+          /* begin moving toward middle bucket (your existing behavior) */
+          followDir = FOLLOW_REV;
+          following = 1;
+          DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_REV));
 
-    curState = ALIGN_MID_BUCKET;
-  }
+          curState = ALIGN_MID_BUCKET;
+        }
 
-  break;
-}
+        break;
+      }
 
     case INIT_FIND_MIDDLE:
     {
@@ -808,6 +822,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
 
   return ReturnEvent;
 }
+}
 
 /*=========================== INIT HELPERS ============================*/
 static void InitPinsAndPPS(void)
@@ -897,8 +912,8 @@ static void SetMotor2(int16_t dutySignedPercent)
 {
   uint16_t mag = (dutySignedPercent < 0) ? (uint16_t)(-dutySignedPercent) : (uint16_t)dutySignedPercent;
   uint16_t ocrs = DutyPercentToOCrs(mag);
-  DB_printf("Duty*PR2: %d\r\n", ocrs);
-  DB_printf("Motor2 Duty: %d\r\n", dutySignedPercent);
+//  DB_printf("Duty*PR2: %d\r\n", ocrs);
+//  DB_printf("Motor2 Duty: %d\r\n", dutySignedPercent);
 
   if (dutySignedPercent > 0)
   {
