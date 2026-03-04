@@ -603,7 +603,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
             cmdEvent.EventParam = CMD_COLLECT_BACK;
             PostSPIFollowerService(cmdEvent);
             ES_Timer_InitTimer(MOTOR_TIMER, BACK_COLLECT_TIME);
-//            DoTranslate(PackTranslateParam(TRANS_FULL, DIR_REV));
+            DoTranslate(PackTranslateParam(TRANS_FULL, DIR_REV));
             
             /* Initiating backup ramp up - half the backup speed */
 //            ES_Timer_InitTimer(MOTOR_TIMER, BACKUP_RAMPUP_MS);
