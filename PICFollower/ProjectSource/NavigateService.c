@@ -51,7 +51,7 @@
 #define VEER_AWAY_FROM_WALL       1000u
 #define BACKUP_RAMPUP_MS          500
 #define SEARCH_TIME               10000
-#define TURN_DELAY_PRE_LF         5000 // turn before starting to line follow
+#define TURN_DELAY_PRE_LF         2500 // turn before starting to line follow, 4500 
 #define FIND_T_TIMER_BLOCK        4500
 #define LINE_FOLLOWING_BLOCKING_TIMER   500 // DO NOT CHANGE
 
@@ -416,21 +416,21 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
             ES_Timer_StopTimer(MOTOR_TIMER);
       }
       
-      if (ThisEvent.EventType == ES_TAPE_DETECT && following)
-      {
-        LineFollow(ThisEvent, FOLLOW_FWD);
-      }
 
       if (ThisEvent.EventType == ES_T_DETECTED && ThisEvent.EventParam == FULL_T && lookingForT )
       {
         // rotate clockwise to face away from dispenser, start timer before line following
 //        DoRotate(PackRotateParam(ROT_90, ROT_CW));
+        following = 0;
         cmdEvent.EventParam = CMD_ROT_CW_180;
-        ES_Timer_InitTimer(MOTOR_TIMER, VEER_AWAY_FROM_WALL*1.2);
+        ES_Timer_InitTimer(MOTOR_TIMER, VEER_AWAY_FROM_WALL*1.3);
         PostSPIFollowerService(cmdEvent);
         SetMotor1(-(int16_t)DUTY_TRANS_HALF*0.8);
         SetMotor2(-(int16_t)DUTY_TRANS_HALF*1.2);
         curState = START_LOOKING_FOR_T;
+      } else if (ThisEvent.EventType == ES_TAPE_DETECT && following)
+      {
+        LineFollow(ThisEvent, FOLLOW_FWD);
       }
       
       break;
@@ -460,16 +460,17 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
             SetMotor1((int16_t)DUTY_TRANS_HALF);
             SetMotor2(-(int16_t)DUTY_TRANS_HALF*1.2);
             following = 0;
-            ES_Timer_InitTimer(BEACON_TIMER, TURN_DELAY_PRE_LF);
+            ES_Timer_InitTimer(BEACON_TIMER, TURN_DELAY_PRE_LF); // 270 turn
         }
         
         if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == BEACON_TIMER) {
             ES_Timer_StopTimer(BEACON_TIMER);
             DoTranslate(PackTranslateParam(TRANS_HALF, DIR_REV));
-            curState = COLLECT_ALIGN;
+            followDir = FOLLOW_REV;
             collectState = COLLECT_START;
             following = 1;
-            collectStarted = 0;
+            collectStarted = 0;            
+            curState = COLLECT_ALIGN;
         }
 //        if (ThisEvent.EventType == ES_MOVE_DONE) {
 //            /* move forward to dispenser */

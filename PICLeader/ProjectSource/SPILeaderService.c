@@ -379,7 +379,7 @@ static void HandleFollowerStatus(uint8_t statusByte)
       cmdEvent.EventType = ES_ENCODER_TARGET_ROT;
       cmdEvent.EventParam = ROT_90_PULSES;
       PostEncoderService(cmdEvent);
-      LATAbits.LATA3 = 1;
+//      LATAbits.LATA3 = 1;
       break;
     
     case CMD_ENCODER_FIRST_ALIGN:
@@ -391,12 +391,12 @@ static void HandleFollowerStatus(uint8_t statusByte)
       break;
 
     case CMD_ALIGN_COLLECT:
-    /* This is when the bot is facing the coal dispenser and needs to drive fwd */
+    /* This is when the bot is facing the coal dispenser and needs to drive backwards */
       DB_printf("Follower status: Facing dispenser, aligning by moving fwd\r\n");
       cmdEvent.EventType = ES_ENCODER_TARGET_STRAIGHT;
       cmdEvent.EventParam = COLLECT_REV_ALIGN;
       PostEncoderService(cmdEvent);
-      LATAbits.LATA3 = 1;
+      LATAbits.LATA3 = 0;
       break;
 
     case CMD_FIRST_COLLECT_START:
