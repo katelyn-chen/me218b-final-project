@@ -33,6 +33,10 @@
 #define RIGHT_CORNER_BITFIELD_4   0b01111
 #define LEFT_CORNER_BITFIELD      0b11100
 #define LEFT_CORNER_BITFIELD_4    0b11110
+#define LEFT_BIT_ONLY             0b10000
+#define RIGHT_BIT_ONLY            0b00001
+#define LEFT_TWO_BITS             0b11000
+#define RIGHT_TWO_BITS            0b00011
 
 
 #define TAPE_CONFIRM_COUNT        5
@@ -77,21 +81,22 @@ ES_Event_t RunReflectiveSenseService(ES_Event_t ThisEvent)
 //        DB_printf("Tape change detected! Sensor bitfield: %d\r\n", ThisEvent.EventParam);
         uint8_t tapeState = (uint8_t)ThisEvent.EventParam;
           ES_Event_t NewEvent;
-          if (tapeState == ALL_TAPE_BITFIELD && T_count == 0) { 
+          if (tapeState == ALL_TAPE_BITFIELD && T_count == 0 
+                  || tapeState == RIGHT_CORNER_BITFIELD_4 || tapeState == LEFT_CORNER_BITFIELD_4) { 
               NewEvent.EventType = ES_T_DETECTED;
               NewEvent.EventParam = FULL_T;
               DB_printf("all tape detected, full T \n");
               PostNavigateService(NewEvent);
               T_count++;
               ES_Timer_InitTimer(LINE_TIMER, NEXT_T_WAIT);
-          } else if ((tapeState == RIGHT_CORNER_BITFIELD || tapeState == RIGHT_CORNER_BITFIELD_4) && T_count == 0) {
+          } else if ((tapeState == RIGHT_CORNER_BITFIELD) && T_count == 0) {
               NewEvent.EventType = ES_T_DETECTED;
               NewEvent.EventParam = RIGHT_CORNER;
               DB_printf("right corner bitfield detected \n");
               PostNavigateService(NewEvent);
               T_count++;
               ES_Timer_InitTimer(LINE_TIMER, NEXT_T_WAIT);
-          } else if ((tapeState == LEFT_CORNER_BITFIELD || tapeState == LEFT_CORNER_BITFIELD_4) && T_count == 0) {
+          } else if ((tapeState == LEFT_CORNER_BITFIELD ) && T_count == 0) {
               NewEvent.EventType = ES_T_DETECTED;
               NewEvent.EventParam = LEFT_CORNER;
               DB_printf("left corner bitfield detected \n");
@@ -111,9 +116,13 @@ ES_Event_t RunReflectiveSenseService(ES_Event_t ThisEvent)
               NewEvent.EventType = ES_TAPE_DETECT;
               NewEvent.EventParam = TAPE_OFF_CENTER_LEFT; 
               PostNavigateService(NewEvent);
-          } else if (tapeState == 0) { // do we need know no tape??
+          } else if (tapeState == LEFT_TWO_BITS || tapeState == LEFT_BIT_ONLY) {
               NewEvent.EventType = ES_TAPE_DETECT;
-              NewEvent.EventParam = NO_TAPE;
+              NewEvent.EventParam = TAPE_EXTREME_OFF_CENTER_LEFT; 
+              PostNavigateService(NewEvent);
+          } else if (tapeState == RIGHT_TWO_BITS || tapeState == RIGHT_BIT_ONLY) {
+              NewEvent.EventType = ES_TAPE_DETECT;
+              NewEvent.EventParam = TAPE_EXTREME_OFF_CENTER_RIGHT ;
               PostNavigateService(NewEvent);
           }
           

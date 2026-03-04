@@ -34,13 +34,13 @@
 
 /* duty presets (percent 0..100) */
 #define DUTY_STOP           0u
-#define DUTY_TRANS_TAPE_DET 35u
+#define DUTY_TRANS_TAPE_DET 40u
 #define DUTY_TRANS_HALF     30u
 #define DUTY_TRANS_FULL     85u
-#define DUTY_ROTATE         30u
+#define DUTY_ROTATE         40u
 #define DUTY_SEARCH         30u
 #define TAPE_BASE_DUTY      DUTY_TRANS_TAPE_DET
-#define TAPE_CORR_DUTY      10u   // steering correction amount
+#define TAPE_CORR_DUTY      8u   // steering correction amount
 #define TAPE_LOST_DUTY      15u   // slow search when tape lost
 
 /* Timer Values */
@@ -52,7 +52,8 @@
 #define BACKUP_RAMPUP_MS          500
 #define SEARCH_TIME               10000
 #define TURN_DELAY_PRE_LF         1000 // turn before starting to line follow
-#define LINE_FOLLOWING_TIMER      2000
+#define FIND_T_TIMER_BLOCK        3000
+#define LINE_FOLLOWING_BLOCKING_TIMER   500 // DO NOT CHANGE
 
 
 #ifndef MOTOR_TIMER
@@ -122,6 +123,8 @@ static uint16_t            duty = DUTY_STOP;
 static bool coalSearchFlag  = 0;
 static bool following = 1;
 static bool collectStarted = 0;
+static bool lookingForT = 0;
+
 static TapeStatus_t prevTapeState = NO_TAPE;
 
 /* beacon sweep history (store unique transitions only) */
@@ -381,8 +384,9 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
                 /* Manually setting motors here because we want to modify the duty cycles
                  a bit for driving straight */
                 DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_FWD));
-//                SetMotor1(-DUTY_TRANS_TAPE_DET);
-//                SetMotor2(-1.1*DUTY_TRANS_TAPE_DET);
+                ES_Timer_InitTimer(BEACON_TIMER, LINE_FOLLOWING_BLOCKING_TIMER);
+                ES_Timer_InitTimer(MOTOR_TIMER, FIND_T_TIMER_BLOCK);
+                following = 0;
             }
                 break;
         }
@@ -400,58 +404,72 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
     {
       /* drive forward until T detected */
            
-      if (ThisEvent.EventType == ES_TAPE_DETECT)
+      if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == BEACON_TIMER) {
+            following = 1;
+      }
+      
+      if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == MOTOR_TIMER) {
+            lookingForT = 1;
+      }
+      
+      if (ThisEvent.EventType == ES_TAPE_DETECT && following)
       {
         LineFollow(ThisEvent, FOLLOW_FWD);
       }
 
-      if (ThisEvent.EventType == ES_T_DETECTED && ThisEvent.EventParam == FULL_T)
+      if (ThisEvent.EventType == ES_T_DETECTED && ThisEvent.EventParam == FULL_T && lookingForT )
       {
         // rotate clockwise to face away from dispenser, start timer before line following
-        DoRotate(PackRotateParam(ROT_90, ROT_CW));
-        ES_Timer_InitTimer(MOTOR_TIMER, TURN_DELAY_PRE_LF);
+//        DoRotate(PackRotateParam(ROT_90, ROT_CW));
+        cmdEvent.EventParam = CMD_ROT_CW_180;
+        PostSPIFollowerService(cmdEvent);
+        SetMotor1((int16_t)DUTY_TRANS_HALF*0.8);
+        SetMotor2(-(int16_t)DUTY_TRANS_HALF);
+        curState = START_LOOKING_FOR_T;
+        following = 0;
+//        ES_Timer_InitTimer(MOTOR_TIMER, TURN_DELAY_PRE_LF);
       }
-      
-      if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == MOTOR_TIMER) {
-          /* keep rotating, but now change state so we can start line following
-           * now that the timer had expired */
-          curState = COLLECT_POST_T;
-          ES_Timer_InitTimer(MOTOR_TIMER, LINE_FOLLOWING_TIMER);
-      }
+//      
+//      if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == MOTOR_TIMER) {
+//          /* keep rotating, but now change state so we can start line following
+//           * now that the timer had expired */
+//          curState = START_LOOKING_FOR_T;
+////          ES_Timer_InitTimer(MOTOR_TIMER, LINE_FOLLOWING_TIMER);
+//      }
       
       break;
     }
     /* END INIT COAL DISPNESE SEARCH - NOW FACING AWAY FROM DISPENSER */
     
-    case COLLECT_POST_T: {
-        if (ThisEvent.EventType == ES_TAPE_DETECT && following)
-        {
-            LineFollow(ThisEvent, FOLLOW_FWD);
-            prevTapeState = ThisEvent.EventParam;
-        }
-        
-        if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == MOTOR_TIMER) {
-            curState = START_LOOKING_FOR_T;
-        }
-        
-        break;
-    }
+//    case COLLECT_POST_T: {
+//        if (ThisEvent.EventType == ES_TAPE_DETECT && following)
+//        {
+//            LineFollow(ThisEvent, FOLLOW_FWD);
+//            prevTapeState = ThisEvent.EventParam;
+//        }
+//        
+//        if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == MOTOR_TIMER) {
+//            curState = START_LOOKING_FOR_T;
+//        }
+//        
+//        break;
+//    }
     
     case START_LOOKING_FOR_T: { 
-        if (ThisEvent.EventType == ES_TAPE_DETECT && following)
-        {
-            LineFollow(ThisEvent, FOLLOW_FWD);
-            prevTapeState = ThisEvent.EventParam;
-        }
-        
-        if (ThisEvent.EventType == ES_T_DETECTED && (prevTapeState == TAPE_CENTERED 
-                || prevTapeState == TAPE_OFF_CENTER_RIGHT || prevTapeState == TAPE_OFF_CENTER_LEFT)) {
+//        if (ThisEvent.EventType == ES_TAPE_DETECT && following)
+//        {
+//            LineFollow(ThisEvent, FOLLOW_FWD);
+//            prevTapeState = ThisEvent.EventParam;
+//        }
+//        
+//        if (ThisEvent.EventType == ES_T_DETECTED && (prevTapeState == TAPE_CENTERED 
+//                || prevTapeState == TAPE_OFF_CENTER_RIGHT || prevTapeState == TAPE_OFF_CENTER_LEFT)) {
             // rotate 180 to face dispenser
-            cmdEvent.EventParam = CMD_ROT_CW_180;
-            PostSPIFollowerService(cmdEvent);
-            DoRotate(PackRotateParam(ROT_90, ROT_CW));
-            following = 0;
-        }
+//            SetMotor1(-DUTY_TRANS_HALF*1.5);
+//            SetMotor2(DUTY_TRANS_HALF*1.5);
+////            DoRotate(PackRotateParam(ROT_90, ROT_CW));
+//            following = 0;
+//        }
         
         if (ThisEvent.EventType == ES_MOVE_DONE) {
             /* move forward to dispenser */
@@ -466,7 +484,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
 
     case COLLECT_ALIGN:
     {
-        if (ThisEvent.EventType == ES_T_DETECTED && ThisEvent.EventType == LEFT_CORNER) {
+        if (ThisEvent.EventType == ES_T_DETECTED && ThisEvent.EventParam == LEFT_CORNER) {
             if (!collectStarted) {
                 /* Once the T has been detected, bot moves back and lowers arm
                  I added this flag because I only want this code to run once */
@@ -495,8 +513,8 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
             
             /* Initiating backup ramp up - half the backup speed */
             ES_Timer_InitTimer(MOTOR_TIMER, BACKUP_RAMPUP_MS);
-            SetMotor1(DUTY_TRANS_FULL*1.1*0.5);
-            SetMotor2(DUTY_TRANS_FULL*0.8*0.5);
+            SetMotor1((int16_t)DUTY_TRANS_FULL*1.1*0.5);
+            SetMotor2((int16_t)DUTY_TRANS_FULL*0.8*0.5);
             collectState = COLLECT_BACK;
             followDir = FOLLOW_REV;
         }
@@ -514,8 +532,8 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == MOTOR_TIMER) {
             
             /* This is for the backup ramp up - moving to full backup speed */
-            SetMotor1(DUTY_TRANS_FULL*1.1);
-            SetMotor2(DUTY_TRANS_FULL*0.8);
+            SetMotor1((int16_t)DUTY_TRANS_FULL*1.1);
+            SetMotor2((int16_t)DUTY_TRANS_FULL*0.8);
             ES_Timer_StopTimer(MOTOR_TIMER);
         }
             
@@ -811,20 +829,29 @@ static void LineFollow(ES_Event_t ThisEvent, FollowDir_t followDirection)
 
                 case TAPE_OFF_CENTER_LEFT:
                     // drifting LEFT ? steer RIGHT
-                    leftDuty  =  TAPE_BASE_DUTY + TAPE_CORR_DUTY;
-                    rightDuty =  TAPE_BASE_DUTY - TAPE_CORR_DUTY;
+                    leftDuty  =  TAPE_BASE_DUTY - TAPE_CORR_DUTY;
+                    rightDuty =  TAPE_BASE_DUTY + TAPE_CORR_DUTY;
                     break;
 
                 case TAPE_OFF_CENTER_RIGHT:
                     // drifting RIGHT ? steer LEFT
-                    leftDuty  =  TAPE_BASE_DUTY - TAPE_CORR_DUTY;
-                    rightDuty =  TAPE_BASE_DUTY + TAPE_CORR_DUTY;
+                    leftDuty  =  TAPE_BASE_DUTY + TAPE_CORR_DUTY;
+                    rightDuty =  TAPE_BASE_DUTY - TAPE_CORR_DUTY;
                     break;
 
                 case NO_TAPE:
                     leftDuty  =  TAPE_LOST_DUTY;
                     rightDuty = -TAPE_LOST_DUTY;
                     break;
+                    
+                case TAPE_EXTREME_OFF_CENTER_LEFT:
+                    leftDuty  =  TAPE_BASE_DUTY - 2*TAPE_CORR_DUTY;
+                    rightDuty =  TAPE_BASE_DUTY + 2*TAPE_CORR_DUTY;
+                    break;
+                    
+                case TAPE_EXTREME_OFF_CENTER_RIGHT:
+                    leftDuty  =  TAPE_BASE_DUTY + 2*TAPE_CORR_DUTY;
+                    rightDuty =  TAPE_BASE_DUTY - 2*TAPE_CORR_DUTY;
 
                 default:
                     break;
@@ -845,8 +872,8 @@ static void LineFollow(ES_Event_t ThisEvent, FollowDir_t followDirection)
                 motorSign = 0;
             }
 
-            SetMotor1(leftDuty  * motorSign);
-            SetMotor2(rightDuty * motorSign);
+            SetMotor1((int16_t)leftDuty  * motorSign);
+            SetMotor2((int16_t)rightDuty * motorSign);
 
             break;
         }
@@ -947,20 +974,20 @@ static void SquareUpOnT(ES_Event_t ThisEvent)
             {
                 case FULL_T:
                     // creep forward
-                    SetMotor1(-DUTY_TRANS_TAPE_DET);
-                    SetMotor2(-DUTY_TRANS_TAPE_DET);
+                    SetMotor1(-(int16_t)DUTY_TRANS_TAPE_DET);
+                    SetMotor2(-(int16_t)DUTY_TRANS_TAPE_DET);
                     break;
 
                 case RIGHT_CORNER:
                     // rotate LEFT (CCW)
-                    SetMotor1(DUTY_ROTATE);      // left backward
-                    SetMotor2(-DUTY_ROTATE);     // right forward
+                    SetMotor1((int16_t)DUTY_ROTATE);      // left backward
+                    SetMotor2(-(int16_t)DUTY_ROTATE);     // right forward
                     break;
 
                 case LEFT_CORNER:
                     // rotate RIGHT (CW)
-                    SetMotor1(-DUTY_ROTATE);     // left forward
-                    SetMotor2(DUTY_ROTATE);      // right backward
+                    SetMotor1(-(int16_t)DUTY_ROTATE);     // left forward
+                    SetMotor2((int16_t)DUTY_ROTATE);      // right backward
                     break;
 
                 default:

@@ -39,7 +39,9 @@ typedef enum {
     FULL_T,
     RIGHT_CORNER,
     LEFT_CORNER,
-    NO_TAPE
+    NO_TAPE,
+    TAPE_EXTREME_OFF_CENTER_LEFT,
+    TAPE_EXTREME_OFF_CENTER_RIGHT
 } TapeStatus_t;
 
 typedef enum {
