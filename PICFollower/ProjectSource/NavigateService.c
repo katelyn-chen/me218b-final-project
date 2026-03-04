@@ -633,7 +633,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         }
         
         if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == LF_POSTING_TIMER) {
-            correctingForLF = 0;
+            correctingForLF = 1;
         }
         
         /* END checks to see if we should stop moving back/forth */
