@@ -394,7 +394,7 @@ static void HandleFollowerStatus(uint8_t statusByte)
     /* This is when the bot is facing the coal dispenser and needs to drive fwd */
       DB_printf("Follower status: Facing dispenser, aligning by moving fwd\r\n");
       cmdEvent.EventType = ES_ENCODER_TARGET_STRAIGHT;
-      cmdEvent.EventParam = COLLECT_FWD_ALIGN;
+      cmdEvent.EventParam = COLLECT_REV_ALIGN;
       PostEncoderService(cmdEvent);
 //      LATAbits.LATA3 = 0;
       break;

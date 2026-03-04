@@ -52,6 +52,7 @@
 #define BACKUP_RAMPUP_MS          500
 #define SEARCH_TIME               10000
 #define TURN_DELAY_PRE_LF         1000 // turn before starting to line follow
+#define LINE_FOLLOWING_TIMER      2000
 
 
 #ifndef MOTOR_TIMER
@@ -65,6 +66,7 @@ typedef enum {
   WAITING_FOR_SIDE,
   INIT_COAL_DISP_SEARCH,
   COLLECT_POST_T,
+  START_LOOKING_FOR_T,
   COLLECT_ALIGN,
   FIRST_DISPENSE,
   INIT_FIND_MIDDLE,
@@ -120,6 +122,7 @@ static uint16_t            duty = DUTY_STOP;
 static bool coalSearchFlag  = 0;
 static bool following = 1;
 static bool collectStarted = 0;
+static TapeStatus_t prevTapeState = NO_TAPE;
 
 /* beacon sweep history (store unique transitions only) */
 #define BEACON_SEQ_MAX 8u
@@ -353,7 +356,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
             /* END BEACON RESPONSE */
 
             /* Once the encoder says the bot is done moving towards the beacon,
-             * the bot begins to turn to face straight */
+             * the bot begins to turn to move towards a line */
             if (ThisEvent.EventType == ES_MOVE_DONE)
             {
               orientState = ORIENT_DONE;
@@ -413,6 +416,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
           /* keep rotating, but now change state so we can start line following
            * now that the timer had expired */
           curState = COLLECT_POST_T;
+          ES_Timer_InitTimer(MOTOR_TIMER, LINE_FOLLOWING_TIMER);
       }
       
       break;
@@ -423,9 +427,25 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         if (ThisEvent.EventType == ES_TAPE_DETECT && following)
         {
             LineFollow(ThisEvent, FOLLOW_FWD);
+            prevTapeState = ThisEvent.EventParam;
         }
         
-        if (ThisEvent.EventType == ES_T_DETECTED) {
+        if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == MOTOR_TIMER) {
+            curState = START_LOOKING_FOR_T;
+        }
+        
+        break;
+    }
+    
+    case START_LOOKING_FOR_T: { 
+        if (ThisEvent.EventType == ES_TAPE_DETECT && following)
+        {
+            LineFollow(ThisEvent, FOLLOW_FWD);
+            prevTapeState = ThisEvent.EventParam;
+        }
+        
+        if (ThisEvent.EventType == ES_T_DETECTED && (prevTapeState == TAPE_CENTERED 
+                || prevTapeState == TAPE_OFF_CENTER_RIGHT || prevTapeState == TAPE_OFF_CENTER_LEFT)) {
             // rotate 180 to face dispenser
             cmdEvent.EventParam = CMD_ROT_CW_180;
             PostSPIFollowerService(cmdEvent);
@@ -818,9 +838,9 @@ static void LineFollow(ES_Event_t ThisEvent, FollowDir_t followDirection)
             int8_t motorSign;
             
             if (followDirection == FOLLOW_FWD) {
-                motorSign = 1;
-            } else if (followDirection == FOLLOW_REV) {
                 motorSign = -1;
+            } else if (followDirection == FOLLOW_REV) {
+                motorSign = 1;
             } else {
                 motorSign = 0;
             }
