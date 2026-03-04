@@ -61,7 +61,7 @@
 
 
 
-#define BUCKET_APPROACH_MS    2900   // SOY  tune this
+#define BUCKET_APPROACH_MS    4000   // SOY  tune this
 
 
 /*---------------------------- Module Types -------------------------------*/
@@ -734,15 +734,28 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
       break;
     }
     
-//      case MOVE_TO_MID_BUCKET:
-//      {
-//         // here after found T
-//          // turn 90 degrees right
-//          // find tape and tape follow until find left corner / full T
-//          // turn 90 left 
-//          // 
-//          
-//      }
+     case MOVE_TO_MID_BUCKET:
+     {
+        // here after found T
+        if (ThisEvent.EventType == ES_TAPE_DETECT)
+        {
+          LineFollow(ThisEvent, FOLLOW_REV);
+         // turn 90 degrees right
+          ES_Timer_StopTimer(MOTOR_TIMER);
+          SetMotor1((int16_t)DUTY_TRANS_HALF);
+          SetMotor2(-(int16_t)DUTY_TRANS_HALF*1.2);
+          following = 0;
+          ES_Timer_InitTimer(MOTOR_TIMER, ROTATE_90_TIME_MS);
+         // find tape and tape follow until find left corner / full T
+          LineFollow(ThisEvent, FOLLOW_REV);
+         // turn 90 left 
+         ES_Timer_StopTimer(MOTOR_TIMER);
+          SetMotor1(-[(int16_t)DUTY_TRANS_HALF);
+          SetMotor2((int16_t)DUTY_TRANS_HALF*1.2);
+          following = 0;
+         // 
+         
+     }
 
     case ALIGN_MID_BUCKET:
     {
