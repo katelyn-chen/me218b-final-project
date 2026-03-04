@@ -34,7 +34,7 @@
 
 /* duty presets (percent 0..100) */
 #define DUTY_STOP           0u
-#define DUTY_TRANS_TAPE_DET 40u
+#define DUTY_TRANS_TAPE_DET 30u
 #define DUTY_TRANS_HALF     30u
 #define DUTY_TRANS_FULL     85u
 #define DUTY_ROTATE         40u
@@ -52,7 +52,7 @@
 #define BACKUP_RAMPUP_MS          500
 #define SEARCH_TIME               10000
 #define TURN_DELAY_PRE_LF         1000 // turn before starting to line follow
-#define FIND_T_TIMER_BLOCK        3000
+#define FIND_T_TIMER_BLOCK        4500
 #define LINE_FOLLOWING_BLOCKING_TIMER   500 // DO NOT CHANGE
 
 
@@ -406,10 +406,14 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
            
       if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == BEACON_TIMER) {
             following = 1;
+            lookingForT = 0;
+            ES_Timer_StopTimer(BEACON_TIMER);
+
       }
       
       if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == MOTOR_TIMER) {
             lookingForT = 1;
+            ES_Timer_StopTimer(MOTOR_TIMER);
       }
       
       if (ThisEvent.EventType == ES_TAPE_DETECT && following)
@@ -427,15 +431,8 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         SetMotor2(-(int16_t)DUTY_TRANS_HALF);
         curState = START_LOOKING_FOR_T;
         following = 0;
-//        ES_Timer_InitTimer(MOTOR_TIMER, TURN_DELAY_PRE_LF);
+        ES_Timer_InitTimer(MOTOR_TIMER, TURN_DELAY_PRE_LF);
       }
-//      
-//      if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == MOTOR_TIMER) {
-//          /* keep rotating, but now change state so we can start line following
-//           * now that the timer had expired */
-//          curState = START_LOOKING_FOR_T;
-////          ES_Timer_InitTimer(MOTOR_TIMER, LINE_FOLLOWING_TIMER);
-//      }
       
       break;
     }
@@ -456,28 +453,27 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
 //    }
     
     case START_LOOKING_FOR_T: { 
-//        if (ThisEvent.EventType == ES_TAPE_DETECT && following)
-//        {
-//            LineFollow(ThisEvent, FOLLOW_FWD);
-//            prevTapeState = ThisEvent.EventParam;
-//        }
-//        
-//        if (ThisEvent.EventType == ES_T_DETECTED && (prevTapeState == TAPE_CENTERED 
-//                || prevTapeState == TAPE_OFF_CENTER_RIGHT || prevTapeState == TAPE_OFF_CENTER_LEFT)) {
-            // rotate 180 to face dispenser
-//            SetMotor1(-DUTY_TRANS_HALF*1.5);
-//            SetMotor2(DUTY_TRANS_HALF*1.5);
-////            DoRotate(PackRotateParam(ROT_90, ROT_CW));
-//            following = 0;
-//        }
         
-        if (ThisEvent.EventType == ES_MOVE_DONE) {
-            /* move forward to dispenser */
+        if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == MOTOR_TIMER) {
+          /* keep rotating, but now change state so we can start line following
+           * now that the timer had expired */
+            ES_Timer_StopTimer(MOTOR_TIMER);
             DoTranslate(PackTranslateParam(TRANS_HALF, DIR_FWD));
             curState = COLLECT_ALIGN;
             collectState = COLLECT_START;
             following = 1;
-        }  
+            collectStarted = 0;
+        }
+//        if (ThisEvent.EventType == ES_MOVE_DONE) {
+//            /* move forward to dispenser */
+//            DoTranslate(PackTranslateParam(TRANS_HALF, DIR_FWD));
+//            curState = COLLECT_ALIGN;
+//            collectState = COLLECT_START;
+//            following = 1;
+//            collectStarted = 0;
+//        }
+        
+        if (ThisEvent.EventType == ES_T_DETECTED){};
         break;
     }
     /* END COLLECT POST T - NOW FACING DISPENSER */

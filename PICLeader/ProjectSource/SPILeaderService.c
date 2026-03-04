@@ -53,7 +53,7 @@
 
 /* Pulse values need to be tuned!! */
 #define ROT_90_PULSES           25
-#define ROT_180_PULSES          ROT_90_PULSES*3.5
+#define ROT_180_PULSES          ROT_90_PULSES*3
 #define COLLECT_REV_ALIGN       10      // FIRST reverse from dispenser before lowering arm 
 #define INIT_ROT_ADJUST         23      // first rotation after seeing beacon
 #define RIGHT_FULL_ROTATE       60      // tuned! one full wheel rotation
@@ -396,7 +396,7 @@ static void HandleFollowerStatus(uint8_t statusByte)
       cmdEvent.EventType = ES_ENCODER_TARGET_STRAIGHT;
       cmdEvent.EventParam = COLLECT_REV_ALIGN;
       PostEncoderService(cmdEvent);
-//      LATAbits.LATA3 = 0;
+      LATAbits.LATA3 = 1;
       break;
 
     case CMD_FIRST_COLLECT_START:
@@ -466,6 +466,7 @@ static void HandleFollowerStatus(uint8_t statusByte)
         cmdEvent.EventType = ES_ENCODER_TARGET_ROT;
         cmdEvent.EventParam = ROT_180_PULSES;
         PostEncoderService(cmdEvent);
+        LATAbits.LATA3 = 1;
         break;
          
 
