@@ -62,7 +62,7 @@
 
 
 
-#define BUCKET_APPROACH_MS    4000   // SOY  tune this
+#define BUCKET_APPROACH_MS    3000   // SOY  tune this
 
 
 /*---------------------------- Module Types -------------------------------*/
@@ -633,9 +633,6 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
             break;
         }
         
-        if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == LF_POSTING_TIMER) {
-            correctingForLF = 1;
-        }
         
         /* END checks to see if we should stop moving back/forth */
         
@@ -752,7 +749,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         /* When the timer expires, stop and dispense */
         if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == BUCKET_TIMER)
         {
-          DB_printf("bucket timeout");
+          DB_printf("bucket timeout\r\n");
           StopMotors();
           following = 0;
           ES_Timer_StopTimer(BUCKET_TIMER);
@@ -763,6 +760,10 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
             DB_printf("FIRST bucket: timed stop -> request dispense\r\n");
             SendDispenseStart();
           }
+        }
+        
+        if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == LF_POSTING_TIMER) {
+            correctingForLF = 1;
         }
         
         if (ThisEvent.EventType == ES_TAPE_DETECT && following)
@@ -777,20 +778,19 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         break;
       }
 
-    
-   
-
-  
-
    case INIT_FIND_MIDDLE:
 {
-  if (ThisEvent.EventType == ES_TAPE_DETECT && following) {
-    if (correctingForLF) {
-      correctingForLF = 0;
-      ES_Timer_InitTimer(LF_POSTING_TIMER, LF_POSTING_DELAY);
-      LineFollow(ThisEvent, FOLLOW_REV);
+    if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == LF_POSTING_TIMER) {
+              correctingForLF = 1;
     }
-  }
+  
+    if (ThisEvent.EventType == ES_TAPE_DETECT && following) {
+      if (correctingForLF) {
+        correctingForLF = 0;
+        ES_Timer_InitTimer(LF_POSTING_TIMER, LF_POSTING_DELAY);
+        LineFollow(ThisEvent, FOLLOW_REV);
+      }
+    }
       
       if (ThisEvent.EventType == ES_T_DETECTED && ThisEvent.EventParam == FULL_T)
       {
@@ -819,15 +819,17 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         DB_printf("MIDDLE: first 90 done, now line follow to next T\r\n");
 
         ES_Timer_StopTimer(MOTOR_TIMER);
-        correctingForLF = 1;
-
+        
         /* start reverse line following again until we hit the next FULL_T */
         following = 1;
         followDir = FOLLOW_REV;
         DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_REV));
-
         midMoveStage = 1;
         break;
+        }
+      
+      if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == LF_POSTING_TIMER) {
+         correctingForLF = 1;
       }
 
       /* stage 1 -> line follow until the next FULL_T, then do second 90 turn */
@@ -850,7 +852,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
 
         /* turn 90 left (your intended motor pattern, fixed syntax) */
         SetMotor1(-(int16_t)DUTY_TRANS_HALF);
-        SetMotor2((int16_t)(DUTY_TRANS_HALF * 1.2));
+        SetMotor2((int16_t)(DUTY_TRANS_HALF));
         ES_Timer_InitTimer(MOTOR_TIMER, ROTATE_90_TIME_MS);
 
         midMoveStage = 2;
@@ -921,6 +923,10 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
           DB_printf("MIDDLE bucket: timed stop -> request dispense\r\n");
           SendDispenseStart();   // same command, leader toggles 90/180 internally
         }
+      }
+      
+      if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == LF_POSTING_TIMER) {
+            correctingForLF = 1;
       }
 
       /* Reverse line follow toward middle bucket */
