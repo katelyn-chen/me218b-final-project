@@ -662,6 +662,9 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
           break;
         }
 
+        break; // MUST ADD HERE TO NOT SKIP TO dispense!!!!
+        }
+
     case FIRST_DISPENSE:
         {
         /* Reverse line follow toward first bucket */
