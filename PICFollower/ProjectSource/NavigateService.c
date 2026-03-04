@@ -57,6 +57,7 @@
 #define BACK_UP_PRE_COLLECT_ACTIVE 3500
 #define BACK_COLLECT_TIME          900
 #define FWD_ADJUST_COLLECT         300
+#define LF_POSTING_DELAY           20
 
 
 
@@ -130,6 +131,7 @@ static bool following = 1;
 static bool collectStarted = 0;
 static bool dispenseRequested = false;
 static bool bucketApproachActive = false;
+static bool correctingForLF = true;
 
 static bool lookingForT = 0;
 static bool beginfwd = 0;
@@ -413,23 +415,35 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
 
     case INIT_COAL_DISP_SEARCH:
     {
-      /* drive forward until T detected */
-           
-      if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == BEACON_TIMER) {
-            DB_printf("Begin tape detect\r\n");
-            following = 1;
-            lookingForT = 0;
-            ES_Timer_StopTimer(BEACON_TIMER);
-
-      }
+        /* drive forward until T detected */
+        
+        if (ThisEvent.EventType == ES_TIMEOUT) {
+            switch (ThisEvent.EventParam) {
+                case BEACON_TIMER:
+                {
+                    DB_printf("Begin tape detect\r\n");
+                    following = 1;
+                    lookingForT = 0;
+                    ES_Timer_StopTimer(BEACON_TIMER);
+                    break;
+                }
+                
+                case MOTOR_TIMER:
+                {
+                    DB_printf("Begin looking for T\r\n");
+                    lookingForT = 1;
+                    ES_Timer_StopTimer(MOTOR_TIMER);
+                    break;
+                }
+                
+                case LF_POSTING_TIMER:
+                {
+                    correctingForLF = 1;
+                    break;
+                }
+            }
+        }
       
-      if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == MOTOR_TIMER) {
-            DB_printf("Begin looking for T\r\n");
-            lookingForT = 1;
-            ES_Timer_StopTimer(MOTOR_TIMER);
-      }
-      
-
       if (ThisEvent.EventType == ES_T_DETECTED && ThisEvent.EventParam == FULL_T && lookingForT )
       {
         // rotate clockwise to face away from dispenser, start timer before line following
@@ -445,7 +459,12 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         lookingForT = 0;
       } else if (ThisEvent.EventType == ES_TAPE_DETECT && following)
       {
-        LineFollow(ThisEvent, FOLLOW_FWD);
+          if (correctingForLF) {
+            correctingForLF = 0; 
+            ES_Timer_InitTimer(LF_POSTING_TIMER, LF_POSTING_DELAY);
+            LineFollow(ThisEvent, FOLLOW_FWD);
+          }
+              
       }
       
       break;
@@ -466,37 +485,44 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
 //        break;
 //    }
     
-    case START_LOOKING_FOR_T: { 
-        
-        if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == MOTOR_TIMER) {
-          /* keep rotating, but now change state so we can start line following
-           * now that the timer had expired */
-            DB_printf("Done veering - turning on centroid now\r\n");
-            ES_Timer_StopTimer(MOTOR_TIMER);
-            SetMotor1((int16_t)DUTY_TRANS_HALF);
-            SetMotor2(-(int16_t)DUTY_TRANS_HALF*1.2);
-            following = 0;
-            ES_Timer_InitTimer(BEACON_TIMER, TURN_DELAY_PRE_LF); // 270 turn
+    case START_LOOKING_FOR_T: {
+        if (ThisEvent.EventType == ES_TIMEOUT) {
+            switch (ThisEvent.EventParam) {
+                case BEACON_TIMER:
+                {
+                    ES_Timer_InitTimer(BEACON_TIMER, BACK_UP_PRE_COLLECT_ACTIVE);
+                    DB_printf("Starting back up\r\n");
+                    DoTranslate(PackTranslateParam(TRANS_HALF*0.8, DIR_REV));
+                    followDir = FOLLOW_REV;
+                    collectState = COLLECT_START;
+                    following = 1;
+                    collectStarted = 0;            
+                    curState = COLLECT_ALIGN;
+                    break;
+                }
+                
+                case MOTOR_TIMER:
+                {
+                    /* keep rotating, but now change state so we can start line following
+                    * now that the timer had expired */
+                     DB_printf("Done veering - turning on centroid now\r\n");
+                     ES_Timer_StopTimer(MOTOR_TIMER);
+                     SetMotor1((int16_t)DUTY_TRANS_HALF);
+                     SetMotor2(-(int16_t)DUTY_TRANS_HALF*1.2);
+                     following = 0;
+                     ES_Timer_InitTimer(BEACON_TIMER, TURN_DELAY_PRE_LF); // 270 turn
+                    break;
+                }
+                
+                case LF_POSTING_TIMER:
+                {
+                    DB_printf("Toggling LF_POSTING_TIMER in START_LOOKING_FOR_T\r\n");
+                    correctingForLF = 1;
+                    ES_Timer_StopTimer(LF_POSTING_TIMER);
+                    break;
+                }
+            }
         }
-        
-        if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == BEACON_TIMER) {
-            ES_Timer_InitTimer(BEACON_TIMER, BACK_UP_PRE_COLLECT_ACTIVE);
-            DB_printf("Starting back up\r\n");
-            DoTranslate(PackTranslateParam(TRANS_HALF*0.8, DIR_REV));
-            followDir = FOLLOW_REV;
-            collectState = COLLECT_START;
-            following = 1;
-            collectStarted = 0;            
-            curState = COLLECT_ALIGN;
-        }
-//        if (ThisEvent.EventType == ES_MOVE_DONE) {
-//            /* move forward to dispenser */
-//            DoTranslate(PackTranslateParam(TRANS_HALF, DIR_FWD));
-//            curState = COLLECT_ALIGN;
-//            collectState = COLLECT_START;
-//            following = 1;
-//            collectStarted = 0;
-//        }
         
         if (ThisEvent.EventType == ES_T_DETECTED){};
         break;
@@ -506,18 +532,25 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
     case COLLECT_ALIGN:
     {
         /* Bot should be moving backwards when it enters this state! */
-        if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == BEACON_TIMER) {
-            /* can start moving forward! */
-            DB_printf("Timer expired for backup - now moving forward. Posting start collect\r\n");
-            collectStarted = 1; // mark collect as started
-            SetMotor1(-(int16_t)DUTY_TRANS_HALF*1.5);
-            SetMotor2(-(int16_t)DUTY_TRANS_HALF*0.5);
-            followDir = FOLLOW_FWD;
-            cmdEvent.EventParam = CMD_FIRST_COLLECT_START;
-            PostSPIFollowerService(cmdEvent);
-            lookingForT = 1;
-            curState = COLLECT_ACTIVE;
+        
+        /* TIMER RESPONSES */
+        if (ThisEvent.EventType == ES_TIMEOUT) {
+            if (ThisEvent.EventParam == BEACON_TIMER) {
+                /* can start moving forward! */
+                DB_printf("Timer expired for backup - now moving forward. Posting start collect\r\n");
+                collectStarted = 1; // mark collect as started
+                SetMotor1(-(int16_t)DUTY_TRANS_HALF*1.5);
+                SetMotor2(-(int16_t)DUTY_TRANS_HALF*0.5);
+                followDir = FOLLOW_FWD;
+                cmdEvent.EventParam = CMD_FIRST_COLLECT_START;
+                PostSPIFollowerService(cmdEvent);
+                lookingForT = 1;
+                curState = COLLECT_ACTIVE;
+            } else if (ThisEvent.EventParam == LF_POSTING_TIMER) {
+                correctingForLF = 1;
+            }
         }
+        /* END TIMER RESPONSES */
         
 //        if (ThisEvent.EventType == ES_T_DETECTED && !collectStarted) {
 //            if (ThisEvent.EventParam == LEFT_CORNER) {
@@ -541,11 +574,14 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
 //                lookingForT = 1;
 //                curState = COLLECT_ACTIVE;
 //            }
-        /* Line follow for  initially moving back from the dispenser
-         * and then towards it again after the arm has been lowered */
+        /* Line follow for  initially moving back from the dispenser */
         if (ThisEvent.EventType == ES_TAPE_DETECT && following)
         {
-          LineFollow(ThisEvent, followDir);
+          if (correctingForLF) {
+            correctingForLF = 0; 
+            ES_Timer_InitTimer(LF_POSTING_TIMER, LF_POSTING_DELAY);
+            LineFollow(ThisEvent, FOLLOW_REV);
+          }
         }
         
         break;
@@ -590,6 +626,10 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
             cmdEvent.EventParam = CMD_FIRST_COLLECT_GRAB;
             PostSPIFollowerService(cmdEvent);
             break;
+        }
+        
+        if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == LF_POSTING_TIMER) {
+            correctingForLF = 0;
         }
         
         /* END checks to see if we should stop moving back/forth */
@@ -637,7 +677,11 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         
         if (ThisEvent.EventType == ES_TAPE_DETECT && following)
         {
-          LineFollow(ThisEvent, followDir);
+          if (correctingForLF) {
+            correctingForLF = 0; 
+            ES_Timer_InitTimer(LF_POSTING_TIMER, LF_POSTING_DELAY);
+            LineFollow(ThisEvent, followDir);
+          }
         }
               
            
@@ -719,7 +763,11 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         if (ThisEvent.EventType == ES_TAPE_DETECT && following)
         {
           DB_printf("telling collect to grab from tape!\r\n");
-          LineFollow(ThisEvent, FOLLOW_REV);
+          if (correctingForLF) {
+            correctingForLF = 0; 
+            ES_Timer_InitTimer(LF_POSTING_TIMER, LF_POSTING_DELAY);
+            LineFollow(ThisEvent, FOLLOW_FWD);
+          }
         }
         break;
       }
@@ -790,7 +838,11 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
     /* Reverse line follow toward middle bucket */
   if (ThisEvent.EventType == ES_TAPE_DETECT && following)
   {
-    LineFollow(ThisEvent, FOLLOW_REV);
+    if (correctingForLF) {
+        correctingForLF = 0; 
+        ES_Timer_InitTimer(LF_POSTING_TIMER, LF_POSTING_DELAY);
+        LineFollow(ThisEvent, FOLLOW_REV);
+    }
   }
 
   break;
@@ -1076,9 +1128,13 @@ static void LineFollow(ES_Event_t ThisEvent, FollowDir_t followDirection)
            } else {
                motorSign = 1;
            }
-
-           SetMotor1(leftDuty  * motorSign);
-           SetMotor2(rightDuty * motorSign);
+           
+//           if (correctingForLF) {
+//            correctingForLF = 0;
+            SetMotor1(leftDuty  * motorSign);
+            SetMotor2(rightDuty * motorSign);
+//            ES_Timer_InitTimer(LF_POSTING_TIMER, LF_POSTING_DELAY);
+//           }
 
             break;
         }

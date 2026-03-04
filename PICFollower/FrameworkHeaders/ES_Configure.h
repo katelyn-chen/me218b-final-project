@@ -351,7 +351,7 @@ typedef enum
 #define TIMER2_RESP_FUNC PostReflectiveSenseService
 #define TIMER3_RESP_FUNC PostNavigateService
 #define TIMER4_RESP_FUNC PostNavigateService
-#define TIMER5_RESP_FUNC PostReflectiveSenseService
+#define TIMER5_RESP_FUNC PostNavigateService
 #define TIMER6_RESP_FUNC TIMER_UNUSED
 #define TIMER7_RESP_FUNC TIMER_UNUSED
 #define TIMER8_RESP_FUNC TIMER_UNUSED

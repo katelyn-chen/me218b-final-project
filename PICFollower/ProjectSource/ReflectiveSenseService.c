@@ -42,7 +42,7 @@
 
 #define TAPE_CONFIRM_COUNT        5
 #define NEXT_T_WAIT               1000        // 1.5 second
-#define LF_POSTING_DELAY          20
+//#define LF_POSTING_DELAY          20
 
 /*============================== STATE ==============================*/
 static uint8_t MyPriority;
@@ -82,9 +82,9 @@ ES_Event_t RunReflectiveSenseService(ES_Event_t ThisEvent)
     
     case ES_TAPE_CHANGE:
     {
-        if (posting) {
+//        if (posting) {
             //        DB_printf("Tape change detected! Sensor bitfield: %d\r\n", ThisEvent.EventParam);
-            posting = 0; // don't post until timer expires
+//            posting = 0; // don't post until timer expires
             uint8_t tapeState = (uint8_t)ThisEvent.EventParam;
             ES_Event_t NewEvent;
               if (tapeState == ALL_TAPE_BITFIELD && T_count == 0 
@@ -133,8 +133,8 @@ ES_Event_t RunReflectiveSenseService(ES_Event_t ThisEvent)
                   NewEvent.EventParam = TAPE_EXTREME_OFF_CENTER_RIGHT ;
                   PostNavigateService(NewEvent);
               }
-        }
-        ES_Timer_InitTimer(LF_POSTING_TIMER, LF_POSTING_DELAY);
+//        }
+//        ES_Timer_InitTimer(LF_POSTING_TIMER, LF_POSTING_DELAY);
         break;
     }
           
