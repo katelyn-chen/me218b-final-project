@@ -52,14 +52,12 @@
 #define BACKUP_RAMPUP_MS          500
 #define SEARCH_TIME               10000
 #define TURN_DELAY_PRE_LF         2700 // turn before starting to line follow, 4500 
-#define FIND_T_TIMER_BLOCK        5000
+#define FIND_T_TIMER_BLOCK        6000
 #define LINE_FOLLOWING_BLOCKING_TIMER   500 // DO NOT CHANGE
-#define BACK_UP_PRE_COLLECT_ACTIVE 3500
-#define BACK_COLLECT_TIME          900
+#define BACK_UP_PRE_COLLECT_ACTIVE 4000
+#define BACK_COLLECT_TIME          700
 #define FWD_ADJUST_COLLECT         300
 #define LF_POSTING_DELAY           20
-
-
 
 
 #define BUCKET_APPROACH_MS    3000   // SOY  tune this
@@ -263,14 +261,14 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
                 /* Hit front left limit switch */
                 if (PORTAbits.RA3) {
                     DB_printf("The front left limit switch was hit but no wall detected in front! veering fwd and right\r\n");
-                    SetMotor1(-(int16_t)DUTY_TRANS_HALF*0.5);
-                    SetMotor2(-(int16_t)DUTY_TRANS_FULL*0.8);
+                    SetMotor1(-(int16_t)DUTY_TRANS_HALF*0.7);
+                    SetMotor2(-(int16_t)DUTY_TRANS_FULL);
                     ES_Timer_InitTimer(MOTOR_TIMER, VEER_AWAY_FROM_WALL);
                 
                 } else {
                     DB_printf("The front left limit switch was hit and a wall was detected in front! veering back and right\r\n");
-                    SetMotor1((int16_t)DUTY_TRANS_HALF*0.5);
-                    SetMotor2((int16_t)DUTY_TRANS_FULL*0.8);
+                    SetMotor1((int16_t)DUTY_TRANS_HALF*0.7);
+                    SetMotor2((int16_t)DUTY_TRANS_FULL);
                     ES_Timer_InitTimer(MOTOR_TIMER, VEER_AWAY_FROM_WALL);
                 }
             }
@@ -279,14 +277,14 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
                 /* Hit back right limit switch*/
                 if (PORTAbits.RA3) {
                     DB_printf("The back right limit switch was hit but no wall detected in front! veering fwd and left\r\n");
-                    SetMotor1(-(int16_t)DUTY_TRANS_HALF*0.5);
-                    SetMotor2(-(int16_t)DUTY_TRANS_FULL*0.8);
+                    SetMotor1(-(int16_t)DUTY_TRANS_HALF*0.7);
+                    SetMotor2(-(int16_t)DUTY_TRANS_FULL);
                     ES_Timer_InitTimer(MOTOR_TIMER, VEER_AWAY_FROM_WALL);
                 
                 } else {
                     DB_printf("The back right limit switch was hit and a wall was detected in front! veering back and right\r\n");
-                    SetMotor1((int16_t)DUTY_TRANS_HALF*0.5);
-                    SetMotor2((int16_t)DUTY_TRANS_FULL*0.8);
+                    SetMotor1((int16_t)DUTY_TRANS_HALF*0.7);
+                    SetMotor2((int16_t)DUTY_TRANS_FULL);
                     ES_Timer_InitTimer(MOTOR_TIMER, VEER_AWAY_FROM_WALL);
                 }
             }
@@ -657,12 +655,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
             cmdEvent.EventParam = CMD_COLLECT_BACK;
             PostSPIFollowerService(cmdEvent);
             ES_Timer_InitTimer(MOTOR_TIMER, BACK_COLLECT_TIME);
-            DoTranslate(PackTranslateParam(TRANS_FULL, DIR_REV));
-            
-            /* Initiating backup ramp up - half the backup speed */
-//            ES_Timer_InitTimer(MOTOR_TIMER, BACKUP_RAMPUP_MS);
-//            SetMotor1((int16_t)DUTY_TRANS_FULL*1.15);
-//            SetMotor2((int16_t)DUTY_TRANS_FULL*0.7);
+            DoTranslate(PackTranslateParam(TRANS_FULL*0.6, DIR_REV));
             following = 1;
             collectState = COLLECT_BACK;
             followDir = FOLLOW_REV;
@@ -739,7 +732,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
           /* begin moving toward middle bucket (your existing behavior) */
           followDir = FOLLOW_REV;
           following = 1;
-          DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_REV));
+          DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_FWD));
 
           curState = INIT_FIND_MIDDLE;   /* IMPORTANT: go find the next T before turning */
         }
