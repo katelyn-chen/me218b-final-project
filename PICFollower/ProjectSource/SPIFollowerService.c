@@ -414,6 +414,9 @@ void __ISR(_SPI1_VECTOR, IPL7SOFT) SPI1_Handler(void) {
         incomingCmd = SPI1BUF;     // what leader sent
         //DB_printf("%d\r\n", incomingCmd);
         SPI1BUF = outgoingCmd;
+        if (incomingCmd == CMD_QUERY) {
+        outgoingCmd = CMD_NOOP;
+    }
         if (incomingCmd != curCmd) {
            NewEvent.EventType = ES_SPI_RECEIVED;
            curCmd = incomingCmd;
