@@ -60,16 +60,9 @@
 
 
 
-  
-#ifndef MOTOR_TIMER
-#define MOTOR_TIMER               14u
-#endif
 
-#define BUCKET_APPROACH_MS    800u   // SOY  tune this
+#define BUCKET_APPROACH_MS    2900   // SOY  tune this
 
-#ifndef BUCKET_TIMER
-#define BUCKET_TIMER          48u
-#endif
 
 /*---------------------------- Module Types -------------------------------*/
 typedef enum {
