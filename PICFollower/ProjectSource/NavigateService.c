@@ -65,7 +65,7 @@
 #define MOTOR_TIMER               14u
 #endif
 
-#define BUCKET_APPROACH_MS    1500u   // SOY  tune this
+#define BUCKET_APPROACH_MS    800u   // SOY  tune this
 
 #ifndef BUCKET_TIMER
 #define BUCKET_TIMER          12u
@@ -589,7 +589,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         
         if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == BEACON_TIMER
                 && collectState == COLLECT_FWD) {
-            DB_printf("telling collect to grab!\r\n");
+            DB_printf("telling collect to grab from timer!\r\n");
             ES_Timer_StopTimer(BEACON_TIMER);
             StopMotors();
             following = 0;
@@ -671,11 +671,22 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
     case FIRST_DISPENSE:
         {
         /* Reverse line follow toward first bucket */
-        if (ThisEvent.EventType == ES_TAPE_DETECT && following)
+        /* After dispensing, transition to middle bucket search */
+        if (ThisEvent.EventType == ES_DISPENSE_COMPLETE)
         {
-          DB_printf("telling collect to grab!\r\n");
-          LineFollow(ThisEvent, FOLLOW_REV);
+          DB_printf("Dispense complete (first). Going to middle bucket.\r\n");
+
+          dispenseRequested = false;
+          bucketApproachActive = false;   // reset for next approach
+
+          /* begin moving toward middle bucket (your existing behavior) */
+          followDir = FOLLOW_REV;
+          following = 1;
+          DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_REV));
+
+          curState = ALIGN_MID_BUCKET;
         }
+
 
         /* Start the 1.5s approach window ONCE when you enter this behavior */
         if (!bucketApproachActive)
@@ -695,6 +706,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         /* When the timer expires, stop and dispense */
         if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == BUCKET_TIMER)
         {
+          DB_printf("bucket timeout");
           StopMotors();
           following = 0;
           ES_Timer_StopTimer(BUCKET_TIMER);
@@ -706,23 +718,12 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
             SendDispenseStart();
           }
         }
-
-        /* After dispensing, transition to middle bucket search */
-        if (ThisEvent.EventType == ES_DISPENSE_COMPLETE)
+        
+        if (ThisEvent.EventType == ES_TAPE_DETECT && following)
         {
-          DB_printf("Dispense complete (first). Going to middle bucket.\r\n");
-
-          dispenseRequested = false;
-          bucketApproachActive = false;   // reset for next approach
-
-          /* begin moving toward middle bucket (your existing behavior) */
-          followDir = FOLLOW_REV;
-          following = 1;
-          DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_REV));
-
-          curState = ALIGN_MID_BUCKET;
+          DB_printf("telling collect to grab from tape!\r\n");
+          LineFollow(ThisEvent, FOLLOW_REV);
         }
-
         break;
       }
 
