@@ -59,7 +59,7 @@
 #define RIGHT_FULL_ROTATE       60      // tuned! one full wheel rotation
 #define SIDE_INDICATE_FIRST_FWD 25      // first fwd towards beacon
 #define COLLECT_NUDGE_FWD       18      // nudging fwd to dispenser
-#define COLLECT_NUDGE_BACK      18      // nudging back from dispenser
+#define COLLECT_NUDGE_BACK      15      // nudging back from dispenser
 #define COLLECT_FWD_AFTER_T     15      // moving forward after the T
 
 /*---------------------------- Module Types -------------------------------*/

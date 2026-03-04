@@ -52,11 +52,13 @@
 #define BACKUP_RAMPUP_MS          500
 #define SEARCH_TIME               10000
 #define TURN_DELAY_PRE_LF         2700 // turn before starting to line follow, 4500 
-#define FIND_T_TIMER_BLOCK        4500
+#define FIND_T_TIMER_BLOCK        5000
 #define LINE_FOLLOWING_BLOCKING_TIMER   500 // DO NOT CHANGE
-#define BACK_UP_PRE_COLLECT_ACTIVE 3000
+#define BACK_UP_PRE_COLLECT_ACTIVE 3500
+#define BACK_COLLECT_TIME          700
+#define FWD_ADJUST_COLLECT         300
 
-
+  
 #ifndef MOTOR_TIMER
 #define MOTOR_TIMER               14u
 #endif
@@ -495,6 +497,8 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == BEACON_TIMER) {
             /* can start moving forward! */
             collectStarted = 1; // mark collect as started
+            SetMotor1(-(int16_t)DUTY_TRANS_HALF*1.5);
+            SetMotor2(-(int16_t)DUTY_TRANS_HALF*0.5);
             followDir = FOLLOW_FWD;
             cmdEvent.EventParam = CMD_FIRST_COLLECT_START;
             PostSPIFollowerService(cmdEvent);
@@ -546,15 +550,27 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         {
           /* we are looking for the left corner MAYBE change to FULL_T */
           /* need to start grabbing here! */
+            ES_Timer_InitTimer(BEACON_TIMER, FWD_ADJUST_COLLECT);
+            SetMotor1((int16_t)-DUTY_TRANS_HALF);
+            SetMotor2((int16_t)-1.5*DUTY_TRANS_HALF);
+            break;
+        }
+        
+        if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == MOTOR_TIMER
+                && collectState == COLLECT_BACK) {
             StopMotors();
-            cmdEvent.EventParam = CMD_FIRST_COLLECT_GRAB;
+            following = 0;
+            cmdEvent.EventParam = CMD_FIRST_COLLECT_ARM_UP;
             PostSPIFollowerService(cmdEvent);
             break;
         }
         
-        if (ThisEvent.EventType == ES_MOVE_DONE && collectState == COLLECT_BACK) {
+        if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == BEACON_TIMER
+                && collectState == COLLECT_BACK) {
+            ES_Timer_StopTimer(BEACON_TIMER);
             StopMotors();
-            cmdEvent.EventParam = CMD_FIRST_COLLECT_ARM_UP;
+            following = 0;
+            cmdEvent.EventParam = CMD_FIRST_COLLECT_GRAB;
             PostSPIFollowerService(cmdEvent);
             break;
         }
@@ -569,6 +585,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
             cmdEvent.EventParam = CMD_COLLECT_FWD;
             PostSPIFollowerService(cmdEvent);
             DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_FWD));
+            following = 1;
             collectState = COLLECT_FWD;
             followDir = FOLLOW_FWD;
         }
@@ -577,22 +594,24 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
             /* Moving back from the ball dispenser */
             cmdEvent.EventParam = CMD_COLLECT_BACK;
             PostSPIFollowerService(cmdEvent);
-            DoTranslate(PackTranslateParam(TRANS_FULL, DIR_REV));
+            ES_Timer_InitTimer(MOTOR_TIMER, BACK_COLLECT_TIME);
+//            DoTranslate(PackTranslateParam(TRANS_FULL, DIR_REV));
             
             /* Initiating backup ramp up - half the backup speed */
-            ES_Timer_InitTimer(MOTOR_TIMER, BACKUP_RAMPUP_MS);
-            SetMotor1((int16_t)DUTY_TRANS_FULL*1.2*0.5);
-            SetMotor2((int16_t)DUTY_TRANS_FULL*0.5*0.5);
+//            ES_Timer_InitTimer(MOTOR_TIMER, BACKUP_RAMPUP_MS);
+//            SetMotor1((int16_t)DUTY_TRANS_FULL*1.15);
+//            SetMotor2((int16_t)DUTY_TRANS_FULL*0.7);
+            following = 1;
             collectState = COLLECT_BACK;
             followDir = FOLLOW_REV;
         }
         
-        /* This is for the backup ramp up - moving to full backup speed */
-        if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == MOTOR_TIMER) {
-            SetMotor1((int16_t)DUTY_TRANS_FULL*1.2);
-            SetMotor2((int16_t)DUTY_TRANS_FULL*0.5);
-            ES_Timer_StopTimer(MOTOR_TIMER);
-        }
+//        /* This is for the backup ramp up - moving to full backup speed */
+//        if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == MOTOR_TIMER) {
+//            SetMotor1((int16_t)DUTY_TRANS_FULL*1.2);
+//            SetMotor2((int16_t)DUTY_TRANS_FULL*0.5);
+//            ES_Timer_StopTimer(MOTOR_TIMER);
+//        }
         
         /* END EVENTS ORIGINATING FROM COLLECT SERVICE */
         

@@ -51,11 +51,11 @@
 /* Grabber (OC1 -> RB4): open/close */
 // changes travel distance
 #define GRAB_OPEN_TICKS        4700u // tested!!! DONT CHANGE VALUES
-#define GRAB_CLOSE_TICKS       1100u
+#define GRAB_CLOSE_TICKS       1200u
 
 /* Arm (OC4 -> RA4): ready/down */
 #define ARM_UP_TICKS           1540u // tested!!! DONT CHANGE VALUES
-#define ARM_DOWN_TICKS         3324u
+#define ARM_DOWN_TICKS         3328u
 // 1540, 3300 is 90 degree 
 
 #define BUCKET_ARM_DISPENSE_TICKS    3000u 
