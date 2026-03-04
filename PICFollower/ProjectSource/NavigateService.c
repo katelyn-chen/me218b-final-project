@@ -770,7 +770,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
           if (correctingForLF) {
             correctingForLF = 0; 
             ES_Timer_InitTimer(LF_POSTING_TIMER, LF_POSTING_DELAY);
-            LineFollow(ThisEvent, FOLLOW_FWD);
+            LineFollow(ThisEvent, FOLLOW_REV);
           }
         }
         break;
