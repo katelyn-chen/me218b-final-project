@@ -782,8 +782,16 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
 
   
 
-    case INIT_FIND_MIDDLE:
-    {
+   case INIT_FIND_MIDDLE:
+{
+  if (ThisEvent.EventType == ES_TAPE_DETECT && following) {
+    if (correctingForLF) {
+      correctingForLF = 0;
+      ES_Timer_InitTimer(LF_POSTING_TIMER, LF_POSTING_DELAY);
+      LineFollow(ThisEvent, FOLLOW_REV);
+    }
+  }
+      
       if (ThisEvent.EventType == ES_T_DETECTED && ThisEvent.EventParam == FULL_T)
       {
         DB_printf("MIDDLE: found T, starting 2-turn maneuver\r\n");
@@ -811,6 +819,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         DB_printf("MIDDLE: first 90 done, now line follow to next T\r\n");
 
         ES_Timer_StopTimer(MOTOR_TIMER);
+        correctingForLF = 1;
 
         /* start reverse line following again until we hit the next FULL_T */
         following = 1;
