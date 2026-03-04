@@ -77,6 +77,7 @@ typedef enum {
   COLLECT_ACTIVE,
   FIRST_DISPENSE,
   INIT_FIND_MIDDLE,
+  MOVE_TO_MID_BUCKET,
   ALIGN_MID_BUCKET,
   INIT_FIND_END,
   ALIGN_END_BUCKET,
@@ -125,6 +126,9 @@ static InitCollectState_t  collectState;
 static Field_t             field = FIELD_UNKNOWN;
 static FollowDir_t followDir;
 static uint16_t            duty = DUTY_STOP;
+
+static uint8_t midMoveStage = 0;
+
 //static int8_t LineFollowDirection = 1;   // +1 = forward, -1 = reverse
 static bool coalSearchFlag  = 0;
 static bool following = 1;
@@ -630,7 +634,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         }
         
         if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == LF_POSTING_TIMER) {
-            correctingForLF = 0;
+            correctingForLF = 1;
         }
         
         /* END checks to see if we should stop moving back/forth */
@@ -727,6 +731,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         
         /* Reverse line follow toward first bucket */
         /* After dispensing, transition to middle bucket search */
+
         if (ThisEvent.EventType == ES_DISPENSE_COMPLETE)
         {
           DB_printf("Dispense complete (first). Going to middle bucket.\r\n");
@@ -734,14 +739,13 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
           dispenseRequested = false;
           bucketApproachActive = false;   // reset for next approach
 
-          /* begin moving toward end bucket (your existing behavior) */
+          /* begin moving toward middle bucket (your existing behavior) */
           followDir = FOLLOW_REV;
           following = 1;
           DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_REV));
 
-          curState = ALIGN_MID_BUCKET;
+          curState = INIT_FIND_MIDDLE;   /* IMPORTANT: go find the next T before turning */
         }
-
 
         /* Start the 1.5s approach window ONCE when you enter this behavior */
 
@@ -767,100 +771,161 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
           if (correctingForLF) {
             correctingForLF = 0; 
             ES_Timer_InitTimer(LF_POSTING_TIMER, LF_POSTING_DELAY);
-            LineFollow(ThisEvent, FOLLOW_FWD);
+            LineFollow(ThisEvent, FOLLOW_REV);
           }
         }
         break;
       }
 
+    
+   
+
+  
+
     case INIT_FIND_MIDDLE:
     {
-      if (ThisEvent.EventType == ES_T_DETECTED)
+      if (ThisEvent.EventType == ES_T_DETECTED && ThisEvent.EventParam == FULL_T)
       {
-//        curState = MOVE_TO_MID_BUCKET;
-          curState = ALIGN_MID_BUCKET;
+        DB_printf("MIDDLE: found T, starting 2-turn maneuver\r\n");
+
+        /* stage 0: do first 90-degree turn */
+        midMoveStage = 0;
+        following = 0;
+        ES_Timer_StopTimer(MOTOR_TIMER);
+
+        /* turn 90 degrees right (your existing motor pattern) */
+        SetMotor1((int16_t)DUTY_TRANS_HALF);
+        SetMotor2(-(int16_t)(DUTY_TRANS_HALF * 1.2));
+        ES_Timer_InitTimer(MOTOR_TIMER, ROTATE_90_TIME_MS);
+
+        curState = MOVE_TO_MID_BUCKET;
       }
       break;
     }
-    
-//     case MOVE_TO_MID_BUCKET:
-//     {
-//        // here after found T
-//        if (ThisEvent.EventType == ES_TAPE_DETECT)
-//        {
-//          LineFollow(ThisEvent, FOLLOW_REV);
-//         // turn 90 degrees right
-//          ES_Timer_StopTimer(MOTOR_TIMER);
-//          SetMotor1((int16_t)DUTY_TRANS_HALF);
-//          SetMotor2(-(int16_t)DUTY_TRANS_HALF*1.2);
-//          following = 0;
-//          ES_Timer_InitTimer(MOTOR_TIMER, ROTATE_90_TIME_MS);
-//         // find tape and tape follow until find left corner / full T
-//          LineFollow(ThisEvent, FOLLOW_REV);
-//         // turn 90 left 
-//         ES_Timer_StopTimer(MOTOR_TIMER);
-//          SetMotor1(-[(int16_t)DUTY_TRANS_HALF);
-//          SetMotor2((int16_t)DUTY_TRANS_HALF*1.2);
-//          following = 0;
-//         // 
-//         
-//     }
+
+    case MOVE_TO_MID_BUCKET:
+    {
+      /* stage 0 -> waiting for first 90 turn to finish */
+      if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == MOTOR_TIMER && midMoveStage == 0)
+      {
+        DB_printf("MIDDLE: first 90 done, now line follow to next T\r\n");
+
+        ES_Timer_StopTimer(MOTOR_TIMER);
+
+        /* start reverse line following again until we hit the next FULL_T */
+        following = 1;
+        followDir = FOLLOW_REV;
+        DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_REV));
+
+        midMoveStage = 1;
+        break;
+      }
+
+      /* stage 1 -> line follow until the next FULL_T, then do second 90 turn */
+      if (ThisEvent.EventType == ES_TAPE_DETECT && following && midMoveStage == 1)
+      {
+        /* keep line following while looking for the next T */
+        if (correctingForLF) {
+          correctingForLF = 0;
+          ES_Timer_InitTimer(LF_POSTING_TIMER, LF_POSTING_DELAY);
+          LineFollow(ThisEvent, FOLLOW_REV);
+        }
+      }
+
+      if (ThisEvent.EventType == ES_T_DETECTED && ThisEvent.EventParam == FULL_T && midMoveStage == 1)
+      {
+        DB_printf("MIDDLE: second T found, doing second 90\r\n");
+
+        following = 0;
+        ES_Timer_StopTimer(MOTOR_TIMER);
+
+        /* turn 90 left (your intended motor pattern, fixed syntax) */
+        SetMotor1(-(int16_t)DUTY_TRANS_HALF);
+        SetMotor2((int16_t)(DUTY_TRANS_HALF * 1.2));
+        ES_Timer_InitTimer(MOTOR_TIMER, ROTATE_90_TIME_MS);
+
+        midMoveStage = 2;
+        break;
+      }
+
+      /* stage 2 -> second 90 done, now we are ready to approach middle bucket + dispense */
+      if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == MOTOR_TIMER && midMoveStage == 2)
+      {
+        DB_printf("MIDDLE: second 90 done, entering ALIGN_MID_BUCKET\r\n");
+
+        ES_Timer_StopTimer(MOTOR_TIMER);
+
+        /* reset approach flags so ALIGN_MID_BUCKET starts its timed approach cleanly */
+        bucketApproachActive = false;
+        dispenseRequested = false;
+
+        /* start moving backwards again (ALIGN_MID_BUCKET expects reverse approach) */
+        following = 1;
+        followDir = FOLLOW_REV;
+        DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_REV));
+
+        curState = ALIGN_MID_BUCKET;
+        break;
+      }
+
+      break;
+    }
 
     case ALIGN_MID_BUCKET:
     {
+      if (ThisEvent.EventType == ES_DISPENSE_COMPLETE)
+      {
+        DB_printf("Dispense complete (middle).\r\n");
 
-    if (ThisEvent.EventType == ES_DISPENSE_COMPLETE)
+        dispenseRequested = false;
+        bucketApproachActive = false;
+
+        curState = INIT_FIND_END;  // or next phase
+        break;
+      }
+
+      /* Start timed approach ONCE */
+      if (!bucketApproachActive)
+      {
+        ES_Timer_StopTimer(BUCKET_TIMER);
+        DB_printf("MIDDLE bucket: starting timed approach\r\n");
+        bucketApproachActive = true;
+        dispenseRequested = false;
+
+        following = 1;
+        followDir = FOLLOW_REV;
+        DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_REV));
+
+        ES_Timer_InitTimer(BUCKET_TIMER, BUCKET_APPROACH_MS);
+      }
+
+      /* Timer expiry -> stop and dispense */
+      if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == BUCKET_TIMER)
+      {
+        StopMotors();
+        following = 0;
+        ES_Timer_StopTimer(BUCKET_TIMER);
+
+        if (!dispenseRequested)
         {
-          DB_printf("Dispense complete (middle).\r\n");
-
-          dispenseRequested = false;
-          bucketApproachActive = false;
-
-          curState = INIT_FIND_END;  // or next phase
+          dispenseRequested = true;
+          DB_printf("MIDDLE bucket: timed stop -> request dispense\r\n");
+          SendDispenseStart();   // same command, leader toggles 90/180 internally
         }
-    
-    /* Start timed approach ONCE */
-    if (!bucketApproachActive)
-    {
-      ES_Timer_StopTimer(BUCKET_TIMER);
-      DB_printf("MIDDLE bucket: starting timed approach\r\n");
-      bucketApproachActive = true;
-      dispenseRequested = false;
+      }
 
-      following = 1;
-      followDir = FOLLOW_REV;
-      DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_REV));
+      /* Reverse line follow toward middle bucket */
+      if (ThisEvent.EventType == ES_TAPE_DETECT && following)
+      {
+        if (correctingForLF) {
+          correctingForLF = 0;
+          ES_Timer_InitTimer(LF_POSTING_TIMER, LF_POSTING_DELAY);
+          LineFollow(ThisEvent, FOLLOW_REV);
+        }
+      }
 
-      ES_Timer_InitTimer(BUCKET_TIMER, BUCKET_APPROACH_MS);
+      break;
     }
-
-  /* Timer expiry -> stop and dispense */
-  if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == BUCKET_TIMER)
-  {
-    StopMotors();
-    following = 0;
-    ES_Timer_StopTimer(BUCKET_TIMER);
-
-    if (!dispenseRequested)
-    {
-      dispenseRequested = true;
-      DB_printf("MIDDLE bucket: timed stop -> request dispense\r\n");
-      SendDispenseStart();   // same command, leader toggles 90/180 internally
-    }
-  }
-  
-    /* Reverse line follow toward middle bucket */
-  if (ThisEvent.EventType == ES_TAPE_DETECT && following)
-  {
-    if (correctingForLF) {
-        correctingForLF = 0; 
-        ES_Timer_InitTimer(LF_POSTING_TIMER, LF_POSTING_DELAY);
-        LineFollow(ThisEvent, FOLLOW_REV);
-    }
-  }
-
-  break;
-}
 
     case INIT_FIND_END:
     {
