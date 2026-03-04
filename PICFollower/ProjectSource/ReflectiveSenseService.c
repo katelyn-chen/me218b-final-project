@@ -37,6 +37,7 @@
 #define RIGHT_BIT_ONLY            0b00001
 #define LEFT_TWO_BITS             0b11000
 #define RIGHT_TWO_BITS            0b00011
+#define MIDDLE_BITS               0b01110
 
 
 #define TAPE_CONFIRM_COUNT        5
@@ -82,7 +83,7 @@ ES_Event_t RunReflectiveSenseService(ES_Event_t ThisEvent)
         uint8_t tapeState = (uint8_t)ThisEvent.EventParam;
           ES_Event_t NewEvent;
           if (tapeState == ALL_TAPE_BITFIELD && T_count == 0 
-                  || tapeState == RIGHT_CORNER_BITFIELD_4 || tapeState == LEFT_CORNER_BITFIELD_4) { 
+                  || tapeState == RIGHT_CORNER_BITFIELD_4 || tapeState == LEFT_CORNER_BITFIELD_4 || tapeState == MIDDLE_BITS) { 
               NewEvent.EventType = ES_T_DETECTED;
               NewEvent.EventParam = FULL_T;
               DB_printf("all tape detected, full T \n");

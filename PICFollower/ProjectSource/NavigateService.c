@@ -51,9 +51,10 @@
 #define VEER_AWAY_FROM_WALL       1000u
 #define BACKUP_RAMPUP_MS          500
 #define SEARCH_TIME               10000
-#define TURN_DELAY_PRE_LF         2500 // turn before starting to line follow, 4500 
+#define TURN_DELAY_PRE_LF         2700 // turn before starting to line follow, 4500 
 #define FIND_T_TIMER_BLOCK        4500
 #define LINE_FOLLOWING_BLOCKING_TIMER   500 // DO NOT CHANGE
+#define BACK_UP_PRE_COLLECT_ACTIVE 3000
 
 
 #ifndef MOTOR_TIMER
@@ -69,6 +70,7 @@ typedef enum {
   COLLECT_POST_T,
   START_LOOKING_FOR_T,
   COLLECT_ALIGN,
+  COLLECT_ACTIVE,
   FIRST_DISPENSE,
   INIT_FIND_MIDDLE,
   ALIGN_MID_BUCKET,
@@ -428,6 +430,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         SetMotor1(-(int16_t)DUTY_TRANS_HALF*0.8);
         SetMotor2(-(int16_t)DUTY_TRANS_HALF*1.2);
         curState = START_LOOKING_FOR_T;
+        lookingForT = 0;
       } else if (ThisEvent.EventType == ES_TAPE_DETECT && following)
       {
         LineFollow(ThisEvent, FOLLOW_FWD);
@@ -464,8 +467,8 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         }
         
         if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == BEACON_TIMER) {
-            ES_Timer_StopTimer(BEACON_TIMER);
-            DoTranslate(PackTranslateParam(TRANS_HALF, DIR_REV));
+            ES_Timer_InitTimer(BEACON_TIMER, BACK_UP_PRE_COLLECT_ACTIVE);
+            DoTranslate(PackTranslateParam(TRANS_HALF*0.8, DIR_REV));
             followDir = FOLLOW_REV;
             collectState = COLLECT_START;
             following = 1;
@@ -488,28 +491,89 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
 
     case COLLECT_ALIGN:
     {
-        if (ThisEvent.EventType == ES_T_DETECTED && ThisEvent.EventParam == LEFT_CORNER) {
-            if (!collectStarted) {
-                /* Once the T has been detected, bot moves back and lowers arm
-                 I added this flag because I only want this code to run once */
-                collectStarted = 1; // mark collect as started
-                following = 1;
-                DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_REV));
-                followDir = FOLLOW_REV;
-                cmdEvent.EventParam = CMD_ALIGN_COLLECT;
-                PostSPIFollowerService(cmdEvent);
-            }
+        /* Bot should be moving backwards when it enters this state! */
+        if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == BEACON_TIMER) {
+            /* can start moving forward! */
+            collectStarted = 1; // mark collect as started
+            followDir = FOLLOW_FWD;
+            cmdEvent.EventParam = CMD_FIRST_COLLECT_START;
+            PostSPIFollowerService(cmdEvent);
+            lookingForT = 1;
+            curState = COLLECT_ACTIVE;
         }
         
-        /* Line follow for both nudge fwd and nudge back, as well as initially
-         moving back from the dispenser */
+//        if (ThisEvent.EventType == ES_T_DETECTED && !collectStarted) {
+//            if (ThisEvent.EventParam == LEFT_CORNER) {
+//                /* Once the T has been detected, bot moves back and lowers arm
+//                 I added this flag because I only want this code to run once */
+//                /* needs to move back bc too close*/
+//                following = 1;
+//                DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_REV));
+//                followDir = FOLLOW_REV;
+//                cmdEvent.EventParam = CMD_ALIGN_COLLECT;
+//                PostSPIFollowerService(cmdEvent);
+//            }
+//            
+//            if (ThisEvent.EventParam == FULL_T) {
+//                /* can start moving forward!*/
+//                collectStarted = 1; // mark collect as started
+//                following = 1;
+//                followDir = FOLLOW_FWD;
+//                cmdEvent.EventParam = CMD_FIRST_COLLECT_START;
+//                PostSPIFollowerService(cmdEvent);
+//                lookingForT = 1;
+//                curState = COLLECT_ACTIVE;
+//            }
+        /* Line follow for  initially moving back from the dispenser
+         * and then towards it again after the arm has been lowered */
         if (ThisEvent.EventType == ES_TAPE_DETECT && following)
         {
           LineFollow(ThisEvent, followDir);
         }
         
+        break;
+    }
+    
+    case COLLECT_ACTIVE:
+    {
+        /* Line follow for both nudge fwd and nudge back, as well as initially
+         moving back from the dispenser. Arm should be down and bot should 
+         * get command to nudge forward from the collect service soon after we enter
+         * this state! (timer based in collect service) */
+        
+        /* Checking if we should stop moving back/forth */
+        if (ThisEvent.EventType == ES_T_DETECTED && collectState == COLLECT_FWD)
+        {
+          /* we are looking for the left corner MAYBE change to FULL_T */
+          /* need to start grabbing here! */
+            StopMotors();
+            cmdEvent.EventParam = CMD_FIRST_COLLECT_GRAB;
+            PostSPIFollowerService(cmdEvent);
+            break;
+        }
+        
+        if (ThisEvent.EventType == ES_MOVE_DONE && collectState == COLLECT_BACK) {
+            StopMotors();
+            cmdEvent.EventParam = CMD_FIRST_COLLECT_ARM_UP;
+            PostSPIFollowerService(cmdEvent);
+            break;
+        }
+        
+        /* END checks to see if we should stop moving back/forth */
+        
+        /* EVENTS ORIGINATING FROM COLLECT SERVICE --> SPILeader --> SPIFollower */
+        
+        if (ThisEvent.EventType == ES_COLLECT_FWD) {
+           /* Moving fwd to the ball dispenser needs to stop
+            when it sees the t*/
+            cmdEvent.EventParam = CMD_COLLECT_FWD;
+            PostSPIFollowerService(cmdEvent);
+            DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_FWD));
+            collectState = COLLECT_FWD;
+            followDir = FOLLOW_FWD;
+        }
+        
         if (ThisEvent.EventType == ES_COLLECT_BACK) {
-            
             /* Moving back from the ball dispenser */
             cmdEvent.EventParam = CMD_COLLECT_BACK;
             PostSPIFollowerService(cmdEvent);
@@ -518,49 +582,25 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
             /* Initiating backup ramp up - half the backup speed */
             ES_Timer_InitTimer(MOTOR_TIMER, BACKUP_RAMPUP_MS);
             SetMotor1((int16_t)DUTY_TRANS_FULL*1.2*0.5);
-            SetMotor2((int16_t)DUTY_TRANS_FULL*0.7*0.5);
+            SetMotor2((int16_t)DUTY_TRANS_FULL*0.5*0.5);
             collectState = COLLECT_BACK;
             followDir = FOLLOW_REV;
         }
         
-        if (ThisEvent.EventType == ES_COLLECT_FWD) {
-            
-           /* Moving fwd to the ball dispenser */
-            cmdEvent.EventParam = CMD_COLLECT_FWD;
-            PostSPIFollowerService(cmdEvent);
-            DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_FWD));
-            collectState = COLLECT_FWD;
-            followDir = FOLLOW_FWD;
-        }
-        
+        /* This is for the backup ramp up - moving to full backup speed */
         if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == MOTOR_TIMER) {
-            
-            /* This is for the backup ramp up - moving to full backup speed */
             SetMotor1((int16_t)DUTY_TRANS_FULL*1.2);
-            SetMotor2((int16_t)DUTY_TRANS_FULL*0.7);
+            SetMotor2((int16_t)DUTY_TRANS_FULL*0.5);
             ES_Timer_StopTimer(MOTOR_TIMER);
         }
-            
-        if (ThisEvent.EventType == ES_MOVE_DONE) {
-            StopMotors();
-            switch (collectState) {
-                case COLLECT_START:
-                  DB_printf("Nav service telling collect service to stop\r\n");
-                  cmdEvent.EventParam = CMD_FIRST_COLLECT_START;
-                  PostSPIFollowerService(cmdEvent);
-                  break;
-                
-                case COLLECT_BACK:
-                    cmdEvent.EventParam = CMD_FIRST_COLLECT_ARM_UP;
-                    PostSPIFollowerService(cmdEvent);
-                    break;
-                    
-                case COLLECT_FWD:
-                    cmdEvent.EventParam = CMD_FIRST_COLLECT_GRAB;
-                    PostSPIFollowerService(cmdEvent);
-                    break;
-                }
-        }  
+        
+        /* END EVENTS ORIGINATING FROM COLLECT SERVICE */
+        
+        if (ThisEvent.EventType == ES_TAPE_DETECT && following)
+        {
+          LineFollow(ThisEvent, followDir);
+        }
+              
            
       if (ThisEvent.EventType == ES_FIND_BUCKET)
       {
@@ -849,13 +889,13 @@ static void LineFollow(ES_Event_t ThisEvent, FollowDir_t followDirection)
                     break;
                     
                 case TAPE_EXTREME_OFF_CENTER_LEFT:
-                    leftDuty  =  TAPE_BASE_DUTY - 2*TAPE_CORR_DUTY;
-                    rightDuty =  TAPE_BASE_DUTY + 2*TAPE_CORR_DUTY;
+                    leftDuty  =  TAPE_BASE_DUTY - 1.5*TAPE_CORR_DUTY;
+                    rightDuty =  TAPE_BASE_DUTY + 1.5*TAPE_CORR_DUTY;
                     break;
                     
                 case TAPE_EXTREME_OFF_CENTER_RIGHT:
-                    leftDuty  =  TAPE_BASE_DUTY + 2*TAPE_CORR_DUTY;
-                    rightDuty =  TAPE_BASE_DUTY - 2*TAPE_CORR_DUTY;
+                    leftDuty  =  TAPE_BASE_DUTY + 1.5*TAPE_CORR_DUTY;
+                    rightDuty =  TAPE_BASE_DUTY - 1.5*TAPE_CORR_DUTY;
                     break;
 
                 default:
