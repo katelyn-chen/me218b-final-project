@@ -443,8 +443,9 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
                 }
             }
         }
-      
-      if (ThisEvent.EventType == ES_T_DETECTED && ThisEvent.EventParam == FULL_T && lookingForT )
+        /*I JUST CHANGED THIS !!!!!*/
+      if (ThisEvent.EventType == ES_T_DETECTED && lookingForT )
+//      if (ThisEvent.EventType == ES_T_DETECTED && ThisEvent.EventParam == FULL_T && lookingForT )
       {
         // rotate clockwise to face away from dispenser, start timer before line following
 //        DoRotate(PackRotateParam(ROT_90, ROT_CW));
@@ -782,28 +783,28 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
       break;
     }
     
-     case MOVE_TO_MID_BUCKET:
-     {
-        // here after found T
-        if (ThisEvent.EventType == ES_TAPE_DETECT)
-        {
-          LineFollow(ThisEvent, FOLLOW_REV);
-         // turn 90 degrees right
-          ES_Timer_StopTimer(MOTOR_TIMER);
-          SetMotor1((int16_t)DUTY_TRANS_HALF);
-          SetMotor2(-(int16_t)DUTY_TRANS_HALF*1.2);
-          following = 0;
-          ES_Timer_InitTimer(MOTOR_TIMER, ROTATE_90_TIME_MS);
-         // find tape and tape follow until find left corner / full T
-          LineFollow(ThisEvent, FOLLOW_REV);
-         // turn 90 left 
-         ES_Timer_StopTimer(MOTOR_TIMER);
-          SetMotor1(-[(int16_t)DUTY_TRANS_HALF);
-          SetMotor2((int16_t)DUTY_TRANS_HALF*1.2);
-          following = 0;
-         // 
-         
-     }
+//     case MOVE_TO_MID_BUCKET:
+//     {
+//        // here after found T
+//        if (ThisEvent.EventType == ES_TAPE_DETECT)
+//        {
+//          LineFollow(ThisEvent, FOLLOW_REV);
+//         // turn 90 degrees right
+//          ES_Timer_StopTimer(MOTOR_TIMER);
+//          SetMotor1((int16_t)DUTY_TRANS_HALF);
+//          SetMotor2(-(int16_t)DUTY_TRANS_HALF*1.2);
+//          following = 0;
+//          ES_Timer_InitTimer(MOTOR_TIMER, ROTATE_90_TIME_MS);
+//         // find tape and tape follow until find left corner / full T
+//          LineFollow(ThisEvent, FOLLOW_REV);
+//         // turn 90 left 
+//         ES_Timer_StopTimer(MOTOR_TIMER);
+//          SetMotor1(-[(int16_t)DUTY_TRANS_HALF);
+//          SetMotor2((int16_t)DUTY_TRANS_HALF*1.2);
+//          following = 0;
+//         // 
+//         
+//     }
 
     case ALIGN_MID_BUCKET:
     {
@@ -993,7 +994,7 @@ static void SetMotor2(int16_t dutySignedPercent)
 {
   uint16_t mag = (dutySignedPercent < 0) ? (uint16_t)(-dutySignedPercent) : (uint16_t)dutySignedPercent;
   uint16_t ocrs = DutyPercentToOCrs(mag);
-//  DB_printf("Duty*PR2: %d\r\n", ocrs);
+  DB_printf("Duty*PR2: %d\r\n", ocrs);
 //  DB_printf("Motor2 Duty: %d\r\n", dutySignedPercent);
 
   if (dutySignedPercent > 0)

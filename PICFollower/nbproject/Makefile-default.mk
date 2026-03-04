@@ -101,230 +101,230 @@ endif
 # ------------------------------------------------------------------------------------
 # Rules for buildStep: compile
 ifeq ($(TYPE_IMAGE), DEBUG_RUN)
-${OBJECTDIR}/FrameworkSource/ES_CheckEvents.o: FrameworkSource/ES_CheckEvents.c  .generated_files/flags/default/941aa7988d5f0b308f2d4a75684b8138ede65982 .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
+${OBJECTDIR}/FrameworkSource/ES_CheckEvents.o: FrameworkSource/ES_CheckEvents.c  .generated_files/flags/default/85169bc054d302c5f974e8c2f27b75cd7bd53447 .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
 	@${MKDIR} "${OBJECTDIR}/FrameworkSource" 
 	@${RM} ${OBJECTDIR}/FrameworkSource/ES_CheckEvents.o.d 
 	@${RM} ${OBJECTDIR}/FrameworkSource/ES_CheckEvents.o 
 	${MP_CC}  $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_SNAP=1  -fframe-base-loclist  -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -fno-common -I"FrameworkHeaders" -I"FrameworkSource" -I"ProjectHeaders" -I"ProjectSource" -MP -MMD -MF "${OBJECTDIR}/FrameworkSource/ES_CheckEvents.o.d" -o ${OBJECTDIR}/FrameworkSource/ES_CheckEvents.o FrameworkSource/ES_CheckEvents.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)  -mdfp="${DFP_DIR}"  
 	
-${OBJECTDIR}/FrameworkSource/ES_DeferRecall.o: FrameworkSource/ES_DeferRecall.c  .generated_files/flags/default/5d437590aafc8bf07eff8bf80c5b29c4f68635c5 .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
+${OBJECTDIR}/FrameworkSource/ES_DeferRecall.o: FrameworkSource/ES_DeferRecall.c  .generated_files/flags/default/a78a229deaf84b7d8c80f2dffdc82d4d41f1b3bf .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
 	@${MKDIR} "${OBJECTDIR}/FrameworkSource" 
 	@${RM} ${OBJECTDIR}/FrameworkSource/ES_DeferRecall.o.d 
 	@${RM} ${OBJECTDIR}/FrameworkSource/ES_DeferRecall.o 
 	${MP_CC}  $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_SNAP=1  -fframe-base-loclist  -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -fno-common -I"FrameworkHeaders" -I"FrameworkSource" -I"ProjectHeaders" -I"ProjectSource" -MP -MMD -MF "${OBJECTDIR}/FrameworkSource/ES_DeferRecall.o.d" -o ${OBJECTDIR}/FrameworkSource/ES_DeferRecall.o FrameworkSource/ES_DeferRecall.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)  -mdfp="${DFP_DIR}"  
 	
-${OBJECTDIR}/FrameworkSource/ES_Framework.o: FrameworkSource/ES_Framework.c  .generated_files/flags/default/df7b9b329f2ebb7445e76b17b5894be7e9de399c .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
+${OBJECTDIR}/FrameworkSource/ES_Framework.o: FrameworkSource/ES_Framework.c  .generated_files/flags/default/fd98571eda359861639550ec1527a9825f559e78 .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
 	@${MKDIR} "${OBJECTDIR}/FrameworkSource" 
 	@${RM} ${OBJECTDIR}/FrameworkSource/ES_Framework.o.d 
 	@${RM} ${OBJECTDIR}/FrameworkSource/ES_Framework.o 
 	${MP_CC}  $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_SNAP=1  -fframe-base-loclist  -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -fno-common -I"FrameworkHeaders" -I"FrameworkSource" -I"ProjectHeaders" -I"ProjectSource" -MP -MMD -MF "${OBJECTDIR}/FrameworkSource/ES_Framework.o.d" -o ${OBJECTDIR}/FrameworkSource/ES_Framework.o FrameworkSource/ES_Framework.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)  -mdfp="${DFP_DIR}"  
 	
-${OBJECTDIR}/FrameworkSource/ES_LookupTables.o: FrameworkSource/ES_LookupTables.c  .generated_files/flags/default/c0d8a799a0b6dfa9721a7d6fa415e3bd245debc0 .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
+${OBJECTDIR}/FrameworkSource/ES_LookupTables.o: FrameworkSource/ES_LookupTables.c  .generated_files/flags/default/aefe7d838a936cb4fcb83a6a30df20c6da51e8a5 .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
 	@${MKDIR} "${OBJECTDIR}/FrameworkSource" 
 	@${RM} ${OBJECTDIR}/FrameworkSource/ES_LookupTables.o.d 
 	@${RM} ${OBJECTDIR}/FrameworkSource/ES_LookupTables.o 
 	${MP_CC}  $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_SNAP=1  -fframe-base-loclist  -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -fno-common -I"FrameworkHeaders" -I"FrameworkSource" -I"ProjectHeaders" -I"ProjectSource" -MP -MMD -MF "${OBJECTDIR}/FrameworkSource/ES_LookupTables.o.d" -o ${OBJECTDIR}/FrameworkSource/ES_LookupTables.o FrameworkSource/ES_LookupTables.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)  -mdfp="${DFP_DIR}"  
 	
-${OBJECTDIR}/FrameworkSource/ES_Port.o: FrameworkSource/ES_Port.c  .generated_files/flags/default/3bcec3626e687e0e41e5ea4b6a9bc4855038dc1b .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
+${OBJECTDIR}/FrameworkSource/ES_Port.o: FrameworkSource/ES_Port.c  .generated_files/flags/default/7dc253c96cb660851ad92cfb50217e2762e3e80b .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
 	@${MKDIR} "${OBJECTDIR}/FrameworkSource" 
 	@${RM} ${OBJECTDIR}/FrameworkSource/ES_Port.o.d 
 	@${RM} ${OBJECTDIR}/FrameworkSource/ES_Port.o 
 	${MP_CC}  $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_SNAP=1  -fframe-base-loclist  -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -fno-common -I"FrameworkHeaders" -I"FrameworkSource" -I"ProjectHeaders" -I"ProjectSource" -MP -MMD -MF "${OBJECTDIR}/FrameworkSource/ES_Port.o.d" -o ${OBJECTDIR}/FrameworkSource/ES_Port.o FrameworkSource/ES_Port.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)  -mdfp="${DFP_DIR}"  
 	
-${OBJECTDIR}/FrameworkSource/ES_PostList.o: FrameworkSource/ES_PostList.c  .generated_files/flags/default/5a01ebdb794939b2a7ed415e3270d146c03cea1a .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
+${OBJECTDIR}/FrameworkSource/ES_PostList.o: FrameworkSource/ES_PostList.c  .generated_files/flags/default/c704a5564fed100546fefd654b66dca31fa27620 .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
 	@${MKDIR} "${OBJECTDIR}/FrameworkSource" 
 	@${RM} ${OBJECTDIR}/FrameworkSource/ES_PostList.o.d 
 	@${RM} ${OBJECTDIR}/FrameworkSource/ES_PostList.o 
 	${MP_CC}  $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_SNAP=1  -fframe-base-loclist  -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -fno-common -I"FrameworkHeaders" -I"FrameworkSource" -I"ProjectHeaders" -I"ProjectSource" -MP -MMD -MF "${OBJECTDIR}/FrameworkSource/ES_PostList.o.d" -o ${OBJECTDIR}/FrameworkSource/ES_PostList.o FrameworkSource/ES_PostList.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)  -mdfp="${DFP_DIR}"  
 	
-${OBJECTDIR}/FrameworkSource/ES_Queue.o: FrameworkSource/ES_Queue.c  .generated_files/flags/default/3c673fd21d06cc93afe42989b53a4888524ad4e2 .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
+${OBJECTDIR}/FrameworkSource/ES_Queue.o: FrameworkSource/ES_Queue.c  .generated_files/flags/default/6c0a3b2f68ef89ce77bbe6981dcf42c464fca8a .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
 	@${MKDIR} "${OBJECTDIR}/FrameworkSource" 
 	@${RM} ${OBJECTDIR}/FrameworkSource/ES_Queue.o.d 
 	@${RM} ${OBJECTDIR}/FrameworkSource/ES_Queue.o 
 	${MP_CC}  $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_SNAP=1  -fframe-base-loclist  -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -fno-common -I"FrameworkHeaders" -I"FrameworkSource" -I"ProjectHeaders" -I"ProjectSource" -MP -MMD -MF "${OBJECTDIR}/FrameworkSource/ES_Queue.o.d" -o ${OBJECTDIR}/FrameworkSource/ES_Queue.o FrameworkSource/ES_Queue.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)  -mdfp="${DFP_DIR}"  
 	
-${OBJECTDIR}/FrameworkSource/ES_Timers.o: FrameworkSource/ES_Timers.c  .generated_files/flags/default/96d4682017e6d186aaabf5aa00ef25489d2639c8 .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
+${OBJECTDIR}/FrameworkSource/ES_Timers.o: FrameworkSource/ES_Timers.c  .generated_files/flags/default/108934e4f1bb34e8c7d47dfd95c8c92ea9da9108 .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
 	@${MKDIR} "${OBJECTDIR}/FrameworkSource" 
 	@${RM} ${OBJECTDIR}/FrameworkSource/ES_Timers.o.d 
 	@${RM} ${OBJECTDIR}/FrameworkSource/ES_Timers.o 
 	${MP_CC}  $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_SNAP=1  -fframe-base-loclist  -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -fno-common -I"FrameworkHeaders" -I"FrameworkSource" -I"ProjectHeaders" -I"ProjectSource" -MP -MMD -MF "${OBJECTDIR}/FrameworkSource/ES_Timers.o.d" -o ${OBJECTDIR}/FrameworkSource/ES_Timers.o FrameworkSource/ES_Timers.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)  -mdfp="${DFP_DIR}"  
 	
-${OBJECTDIR}/FrameworkSource/terminal.o: FrameworkSource/terminal.c  .generated_files/flags/default/7e3cf14d5534cfffccf314a0155795b529e3e5e7 .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
+${OBJECTDIR}/FrameworkSource/terminal.o: FrameworkSource/terminal.c  .generated_files/flags/default/ff243bb5bd6f15687c09404312c4d134af1afe19 .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
 	@${MKDIR} "${OBJECTDIR}/FrameworkSource" 
 	@${RM} ${OBJECTDIR}/FrameworkSource/terminal.o.d 
 	@${RM} ${OBJECTDIR}/FrameworkSource/terminal.o 
 	${MP_CC}  $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_SNAP=1  -fframe-base-loclist  -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -fno-common -I"FrameworkHeaders" -I"FrameworkSource" -I"ProjectHeaders" -I"ProjectSource" -MP -MMD -MF "${OBJECTDIR}/FrameworkSource/terminal.o.d" -o ${OBJECTDIR}/FrameworkSource/terminal.o FrameworkSource/terminal.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)  -mdfp="${DFP_DIR}"  
 	
-${OBJECTDIR}/FrameworkSource/circular_buffer_no_modulo_threadsafe.o: FrameworkSource/circular_buffer_no_modulo_threadsafe.c  .generated_files/flags/default/8e06683dee4d0bec605a7db0eb176afb2e7ffbf1 .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
+${OBJECTDIR}/FrameworkSource/circular_buffer_no_modulo_threadsafe.o: FrameworkSource/circular_buffer_no_modulo_threadsafe.c  .generated_files/flags/default/9866f967b1bf22b17e6ce7ac9463c1e5900be52b .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
 	@${MKDIR} "${OBJECTDIR}/FrameworkSource" 
 	@${RM} ${OBJECTDIR}/FrameworkSource/circular_buffer_no_modulo_threadsafe.o.d 
 	@${RM} ${OBJECTDIR}/FrameworkSource/circular_buffer_no_modulo_threadsafe.o 
 	${MP_CC}  $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_SNAP=1  -fframe-base-loclist  -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -fno-common -I"FrameworkHeaders" -I"FrameworkSource" -I"ProjectHeaders" -I"ProjectSource" -MP -MMD -MF "${OBJECTDIR}/FrameworkSource/circular_buffer_no_modulo_threadsafe.o.d" -o ${OBJECTDIR}/FrameworkSource/circular_buffer_no_modulo_threadsafe.o FrameworkSource/circular_buffer_no_modulo_threadsafe.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)  -mdfp="${DFP_DIR}"  
 	
-${OBJECTDIR}/FrameworkSource/dbprintf.o: FrameworkSource/dbprintf.c  .generated_files/flags/default/9f3d7c8fcc2d8dcb4e76ad659477293e09193087 .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
+${OBJECTDIR}/FrameworkSource/dbprintf.o: FrameworkSource/dbprintf.c  .generated_files/flags/default/3a1858196a97b84c65be998752e7c29b8b3a2adc .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
 	@${MKDIR} "${OBJECTDIR}/FrameworkSource" 
 	@${RM} ${OBJECTDIR}/FrameworkSource/dbprintf.o.d 
 	@${RM} ${OBJECTDIR}/FrameworkSource/dbprintf.o 
 	${MP_CC}  $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_SNAP=1  -fframe-base-loclist  -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -fno-common -I"FrameworkHeaders" -I"FrameworkSource" -I"ProjectHeaders" -I"ProjectSource" -MP -MMD -MF "${OBJECTDIR}/FrameworkSource/dbprintf.o.d" -o ${OBJECTDIR}/FrameworkSource/dbprintf.o FrameworkSource/dbprintf.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)  -mdfp="${DFP_DIR}"  
 	
-${OBJECTDIR}/ProjectSource/EventCheckers.o: ProjectSource/EventCheckers.c  .generated_files/flags/default/a7430ad01447bfd01d65f3b0b9faaf3f7698aec1 .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
+${OBJECTDIR}/ProjectSource/EventCheckers.o: ProjectSource/EventCheckers.c  .generated_files/flags/default/26db42af5372602b137b7e6f886e47aa56457e86 .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
 	@${MKDIR} "${OBJECTDIR}/ProjectSource" 
 	@${RM} ${OBJECTDIR}/ProjectSource/EventCheckers.o.d 
 	@${RM} ${OBJECTDIR}/ProjectSource/EventCheckers.o 
 	${MP_CC}  $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_SNAP=1  -fframe-base-loclist  -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -fno-common -I"FrameworkHeaders" -I"FrameworkSource" -I"ProjectHeaders" -I"ProjectSource" -MP -MMD -MF "${OBJECTDIR}/ProjectSource/EventCheckers.o.d" -o ${OBJECTDIR}/ProjectSource/EventCheckers.o ProjectSource/EventCheckers.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)  -mdfp="${DFP_DIR}"  
 	
-${OBJECTDIR}/ProjectSource/main.o: ProjectSource/main.c  .generated_files/flags/default/83277f6a081299e30305af8f6acfb02835b98ce8 .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
+${OBJECTDIR}/ProjectSource/main.o: ProjectSource/main.c  .generated_files/flags/default/9cd79573e8f5aa420c173b574a7668d3a70ce80d .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
 	@${MKDIR} "${OBJECTDIR}/ProjectSource" 
 	@${RM} ${OBJECTDIR}/ProjectSource/main.o.d 
 	@${RM} ${OBJECTDIR}/ProjectSource/main.o 
 	${MP_CC}  $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_SNAP=1  -fframe-base-loclist  -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -fno-common -I"FrameworkHeaders" -I"FrameworkSource" -I"ProjectHeaders" -I"ProjectSource" -MP -MMD -MF "${OBJECTDIR}/ProjectSource/main.o.d" -o ${OBJECTDIR}/ProjectSource/main.o ProjectSource/main.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)  -mdfp="${DFP_DIR}"  
 	
-${OBJECTDIR}/ProjectSource/PIC32_SPI_HAL_Starter.o: ProjectSource/PIC32_SPI_HAL_Starter.c  .generated_files/flags/default/4255be2dbf82a617a94c5a76d94286c382c24ac2 .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
+${OBJECTDIR}/ProjectSource/PIC32_SPI_HAL_Starter.o: ProjectSource/PIC32_SPI_HAL_Starter.c  .generated_files/flags/default/26506b17e25fe1518d26ea8ecdad29c6f47f2247 .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
 	@${MKDIR} "${OBJECTDIR}/ProjectSource" 
 	@${RM} ${OBJECTDIR}/ProjectSource/PIC32_SPI_HAL_Starter.o.d 
 	@${RM} ${OBJECTDIR}/ProjectSource/PIC32_SPI_HAL_Starter.o 
 	${MP_CC}  $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_SNAP=1  -fframe-base-loclist  -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -fno-common -I"FrameworkHeaders" -I"FrameworkSource" -I"ProjectHeaders" -I"ProjectSource" -MP -MMD -MF "${OBJECTDIR}/ProjectSource/PIC32_SPI_HAL_Starter.o.d" -o ${OBJECTDIR}/ProjectSource/PIC32_SPI_HAL_Starter.o ProjectSource/PIC32_SPI_HAL_Starter.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)  -mdfp="${DFP_DIR}"  
 	
-${OBJECTDIR}/ProjectSource/PIC32_AD_Lib.o: ProjectSource/PIC32_AD_Lib.c  .generated_files/flags/default/8969de9703de8f2e840a18df0c20a41157198edb .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
+${OBJECTDIR}/ProjectSource/PIC32_AD_Lib.o: ProjectSource/PIC32_AD_Lib.c  .generated_files/flags/default/7d85d9ad3eea90ea09d239423b62217f160bf17e .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
 	@${MKDIR} "${OBJECTDIR}/ProjectSource" 
 	@${RM} ${OBJECTDIR}/ProjectSource/PIC32_AD_Lib.o.d 
 	@${RM} ${OBJECTDIR}/ProjectSource/PIC32_AD_Lib.o 
 	${MP_CC}  $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_SNAP=1  -fframe-base-loclist  -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -fno-common -I"FrameworkHeaders" -I"FrameworkSource" -I"ProjectHeaders" -I"ProjectSource" -MP -MMD -MF "${OBJECTDIR}/ProjectSource/PIC32_AD_Lib.o.d" -o ${OBJECTDIR}/ProjectSource/PIC32_AD_Lib.o ProjectSource/PIC32_AD_Lib.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)  -mdfp="${DFP_DIR}"  
 	
-${OBJECTDIR}/ProjectSource/BeaconService.o: ProjectSource/BeaconService.c  .generated_files/flags/default/97558789db54468ac5e656a6500b431e17b345d .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
+${OBJECTDIR}/ProjectSource/BeaconService.o: ProjectSource/BeaconService.c  .generated_files/flags/default/f25b4098338ab64f08929beb17920e2d651f1e2e .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
 	@${MKDIR} "${OBJECTDIR}/ProjectSource" 
 	@${RM} ${OBJECTDIR}/ProjectSource/BeaconService.o.d 
 	@${RM} ${OBJECTDIR}/ProjectSource/BeaconService.o 
 	${MP_CC}  $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_SNAP=1  -fframe-base-loclist  -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -fno-common -I"FrameworkHeaders" -I"FrameworkSource" -I"ProjectHeaders" -I"ProjectSource" -MP -MMD -MF "${OBJECTDIR}/ProjectSource/BeaconService.o.d" -o ${OBJECTDIR}/ProjectSource/BeaconService.o ProjectSource/BeaconService.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)  -mdfp="${DFP_DIR}"  
 	
-${OBJECTDIR}/ProjectSource/ReflectiveSenseService.o: ProjectSource/ReflectiveSenseService.c  .generated_files/flags/default/301498ebc657d80b2825f1850317f6f54171003d .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
+${OBJECTDIR}/ProjectSource/ReflectiveSenseService.o: ProjectSource/ReflectiveSenseService.c  .generated_files/flags/default/c76572733ee856225ce0286f152d78a8e2c61c79 .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
 	@${MKDIR} "${OBJECTDIR}/ProjectSource" 
 	@${RM} ${OBJECTDIR}/ProjectSource/ReflectiveSenseService.o.d 
 	@${RM} ${OBJECTDIR}/ProjectSource/ReflectiveSenseService.o 
 	${MP_CC}  $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_SNAP=1  -fframe-base-loclist  -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -fno-common -I"FrameworkHeaders" -I"FrameworkSource" -I"ProjectHeaders" -I"ProjectSource" -MP -MMD -MF "${OBJECTDIR}/ProjectSource/ReflectiveSenseService.o.d" -o ${OBJECTDIR}/ProjectSource/ReflectiveSenseService.o ProjectSource/ReflectiveSenseService.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)  -mdfp="${DFP_DIR}"  
 	
-${OBJECTDIR}/ProjectSource/SPIFollowerService.o: ProjectSource/SPIFollowerService.c  .generated_files/flags/default/28d9c21583a979cec5e967849d4b8c9c787c5217 .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
+${OBJECTDIR}/ProjectSource/SPIFollowerService.o: ProjectSource/SPIFollowerService.c  .generated_files/flags/default/beaacad4949ca4d12ed06150b06eabb9a32eae6c .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
 	@${MKDIR} "${OBJECTDIR}/ProjectSource" 
 	@${RM} ${OBJECTDIR}/ProjectSource/SPIFollowerService.o.d 
 	@${RM} ${OBJECTDIR}/ProjectSource/SPIFollowerService.o 
 	${MP_CC}  $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_SNAP=1  -fframe-base-loclist  -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -fno-common -I"FrameworkHeaders" -I"FrameworkSource" -I"ProjectHeaders" -I"ProjectSource" -MP -MMD -MF "${OBJECTDIR}/ProjectSource/SPIFollowerService.o.d" -o ${OBJECTDIR}/ProjectSource/SPIFollowerService.o ProjectSource/SPIFollowerService.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)  -mdfp="${DFP_DIR}"  
 	
-${OBJECTDIR}/ProjectSource/NavigateService.o: ProjectSource/NavigateService.c  .generated_files/flags/default/d44ed0c0a79d76ecfdb8b1a64e59207f56fea77d .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
+${OBJECTDIR}/ProjectSource/NavigateService.o: ProjectSource/NavigateService.c  .generated_files/flags/default/fe9427e946609e4e0b7e9eca69336c6275cf7fa6 .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
 	@${MKDIR} "${OBJECTDIR}/ProjectSource" 
 	@${RM} ${OBJECTDIR}/ProjectSource/NavigateService.o.d 
 	@${RM} ${OBJECTDIR}/ProjectSource/NavigateService.o 
 	${MP_CC}  $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_SNAP=1  -fframe-base-loclist  -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -fno-common -I"FrameworkHeaders" -I"FrameworkSource" -I"ProjectHeaders" -I"ProjectSource" -MP -MMD -MF "${OBJECTDIR}/ProjectSource/NavigateService.o.d" -o ${OBJECTDIR}/ProjectSource/NavigateService.o ProjectSource/NavigateService.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)  -mdfp="${DFP_DIR}"  
 	
 else
-${OBJECTDIR}/FrameworkSource/ES_CheckEvents.o: FrameworkSource/ES_CheckEvents.c  .generated_files/flags/default/aa59f1e186687092e150565cee82a6fde92f952c .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
+${OBJECTDIR}/FrameworkSource/ES_CheckEvents.o: FrameworkSource/ES_CheckEvents.c  .generated_files/flags/default/961361f8a213dd78d44658023a7d331acc9c4f3d .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
 	@${MKDIR} "${OBJECTDIR}/FrameworkSource" 
 	@${RM} ${OBJECTDIR}/FrameworkSource/ES_CheckEvents.o.d 
 	@${RM} ${OBJECTDIR}/FrameworkSource/ES_CheckEvents.o 
 	${MP_CC}  $(MP_EXTRA_CC_PRE)  -g -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -fno-common -I"FrameworkHeaders" -I"FrameworkSource" -I"ProjectHeaders" -I"ProjectSource" -MP -MMD -MF "${OBJECTDIR}/FrameworkSource/ES_CheckEvents.o.d" -o ${OBJECTDIR}/FrameworkSource/ES_CheckEvents.o FrameworkSource/ES_CheckEvents.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)  -mdfp="${DFP_DIR}"  
 	
-${OBJECTDIR}/FrameworkSource/ES_DeferRecall.o: FrameworkSource/ES_DeferRecall.c  .generated_files/flags/default/f86ff5b213fd7b3801ba1bbd1a387d1a1457cb9b .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
+${OBJECTDIR}/FrameworkSource/ES_DeferRecall.o: FrameworkSource/ES_DeferRecall.c  .generated_files/flags/default/48fab179cca8dad9e6daf6ced426fffffaabff9a .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
 	@${MKDIR} "${OBJECTDIR}/FrameworkSource" 
 	@${RM} ${OBJECTDIR}/FrameworkSource/ES_DeferRecall.o.d 
 	@${RM} ${OBJECTDIR}/FrameworkSource/ES_DeferRecall.o 
 	${MP_CC}  $(MP_EXTRA_CC_PRE)  -g -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -fno-common -I"FrameworkHeaders" -I"FrameworkSource" -I"ProjectHeaders" -I"ProjectSource" -MP -MMD -MF "${OBJECTDIR}/FrameworkSource/ES_DeferRecall.o.d" -o ${OBJECTDIR}/FrameworkSource/ES_DeferRecall.o FrameworkSource/ES_DeferRecall.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)  -mdfp="${DFP_DIR}"  
 	
-${OBJECTDIR}/FrameworkSource/ES_Framework.o: FrameworkSource/ES_Framework.c  .generated_files/flags/default/235a106b50e7bfbac17f0735fb8d4c964dbe393f .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
+${OBJECTDIR}/FrameworkSource/ES_Framework.o: FrameworkSource/ES_Framework.c  .generated_files/flags/default/d48f3ccf1927161e91da1921882dbd44d3ff18a2 .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
 	@${MKDIR} "${OBJECTDIR}/FrameworkSource" 
 	@${RM} ${OBJECTDIR}/FrameworkSource/ES_Framework.o.d 
 	@${RM} ${OBJECTDIR}/FrameworkSource/ES_Framework.o 
 	${MP_CC}  $(MP_EXTRA_CC_PRE)  -g -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -fno-common -I"FrameworkHeaders" -I"FrameworkSource" -I"ProjectHeaders" -I"ProjectSource" -MP -MMD -MF "${OBJECTDIR}/FrameworkSource/ES_Framework.o.d" -o ${OBJECTDIR}/FrameworkSource/ES_Framework.o FrameworkSource/ES_Framework.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)  -mdfp="${DFP_DIR}"  
 	
-${OBJECTDIR}/FrameworkSource/ES_LookupTables.o: FrameworkSource/ES_LookupTables.c  .generated_files/flags/default/2bd4781d5bc0f701d545eefe7d37ec61e7be51fa .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
+${OBJECTDIR}/FrameworkSource/ES_LookupTables.o: FrameworkSource/ES_LookupTables.c  .generated_files/flags/default/d872a0dbf437f5cb7abf705da78e11ad168afb58 .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
 	@${MKDIR} "${OBJECTDIR}/FrameworkSource" 
 	@${RM} ${OBJECTDIR}/FrameworkSource/ES_LookupTables.o.d 
 	@${RM} ${OBJECTDIR}/FrameworkSource/ES_LookupTables.o 
 	${MP_CC}  $(MP_EXTRA_CC_PRE)  -g -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -fno-common -I"FrameworkHeaders" -I"FrameworkSource" -I"ProjectHeaders" -I"ProjectSource" -MP -MMD -MF "${OBJECTDIR}/FrameworkSource/ES_LookupTables.o.d" -o ${OBJECTDIR}/FrameworkSource/ES_LookupTables.o FrameworkSource/ES_LookupTables.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)  -mdfp="${DFP_DIR}"  
 	
-${OBJECTDIR}/FrameworkSource/ES_Port.o: FrameworkSource/ES_Port.c  .generated_files/flags/default/67b437f71e1edd84e334717df844c4c4dbb1788a .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
+${OBJECTDIR}/FrameworkSource/ES_Port.o: FrameworkSource/ES_Port.c  .generated_files/flags/default/a99d2eefa629f1edfa60b15fca0db4726b86381a .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
 	@${MKDIR} "${OBJECTDIR}/FrameworkSource" 
 	@${RM} ${OBJECTDIR}/FrameworkSource/ES_Port.o.d 
 	@${RM} ${OBJECTDIR}/FrameworkSource/ES_Port.o 
 	${MP_CC}  $(MP_EXTRA_CC_PRE)  -g -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -fno-common -I"FrameworkHeaders" -I"FrameworkSource" -I"ProjectHeaders" -I"ProjectSource" -MP -MMD -MF "${OBJECTDIR}/FrameworkSource/ES_Port.o.d" -o ${OBJECTDIR}/FrameworkSource/ES_Port.o FrameworkSource/ES_Port.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)  -mdfp="${DFP_DIR}"  
 	
-${OBJECTDIR}/FrameworkSource/ES_PostList.o: FrameworkSource/ES_PostList.c  .generated_files/flags/default/82a347eeff1c367bda1af4c032c9e161079cf9ef .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
+${OBJECTDIR}/FrameworkSource/ES_PostList.o: FrameworkSource/ES_PostList.c  .generated_files/flags/default/2239fa1cc4d0c671658dff16b500bd9b2f2f911e .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
 	@${MKDIR} "${OBJECTDIR}/FrameworkSource" 
 	@${RM} ${OBJECTDIR}/FrameworkSource/ES_PostList.o.d 
 	@${RM} ${OBJECTDIR}/FrameworkSource/ES_PostList.o 
 	${MP_CC}  $(MP_EXTRA_CC_PRE)  -g -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -fno-common -I"FrameworkHeaders" -I"FrameworkSource" -I"ProjectHeaders" -I"ProjectSource" -MP -MMD -MF "${OBJECTDIR}/FrameworkSource/ES_PostList.o.d" -o ${OBJECTDIR}/FrameworkSource/ES_PostList.o FrameworkSource/ES_PostList.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)  -mdfp="${DFP_DIR}"  
 	
-${OBJECTDIR}/FrameworkSource/ES_Queue.o: FrameworkSource/ES_Queue.c  .generated_files/flags/default/751fd2f78ff2bc8ee574e8736961a98c3f455c5e .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
+${OBJECTDIR}/FrameworkSource/ES_Queue.o: FrameworkSource/ES_Queue.c  .generated_files/flags/default/af930022882096aedf84d09467520e97cb4da51a .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
 	@${MKDIR} "${OBJECTDIR}/FrameworkSource" 
 	@${RM} ${OBJECTDIR}/FrameworkSource/ES_Queue.o.d 
 	@${RM} ${OBJECTDIR}/FrameworkSource/ES_Queue.o 
 	${MP_CC}  $(MP_EXTRA_CC_PRE)  -g -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -fno-common -I"FrameworkHeaders" -I"FrameworkSource" -I"ProjectHeaders" -I"ProjectSource" -MP -MMD -MF "${OBJECTDIR}/FrameworkSource/ES_Queue.o.d" -o ${OBJECTDIR}/FrameworkSource/ES_Queue.o FrameworkSource/ES_Queue.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)  -mdfp="${DFP_DIR}"  
 	
-${OBJECTDIR}/FrameworkSource/ES_Timers.o: FrameworkSource/ES_Timers.c  .generated_files/flags/default/8fab0b234dc5dc10f146abd998319e3a9d57559 .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
+${OBJECTDIR}/FrameworkSource/ES_Timers.o: FrameworkSource/ES_Timers.c  .generated_files/flags/default/e4a2219b5550afe9ece69b3521ac726c714874c3 .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
 	@${MKDIR} "${OBJECTDIR}/FrameworkSource" 
 	@${RM} ${OBJECTDIR}/FrameworkSource/ES_Timers.o.d 
 	@${RM} ${OBJECTDIR}/FrameworkSource/ES_Timers.o 
 	${MP_CC}  $(MP_EXTRA_CC_PRE)  -g -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -fno-common -I"FrameworkHeaders" -I"FrameworkSource" -I"ProjectHeaders" -I"ProjectSource" -MP -MMD -MF "${OBJECTDIR}/FrameworkSource/ES_Timers.o.d" -o ${OBJECTDIR}/FrameworkSource/ES_Timers.o FrameworkSource/ES_Timers.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)  -mdfp="${DFP_DIR}"  
 	
-${OBJECTDIR}/FrameworkSource/terminal.o: FrameworkSource/terminal.c  .generated_files/flags/default/1f9d9a8a1e6128d9903020c32613915fae5c29e7 .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
+${OBJECTDIR}/FrameworkSource/terminal.o: FrameworkSource/terminal.c  .generated_files/flags/default/981a945ca6f84f90d6c87dd12316f5f21793eb6f .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
 	@${MKDIR} "${OBJECTDIR}/FrameworkSource" 
 	@${RM} ${OBJECTDIR}/FrameworkSource/terminal.o.d 
 	@${RM} ${OBJECTDIR}/FrameworkSource/terminal.o 
 	${MP_CC}  $(MP_EXTRA_CC_PRE)  -g -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -fno-common -I"FrameworkHeaders" -I"FrameworkSource" -I"ProjectHeaders" -I"ProjectSource" -MP -MMD -MF "${OBJECTDIR}/FrameworkSource/terminal.o.d" -o ${OBJECTDIR}/FrameworkSource/terminal.o FrameworkSource/terminal.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)  -mdfp="${DFP_DIR}"  
 	
-${OBJECTDIR}/FrameworkSource/circular_buffer_no_modulo_threadsafe.o: FrameworkSource/circular_buffer_no_modulo_threadsafe.c  .generated_files/flags/default/a2327706dcfc9923ae76fe5f0cc9f6435923a86d .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
+${OBJECTDIR}/FrameworkSource/circular_buffer_no_modulo_threadsafe.o: FrameworkSource/circular_buffer_no_modulo_threadsafe.c  .generated_files/flags/default/8d7ab65c8fcc38892acde7f307efa147213a47fc .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
 	@${MKDIR} "${OBJECTDIR}/FrameworkSource" 
 	@${RM} ${OBJECTDIR}/FrameworkSource/circular_buffer_no_modulo_threadsafe.o.d 
 	@${RM} ${OBJECTDIR}/FrameworkSource/circular_buffer_no_modulo_threadsafe.o 
 	${MP_CC}  $(MP_EXTRA_CC_PRE)  -g -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -fno-common -I"FrameworkHeaders" -I"FrameworkSource" -I"ProjectHeaders" -I"ProjectSource" -MP -MMD -MF "${OBJECTDIR}/FrameworkSource/circular_buffer_no_modulo_threadsafe.o.d" -o ${OBJECTDIR}/FrameworkSource/circular_buffer_no_modulo_threadsafe.o FrameworkSource/circular_buffer_no_modulo_threadsafe.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)  -mdfp="${DFP_DIR}"  
 	
-${OBJECTDIR}/FrameworkSource/dbprintf.o: FrameworkSource/dbprintf.c  .generated_files/flags/default/6b190cb7bf8ebb2f97f5844865ef51897a8cd540 .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
+${OBJECTDIR}/FrameworkSource/dbprintf.o: FrameworkSource/dbprintf.c  .generated_files/flags/default/2e5d59a8f6315f4edfb8c07c65f2525b9a0bb72e .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
 	@${MKDIR} "${OBJECTDIR}/FrameworkSource" 
 	@${RM} ${OBJECTDIR}/FrameworkSource/dbprintf.o.d 
 	@${RM} ${OBJECTDIR}/FrameworkSource/dbprintf.o 
 	${MP_CC}  $(MP_EXTRA_CC_PRE)  -g -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -fno-common -I"FrameworkHeaders" -I"FrameworkSource" -I"ProjectHeaders" -I"ProjectSource" -MP -MMD -MF "${OBJECTDIR}/FrameworkSource/dbprintf.o.d" -o ${OBJECTDIR}/FrameworkSource/dbprintf.o FrameworkSource/dbprintf.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)  -mdfp="${DFP_DIR}"  
 	
-${OBJECTDIR}/ProjectSource/EventCheckers.o: ProjectSource/EventCheckers.c  .generated_files/flags/default/f4b97de910dd93ba3b23a02fad3033d53c82609f .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
+${OBJECTDIR}/ProjectSource/EventCheckers.o: ProjectSource/EventCheckers.c  .generated_files/flags/default/1c1861b696869a9ea153ca9700ea43d07d8419f .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
 	@${MKDIR} "${OBJECTDIR}/ProjectSource" 
 	@${RM} ${OBJECTDIR}/ProjectSource/EventCheckers.o.d 
 	@${RM} ${OBJECTDIR}/ProjectSource/EventCheckers.o 
 	${MP_CC}  $(MP_EXTRA_CC_PRE)  -g -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -fno-common -I"FrameworkHeaders" -I"FrameworkSource" -I"ProjectHeaders" -I"ProjectSource" -MP -MMD -MF "${OBJECTDIR}/ProjectSource/EventCheckers.o.d" -o ${OBJECTDIR}/ProjectSource/EventCheckers.o ProjectSource/EventCheckers.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)  -mdfp="${DFP_DIR}"  
 	
-${OBJECTDIR}/ProjectSource/main.o: ProjectSource/main.c  .generated_files/flags/default/c9e3fc859a37cf30b6f15a871d5823a8444406be .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
+${OBJECTDIR}/ProjectSource/main.o: ProjectSource/main.c  .generated_files/flags/default/914c2d6bde900a60974595aa4f98e79867a54502 .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
 	@${MKDIR} "${OBJECTDIR}/ProjectSource" 
 	@${RM} ${OBJECTDIR}/ProjectSource/main.o.d 
 	@${RM} ${OBJECTDIR}/ProjectSource/main.o 
 	${MP_CC}  $(MP_EXTRA_CC_PRE)  -g -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -fno-common -I"FrameworkHeaders" -I"FrameworkSource" -I"ProjectHeaders" -I"ProjectSource" -MP -MMD -MF "${OBJECTDIR}/ProjectSource/main.o.d" -o ${OBJECTDIR}/ProjectSource/main.o ProjectSource/main.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)  -mdfp="${DFP_DIR}"  
 	
-${OBJECTDIR}/ProjectSource/PIC32_SPI_HAL_Starter.o: ProjectSource/PIC32_SPI_HAL_Starter.c  .generated_files/flags/default/fbfa7cbad9f7ec40fcb1a817ac65f4b4b5ff2961 .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
+${OBJECTDIR}/ProjectSource/PIC32_SPI_HAL_Starter.o: ProjectSource/PIC32_SPI_HAL_Starter.c  .generated_files/flags/default/1b32ac4dcbdc13d26fa5dbd7d732dbd88053ab9c .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
 	@${MKDIR} "${OBJECTDIR}/ProjectSource" 
 	@${RM} ${OBJECTDIR}/ProjectSource/PIC32_SPI_HAL_Starter.o.d 
 	@${RM} ${OBJECTDIR}/ProjectSource/PIC32_SPI_HAL_Starter.o 
 	${MP_CC}  $(MP_EXTRA_CC_PRE)  -g -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -fno-common -I"FrameworkHeaders" -I"FrameworkSource" -I"ProjectHeaders" -I"ProjectSource" -MP -MMD -MF "${OBJECTDIR}/ProjectSource/PIC32_SPI_HAL_Starter.o.d" -o ${OBJECTDIR}/ProjectSource/PIC32_SPI_HAL_Starter.o ProjectSource/PIC32_SPI_HAL_Starter.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)  -mdfp="${DFP_DIR}"  
 	
-${OBJECTDIR}/ProjectSource/PIC32_AD_Lib.o: ProjectSource/PIC32_AD_Lib.c  .generated_files/flags/default/51aee29fb3a887c514aefc30a3300d0352529876 .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
+${OBJECTDIR}/ProjectSource/PIC32_AD_Lib.o: ProjectSource/PIC32_AD_Lib.c  .generated_files/flags/default/ec35add258062dc45d1b8101f46f72f3aced618a .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
 	@${MKDIR} "${OBJECTDIR}/ProjectSource" 
 	@${RM} ${OBJECTDIR}/ProjectSource/PIC32_AD_Lib.o.d 
 	@${RM} ${OBJECTDIR}/ProjectSource/PIC32_AD_Lib.o 
 	${MP_CC}  $(MP_EXTRA_CC_PRE)  -g -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -fno-common -I"FrameworkHeaders" -I"FrameworkSource" -I"ProjectHeaders" -I"ProjectSource" -MP -MMD -MF "${OBJECTDIR}/ProjectSource/PIC32_AD_Lib.o.d" -o ${OBJECTDIR}/ProjectSource/PIC32_AD_Lib.o ProjectSource/PIC32_AD_Lib.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)  -mdfp="${DFP_DIR}"  
 	
-${OBJECTDIR}/ProjectSource/BeaconService.o: ProjectSource/BeaconService.c  .generated_files/flags/default/9ebef6783025e18dfd6ef6b59e0e5bafca313eec .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
+${OBJECTDIR}/ProjectSource/BeaconService.o: ProjectSource/BeaconService.c  .generated_files/flags/default/eedc20a5658d657ee030ea8e996511faad1a67bd .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
 	@${MKDIR} "${OBJECTDIR}/ProjectSource" 
 	@${RM} ${OBJECTDIR}/ProjectSource/BeaconService.o.d 
 	@${RM} ${OBJECTDIR}/ProjectSource/BeaconService.o 
 	${MP_CC}  $(MP_EXTRA_CC_PRE)  -g -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -fno-common -I"FrameworkHeaders" -I"FrameworkSource" -I"ProjectHeaders" -I"ProjectSource" -MP -MMD -MF "${OBJECTDIR}/ProjectSource/BeaconService.o.d" -o ${OBJECTDIR}/ProjectSource/BeaconService.o ProjectSource/BeaconService.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)  -mdfp="${DFP_DIR}"  
 	
-${OBJECTDIR}/ProjectSource/ReflectiveSenseService.o: ProjectSource/ReflectiveSenseService.c  .generated_files/flags/default/f7acb3b37729552d8bd880c22c52a663ec010cde .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
+${OBJECTDIR}/ProjectSource/ReflectiveSenseService.o: ProjectSource/ReflectiveSenseService.c  .generated_files/flags/default/ed6a0c8ed854a80ac597e06a2ef810d292075886 .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
 	@${MKDIR} "${OBJECTDIR}/ProjectSource" 
 	@${RM} ${OBJECTDIR}/ProjectSource/ReflectiveSenseService.o.d 
 	@${RM} ${OBJECTDIR}/ProjectSource/ReflectiveSenseService.o 
 	${MP_CC}  $(MP_EXTRA_CC_PRE)  -g -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -fno-common -I"FrameworkHeaders" -I"FrameworkSource" -I"ProjectHeaders" -I"ProjectSource" -MP -MMD -MF "${OBJECTDIR}/ProjectSource/ReflectiveSenseService.o.d" -o ${OBJECTDIR}/ProjectSource/ReflectiveSenseService.o ProjectSource/ReflectiveSenseService.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)  -mdfp="${DFP_DIR}"  
 	
-${OBJECTDIR}/ProjectSource/SPIFollowerService.o: ProjectSource/SPIFollowerService.c  .generated_files/flags/default/69ad242e87d6cf65f7d01ad85127e3e1048a909f .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
+${OBJECTDIR}/ProjectSource/SPIFollowerService.o: ProjectSource/SPIFollowerService.c  .generated_files/flags/default/1e599e57378209b42daf0c6391feb44e95d9c985 .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
 	@${MKDIR} "${OBJECTDIR}/ProjectSource" 
 	@${RM} ${OBJECTDIR}/ProjectSource/SPIFollowerService.o.d 
 	@${RM} ${OBJECTDIR}/ProjectSource/SPIFollowerService.o 
 	${MP_CC}  $(MP_EXTRA_CC_PRE)  -g -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -fno-common -I"FrameworkHeaders" -I"FrameworkSource" -I"ProjectHeaders" -I"ProjectSource" -MP -MMD -MF "${OBJECTDIR}/ProjectSource/SPIFollowerService.o.d" -o ${OBJECTDIR}/ProjectSource/SPIFollowerService.o ProjectSource/SPIFollowerService.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)  -mdfp="${DFP_DIR}"  
 	
-${OBJECTDIR}/ProjectSource/NavigateService.o: ProjectSource/NavigateService.c  .generated_files/flags/default/45acc7860315b91a84b734a8c1a4c63ab937a7ce .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
+${OBJECTDIR}/ProjectSource/NavigateService.o: ProjectSource/NavigateService.c  .generated_files/flags/default/66eeff87cb060ae4cd224de064fa18afac594bb .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
 	@${MKDIR} "${OBJECTDIR}/ProjectSource" 
 	@${RM} ${OBJECTDIR}/ProjectSource/NavigateService.o.d 
 	@${RM} ${OBJECTDIR}/ProjectSource/NavigateService.o 

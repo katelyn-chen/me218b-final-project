@@ -33,4 +33,4 @@ MP_CPPC_DIR="/Applications/microchip/xc32/v5.00/bin"
 MP_AS_DIR="/Applications/microchip/xc32/v5.00/bin"
 MP_LD_DIR="/Applications/microchip/xc32/v5.00/bin"
 MP_AR_DIR="/Applications/microchip/xc32/v5.00/bin"
-DFP_DIR=/Users/katelyn/.mchp_packs/Microchip/PIC32MX_DFP/1.5.259
+DFP_DIR=/Users/heath/.mchp_packs/Microchip/PIC32MX_DFP/1.5.259

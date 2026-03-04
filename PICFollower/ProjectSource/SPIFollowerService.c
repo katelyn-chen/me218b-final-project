@@ -109,7 +109,7 @@ ES_Event_t RunSPIFollowerService(ES_Event_t ThisEvent)
   {
     case ES_SPI_RECEIVED:
     {
-      DB_printf("Received from byte leader %d\r\n", ThisEvent.EventParam);
+//      DB_printf("Received from byte leader %d\r\n", ThisEvent.EventParam);
 
       /* ignore unknown bytes */
       if (!IsKnownCommand((uint8_t)ThisEvent.EventParam))
@@ -284,7 +284,7 @@ static bool IsKnownCommand(uint8_t cmd)
 
 static void HandleCommandByte(uint8_t cmd)
 {
-  DB_printf("handling cmd from leader: %d\r\n", cmd);
+//  DB_printf("handling cmd from leader: %d\r\n", cmd);
 
   ES_Event_t cmdEvent;
   cmdEvent.EventType  = ES_NO_EVENT;
@@ -352,7 +352,7 @@ static void HandleCommandByte(uint8_t cmd)
         break;
 
       case CMD_QUERY:
-        DB_printf("Received QUERY command from SPILeaderService!\r\n");
+//        DB_printf("Received QUERY command from SPILeaderService!\r\n");
         /* nothing to post; ISR clears outgoingCmd latch on CMD_QUERY */
         break;
 
