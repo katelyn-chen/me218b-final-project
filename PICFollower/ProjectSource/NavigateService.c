@@ -553,6 +553,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
             ES_Timer_InitTimer(BEACON_TIMER, FWD_ADJUST_COLLECT);
             SetMotor1((int16_t)-DUTY_TRANS_HALF);
             SetMotor2((int16_t)-1.5*DUTY_TRANS_HALF);
+            
             break;
         }
         
@@ -566,7 +567,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         }
         
         if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == BEACON_TIMER
-                && collectState == COLLECT_BACK) {
+                && collectState == COLLECT_FWD) {
             ES_Timer_StopTimer(BEACON_TIMER);
             StopMotors();
             following = 0;
