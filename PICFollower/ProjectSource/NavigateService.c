@@ -40,27 +40,29 @@
 #define DUTY_ROTATE         40u
 #define DUTY_SEARCH         30u
 #define TAPE_BASE_DUTY      DUTY_TRANS_TAPE_DET
-#define TAPE_CORR_DUTY      8u   // steering correction amount
+#define TAPE_CORR_DUTY      10u   // steering correction amount
 #define TAPE_LOST_DUTY      15u   // slow search when tape lost
 
 /* Timer Values */
 #define CHKPT3_FWD                5000u
 #define ROTATE_45_TIME_MS         550u
-#define ROTATE_90_TIME_MS         1100u
+#define ROTATE_90_TIME_MS         750u
 #define ROTATE_FIRST_COLLECT_MS   400u
 #define VEER_AWAY_FROM_WALL       1000u
 #define BACKUP_RAMPUP_MS          500
 #define SEARCH_TIME               10000
 #define TURN_DELAY_PRE_LF         2700 // turn before starting to line follow, 4500 
-#define FIND_T_TIMER_BLOCK        6000
-#define LINE_FOLLOWING_BLOCKING_TIMER   500 // DO NOT CHANGE
+#define FIND_T_TIMER_BLOCK        7000
+#define LINE_FOLLOWING_BLOCKING_TIMER   300 // DO NOT CHANGE
 #define BACK_UP_PRE_COLLECT_ACTIVE 4000
-#define BACK_COLLECT_TIME          700
-#define FWD_ADJUST_COLLECT         300
+#define BACK_COLLECT_TIME          800
+#define FWD_ADJUST_COLLECT         500
 #define LF_POSTING_DELAY           20
+#define FIND_BUCKET2_FWD           1500
+#define BUCKET2_ROT                1000
 
-
-#define BUCKET_APPROACH_MS    3000   // SOY  tune this
+#define BUCKET2_APPROACH_MS    2600   // SOY  tune this
+#define BUCKET1_APPROACH_MS    1200   // SOY  tune this
 
 
 /*---------------------------- Module Types -------------------------------*/
@@ -75,6 +77,7 @@ typedef enum {
   COLLECT_ACTIVE,
   FIRST_DISPENSE,
   INIT_FIND_MIDDLE,
+  INIT_FIND_SECOND_BUCKET,
   MOVE_TO_MID_BUCKET,
   ALIGN_MID_BUCKET,
   INIT_FIND_END,
@@ -126,6 +129,7 @@ static FollowDir_t followDir;
 static uint16_t            duty = DUTY_STOP;
 
 static uint8_t midMoveStage = 0;
+static uint8_t numCollectAdjust = 0;
 
 //static int8_t LineFollowDirection = 1;   // +1 = forward, -1 = reverse
 static bool coalSearchFlag  = 0;
@@ -261,15 +265,15 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
                 /* Hit front left limit switch */
                 if (PORTAbits.RA3) {
                     DB_printf("The front left limit switch was hit but no wall detected in front! veering fwd and right\r\n");
-                    SetMotor1(-(int16_t)DUTY_TRANS_HALF*0.7);
-                    SetMotor2(-(int16_t)DUTY_TRANS_FULL);
-                    ES_Timer_InitTimer(MOTOR_TIMER, VEER_AWAY_FROM_WALL);
+                    SetMotor1(-(int16_t)DUTY_TRANS_HALF*0.6);
+                    SetMotor2(-(int16_t)DUTY_TRANS_FULL*0.9);
+                    ES_Timer_InitTimer(MOTOR_TIMER, VEER_AWAY_FROM_WALL*0.8);
                 
                 } else {
                     DB_printf("The front left limit switch was hit and a wall was detected in front! veering back and right\r\n");
-                    SetMotor1((int16_t)DUTY_TRANS_HALF*0.7);
-                    SetMotor2((int16_t)DUTY_TRANS_FULL);
-                    ES_Timer_InitTimer(MOTOR_TIMER, VEER_AWAY_FROM_WALL);
+                    SetMotor1((int16_t)DUTY_TRANS_HALF*0.6);
+                    SetMotor2((int16_t)DUTY_TRANS_FULL*0.9);
+                    ES_Timer_InitTimer(MOTOR_TIMER, VEER_AWAY_FROM_WALL*0.8);
                 }
             }
             
@@ -277,14 +281,14 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
                 /* Hit back right limit switch*/
                 if (PORTAbits.RA3) {
                     DB_printf("The back right limit switch was hit but no wall detected in front! veering fwd and left\r\n");
-                    SetMotor1(-(int16_t)DUTY_TRANS_HALF*0.7);
-                    SetMotor2(-(int16_t)DUTY_TRANS_FULL);
-                    ES_Timer_InitTimer(MOTOR_TIMER, VEER_AWAY_FROM_WALL);
+                    SetMotor1(-(int16_t)DUTY_TRANS_HALF*0.6);
+                    SetMotor2(-(int16_t)DUTY_TRANS_FULL*0.9);
+                    ES_Timer_InitTimer(MOTOR_TIMER, VEER_AWAY_FROM_WALL*0.8);
                 
                 } else {
                     DB_printf("The back right limit switch was hit and a wall was detected in front! veering back and right\r\n");
-                    SetMotor1((int16_t)DUTY_TRANS_HALF*0.7);
-                    SetMotor2((int16_t)DUTY_TRANS_FULL);
+                    SetMotor1((int16_t)DUTY_TRANS_HALF*0.6);
+                    SetMotor2((int16_t)DUTY_TRANS_FULL*0.9);
                     ES_Timer_InitTimer(MOTOR_TIMER, VEER_AWAY_FROM_WALL);
                 }
             }
@@ -454,7 +458,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         DB_printf("T found!! veering initially to start turning clockwise\r\n");
         following = 0;
         cmdEvent.EventParam = CMD_ROT_CW_180;
-        ES_Timer_InitTimer(MOTOR_TIMER, VEER_AWAY_FROM_WALL*1.3);
+        ES_Timer_InitTimer(MOTOR_TIMER, VEER_AWAY_FROM_WALL*1.5);
         PostSPIFollowerService(cmdEvent);
         SetMotor1(-(int16_t)DUTY_TRANS_HALF*0.8);
         SetMotor2(-(int16_t)DUTY_TRANS_HALF*1.2);
@@ -602,11 +606,20 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         {
           /* we are looking for the left corner MAYBE change to FULL_T */
           /* need to start grabbing here! */
-            beginfwd = 0;
-            DB_printf("adjusting collect fwd alignment a bit!\r\n");
-            ES_Timer_InitTimer(BEACON_TIMER, FWD_ADJUST_COLLECT);
-            SetMotor1((int16_t)-DUTY_TRANS_HALF);
-            SetMotor2((int16_t)-1.5*DUTY_TRANS_HALF);
+            if (numCollectAdjust <3) {
+                numCollectAdjust ++;
+                beginfwd = 0;
+                DB_printf("adjusting collect fwd alignment a bit!\r\n");
+                ES_Timer_InitTimer(BEACON_TIMER, FWD_ADJUST_COLLECT);
+                SetMotor1((int16_t)-1.5*DUTY_TRANS_HALF);
+                SetMotor2((int16_t)-DUTY_TRANS_HALF);
+            }
+            else{
+                beginfwd = 0;
+                DB_printf("adjusting collect fwd alignment a bit!\r\n");
+                ES_Timer_InitTimer(BEACON_TIMER, 100);
+            }
+            
             break;
         }
         
@@ -716,7 +729,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
           followDir = FOLLOW_REV;
           DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_REV));
 
-          ES_Timer_InitTimer(BUCKET_TIMER, BUCKET_APPROACH_MS);
+          ES_Timer_InitTimer(BUCKET_TIMER, BUCKET1_APPROACH_MS);
         }
         
         /* Reverse line follow toward first bucket */
@@ -730,10 +743,10 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
           bucketApproachActive = false;   // reset for next approach
 
           /* begin moving toward middle bucket (your existing behavior) */
-          followDir = FOLLOW_REV;
-          following = 1;
+          followDir = FOLLOW_FWD;
+          following = 0;
           DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_FWD));
-
+          ES_Timer_InitTimer(MOTOR_TIMER, FIND_BUCKET2_FWD);
           curState = INIT_FIND_MIDDLE;   /* IMPORTANT: go find the next T before turning */
         }
 
@@ -771,8 +784,25 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         break;
       }
 
+//      case INIT_FIND_SECOND_BUCKET:
+//      {
+//          if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == MOTOR_TIMER) {
+//              // needs to start turning right for dispensing into second bucket
+//              DoRotate(PackRotateParam(ROT_90, ROT_CCW));
+//              ES_Timer_InitTimer(BEACON_TIMER, BUCKET2_ROT);
+//          }
+//          
+//          if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == BEACON_TIMER) {
+//              DoTranslate(TRANS_HALF, DIR_FWD);
+//              ES_Timer_InitTimer(BUCKET_TIMER, 1000);
+//          }
+//          
+//      
+//    }
+      
    case INIT_FIND_MIDDLE:
 {
+    /* upon entry following is true, following fwd */
     if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == LF_POSTING_TIMER) {
               correctingForLF = 1;
     }
@@ -781,22 +811,22 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
       if (correctingForLF) {
         correctingForLF = 0;
         ES_Timer_InitTimer(LF_POSTING_TIMER, LF_POSTING_DELAY);
-        LineFollow(ThisEvent, FOLLOW_REV);
+        LineFollow(ThisEvent, FOLLOW_FWD);
       }
     }
-      
-      if (ThisEvent.EventType == ES_T_DETECTED && ThisEvent.EventParam == FULL_T)
+      if (ThisEvent.EventType == ES_T_DETECTED)
+//      if (ThisEvent.EventType == ES_T_DETECTED && ThisEvent.EventParam == FULL_T)
       {
         DB_printf("MIDDLE: found T, starting 2-turn maneuver\r\n");
 
-        /* stage 0: do first 90-degree turn */
+        /* stage 0: do first 90-degree turn right */
         midMoveStage = 0;
         following = 0;
         ES_Timer_StopTimer(MOTOR_TIMER);
 
         /* turn 90 degrees right (your existing motor pattern) */
         SetMotor1((int16_t)DUTY_TRANS_HALF);
-        SetMotor2(-(int16_t)(DUTY_TRANS_HALF * 1.2));
+        SetMotor2(-(int16_t)(DUTY_TRANS_HALF * 1.4));
         ES_Timer_InitTimer(MOTOR_TIMER, ROTATE_90_TIME_MS);
 
         curState = MOVE_TO_MID_BUCKET;
@@ -814,12 +844,20 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         ES_Timer_StopTimer(MOTOR_TIMER);
         
         /* start reverse line following again until we hit the next FULL_T */
-        following = 1;
+        // blocking line following for one second!!
+        ES_Timer_InitTimer(BEACON_TIMER, 1500);
+        following = 0;
         followDir = FOLLOW_REV;
         DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_REV));
         midMoveStage = 1;
         break;
         }
+      
+      if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == BEACON_TIMER) {
+        DB_printf("Begin following for middle bucket\r\n");
+        following = 1;
+        //beging following!!
+      }
       
       if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == LF_POSTING_TIMER) {
          correctingForLF = 1;
@@ -835,18 +873,21 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
           LineFollow(ThisEvent, FOLLOW_REV);
         }
       }
-
-      if (ThisEvent.EventType == ES_T_DETECTED && ThisEvent.EventParam == FULL_T && midMoveStage == 1)
+      
+      // if (ThisEvent.EventType == ES_T_DETECTED && midMoveStage == 1)
+     if (ThisEvent.EventType == ES_T_DETECTED && ThisEvent.EventParam == FULL_T && midMoveStage == 1)
       {
         DB_printf("MIDDLE: second T found, doing second 90\r\n");
 
         following = 0;
         ES_Timer_StopTimer(MOTOR_TIMER);
 
-        /* turn 90 left (your intended motor pattern, fixed syntax) */
-        SetMotor1(-(int16_t)DUTY_TRANS_HALF);
-        SetMotor2((int16_t)(DUTY_TRANS_HALF));
-        ES_Timer_InitTimer(MOTOR_TIMER, ROTATE_90_TIME_MS);
+        /* turn 90 right (your intended motor pattern, fixed syntax) */
+//        SetMotor1(-(int16_t)DUTY_TRANS_HALF*1.4);
+//        SetMotor2((int16_t)(DUTY_TRANS_HALF));
+        SetMotor1((int16_t)DUTY_TRANS_HALF);
+        SetMotor2(-(int16_t)(DUTY_TRANS_HALF * 1.4));
+        ES_Timer_InitTimer(MOTOR_TIMER, ROTATE_90_TIME_MS*1.3);
 
         midMoveStage = 2;
         break;
@@ -900,7 +941,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         followDir = FOLLOW_REV;
         DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_REV));
 
-        ES_Timer_InitTimer(BUCKET_TIMER, BUCKET_APPROACH_MS);
+        ES_Timer_InitTimer(BUCKET_TIMER, BUCKET2_APPROACH_MS);
       }
 
       /* Timer expiry -> stop and dispense */
