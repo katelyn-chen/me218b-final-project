@@ -323,7 +323,7 @@ static void HandleFollowerStatus(uint8_t statusByte)
     case CMD_SIDE_FOUND_BLUE:
     {
       // move indicator servo to blue
-      LATAbits.LATA3 = 0;
+//      LATAbits.LATA3 = 0;
       DB_printf("Side indicated: BLUE\r\n");
       cmdEvent.EventType = ES_INDICATE_SIDE;
       cmdEvent.EventParam = FIELD_BLUE;
@@ -339,7 +339,7 @@ static void HandleFollowerStatus(uint8_t statusByte)
     case CMD_SIDE_FOUND_GREEN:
     {
       // move indicator servo to green
-      LATAbits.LATA3 = 0;
+//      LATAbits.LATA3 = 0;
       DB_printf("Side indicated: GREEN\r\n");
       cmdEvent.EventType = ES_INDICATE_SIDE;
       cmdEvent.EventParam = FIELD_GREEN;
@@ -396,7 +396,7 @@ static void HandleFollowerStatus(uint8_t statusByte)
       cmdEvent.EventType = ES_ENCODER_TARGET_STRAIGHT;
       cmdEvent.EventParam = COLLECT_REV_ALIGN;
       PostEncoderService(cmdEvent);
-      LATAbits.LATA3 = 0;
+//      LATAbits.LATA3 = 0;
       break;
 
     case CMD_FIRST_COLLECT_START:
@@ -466,7 +466,7 @@ static void HandleFollowerStatus(uint8_t statusByte)
         cmdEvent.EventType = ES_ENCODER_TARGET_ROT;
         cmdEvent.EventParam = ROT_180_PULSES;
         PostEncoderService(cmdEvent);
-        LATAbits.LATA3 = 1;
+//        LATAbits.LATA3 = 1;
         break;
         
     case CMD_DISPENSE_START:
