@@ -64,7 +64,7 @@
 #define GRABBER_TIMEOUT            5000
 
 #define BUCKET2_APPROACH_MS    2600   // SOY  tune this
-#define BUCKET1_APPROACH_MS    1200   // SOY  tune this
+#define BUCKET1_APPROACH_MS    1300   // SOY  tune this
 
 
 /*---------------------------- Module Types -------------------------------*/
