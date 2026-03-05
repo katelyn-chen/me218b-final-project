@@ -60,6 +60,7 @@
 #define LF_POSTING_DELAY           20
 #define FIND_BUCKET2_FWD           1500
 #define BUCKET2_ROT                1000
+#define T_BACKUP_LF_DELAY          1000 // this is so we can start LF laterwhen backing up at dispenser
 
 #define BUCKET2_APPROACH_MS    2600   // SOY  tune this
 #define BUCKET1_APPROACH_MS    1200   // SOY  tune this
@@ -500,9 +501,10 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
                     ES_Timer_InitTimer(BEACON_TIMER, BACK_UP_PRE_COLLECT_ACTIVE);
                     DB_printf("Starting back up\r\n");
                     DoTranslate(PackTranslateParam(TRANS_HALF*0.8, DIR_REV));
+                    ES_Timer_InitTimer(BUCKET_TIMER, T_BACKUP_LF_DELAY); // 270 turn
                     followDir = FOLLOW_REV;
                     collectState = COLLECT_START;
-                    following = 1;
+                    following = 0;
                     collectStarted = 0;            
                     curState = COLLECT_ALIGN;
                     break;
@@ -528,6 +530,11 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
                     ES_Timer_StopTimer(LF_POSTING_TIMER);
                     break;
                 }
+                
+                case BUCKET_TIMER:
+                {
+                    following = 1;
+                }
             }
         }
         
@@ -546,8 +553,8 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
                 /* can start moving forward! */
                 DB_printf("Timer expired for backup - now moving forward. Posting start collect\r\n");
                 collectStarted = 1; // mark collect as started
-                SetMotor1(-(int16_t)DUTY_TRANS_HALF*1.5);
-                SetMotor2(-(int16_t)DUTY_TRANS_HALF*0.5);
+                SetMotor1(-(int16_t)DUTY_TRANS_HALF*1.3);
+                SetMotor2(-(int16_t)DUTY_TRANS_HALF*0.7);
                 followDir = FOLLOW_FWD;
                 cmdEvent.EventParam = CMD_FIRST_COLLECT_START;
                 PostSPIFollowerService(cmdEvent);
