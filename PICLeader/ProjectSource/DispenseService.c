@@ -294,8 +294,8 @@ static void RequestCmd(uint8_t cmdByte)
 ======================================================================*/
 
 /* pulse widths (us) */
-#define US_FLAG_MIN            600u
-#define US_FLAG_MAX            2500u
+#define US_FLAG_MIN            900u // for MS18 was 600u
+#define US_FLAG_MAX            2100u //for MS18 was 2500u
 #define US_FLAG_CENTER         ((US_FLAG_MIN + US_FLAG_MAX)/2u)
 
 #define US_FLAG_BLUE           US_FLAG_MAX
