@@ -58,7 +58,7 @@
 #define US_PUSH_ARM_DOWN            600u   /* tuned */
 
 /* OC3 : continuous rotation bucket bottom (RB10) */
-#define US_BUCKET_STOP              1400u  /* tuned */
+#define US_BUCKET_STOP              1500u  /* tuned */
 #define US_BUCKET_ROTATE_CW         1700u  /* speed command; reduce closer to STOP if too fast */
 
 /* OC4 : bucket arm (RA4) -- tick values copied from CollectService */
@@ -267,8 +267,11 @@ static void PushArmDown(void) { PushArmMoveTo(US_PUSH_ARM_DOWN, T_PUSH_ARM_DOWN_
 static void PushArmUp(void)   { PushArmMoveTo(US_PUSH_ARM_UP,   T_PUSH_ARM_UP_MS);   }
 
 /* continuous rotation servo: ramp a little so it doesn't jerk */
-static void BucketRotateStart(void) { BucketBottomMoveTo(US_BUCKET_ROTATE_CW, 120u); }
-static void BucketRotateStop(void)  { BucketBottomMoveTo(US_BUCKET_STOP,      120u); }
+// static void BucketRotateStart(void) { BucketBottomMoveTo(US_BUCKET_ROTATE_CW, 120u); }
+// static void BucketRotateStop(void)  { BucketBottomMoveTo(US_BUCKET_STOP,      120u); }
+
+static void BucketRotateStart(void){ Servo_OC3(US_BUCKET_ROTATE_CW); }
+static void BucketRotateStop(void){  Servo_OC3(US_BUCKET_STOP)};   
 
 static void BucketArmInit(void)     { BucketArmMoveToTicks(BUCKET_ARM_INIT_TICKS,     T_BUCKET_ARM_RETURN_MS); }
 static void BucketArmDispense(void) { BucketArmMoveToTicks(BUCKET_ARM_DISPENSE_TICKS, T_BUCKET_ARM_MOVE_MS);   }
