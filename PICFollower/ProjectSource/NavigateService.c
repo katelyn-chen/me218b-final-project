@@ -550,8 +550,8 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
                 /* can start moving forward! */
                 DB_printf("Timer expired for backup - now moving forward. Posting start collect\r\n");
                 collectStarted = 1; // mark collect as started
-                SetMotor1(-(int16_t)DUTY_TRANS_HALF*1.3);
-                SetMotor2(-(int16_t)DUTY_TRANS_HALF*0.7);
+//                SetMotor1(-(int16_t)DUTY_TRANS_HALF*1.3);
+//                SetMotor2(-(int16_t)DUTY_TRANS_HALF*0.7);
                 followDir = FOLLOW_FWD;
                 cmdEvent.EventParam = CMD_FIRST_COLLECT_START;
                 PostSPIFollowerService(cmdEvent);
@@ -620,11 +620,11 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
                 beginfwd = 0;
                 if (numCollectAdjust == 1) {
                     ES_Timer_InitTimer(BEACON_TIMER, FWD_ADJUST_COLLECT*2);
-                    SetMotor1((int16_t)-DUTY_TRANS_HALF);
+                    SetMotor1((int16_t)-DUTY_TRANS_HALF); // was multiplied by 1.5
                     SetMotor2((int16_t)-DUTY_TRANS_HALF);
                 } else {
                     ES_Timer_InitTimer(BEACON_TIMER, FWD_ADJUST_COLLECT);
-                    SetMotor1((int16_t)-DUTY_TRANS_HALF);
+                    SetMotor1((int16_t)-DUTY_TRANS_HALF); // was multiplied by 1.5
                     SetMotor2((int16_t)-DUTY_TRANS_HALF);
                 }
                 
