@@ -270,8 +270,8 @@ static void PushArmUp(void)   { PushArmMoveTo(US_PUSH_ARM_UP,   T_PUSH_ARM_UP_MS
 // static void BucketRotateStart(void) { BucketBottomMoveTo(US_BUCKET_ROTATE_CW, 120u); }
 // static void BucketRotateStop(void)  { BucketBottomMoveTo(US_BUCKET_STOP,      120u); }
 
-static void BucketRotateStart(void){ Servo_OC3(US_BUCKET_ROTATE_CW); }
-static void BucketRotateStop(void){  Servo_OC3(US_BUCKET_STOP)};   
+static void BucketRotateStart(void){ Servo_OC3(US_BUCKET_ROTATE_CW);} 
+static void BucketRotateStop(void){  Servo_OC3(US_BUCKET_STOP);}   
 
 static void BucketArmInit(void)     { BucketArmMoveToTicks(BUCKET_ARM_INIT_TICKS,     T_BUCKET_ARM_RETURN_MS); }
 static void BucketArmDispense(void) { BucketArmMoveToTicks(BUCKET_ARM_DISPENSE_TICKS, T_BUCKET_ARM_MOVE_MS);   }
