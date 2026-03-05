@@ -40,13 +40,13 @@
 #define DUTY_ROTATE         40u
 #define DUTY_SEARCH         30u
 #define TAPE_BASE_DUTY      DUTY_TRANS_TAPE_DET
-#define TAPE_CORR_DUTY      10u   // steering correction amount
+#define TAPE_CORR_DUTY      12u   // steering correction amount
 #define TAPE_LOST_DUTY      15u   // slow search when tape lost
 
 /* Timer Values */
 #define CHKPT3_FWD                5000u
 #define ROTATE_45_TIME_MS         550u
-#define ROTATE_90_TIME_MS         750u
+#define ROTATE_90_TIME_MS         1100u
 #define ROTATE_FIRST_COLLECT_MS   400u
 #define VEER_AWAY_FROM_WALL       1000u
 #define BACKUP_RAMPUP_MS          500
@@ -55,12 +55,13 @@
 #define FIND_T_TIMER_BLOCK        7000
 #define LINE_FOLLOWING_BLOCKING_TIMER   300 // DO NOT CHANGE
 #define BACK_UP_PRE_COLLECT_ACTIVE 4000
-#define BACK_COLLECT_TIME          800
+#define BACK_COLLECT_TIME          900
 #define FWD_ADJUST_COLLECT         500
 #define LF_POSTING_DELAY           20
-#define FIND_BUCKET2_FWD           1500
+#define FIND_BUCKET2_FWD           2000
 #define BUCKET2_ROT                1000
-#define T_BACKUP_LF_DELAY          1000 // this is so we can start LF laterwhen backing up at dispenser
+#define T_BACKUP_LF_DELAY          700 // this is so we can start LF laterwhen backing up at dispenser
+#define GRABBER_TIMEOUT            5000
 
 #define BUCKET2_APPROACH_MS    2600   // SOY  tune this
 #define BUCKET1_APPROACH_MS    1200   // SOY  tune this
@@ -531,10 +532,6 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
                     break;
                 }
                 
-                case BUCKET_TIMER:
-                {
-                    following = 1;
-                }
             }
         }
         
@@ -562,6 +559,8 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
                 curState = COLLECT_ACTIVE;
             } else if (ThisEvent.EventParam == LF_POSTING_TIMER) {
                 correctingForLF = 1;
+            } else if (ThisEvent.EventParam == BUCKET_TIMER) {
+                following = 1;
             }
         }
         /* END TIMER RESPONSES */
@@ -609,17 +608,25 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
          * this state! (timer based in collect service) */
         
         /* Checking if we should stop moving back/forth */
-        if (ThisEvent.EventType == ES_T_DETECTED && collectState == COLLECT_FWD && beginfwd)
+        if ((ThisEvent.EventType == ES_T_DETECTED && collectState == COLLECT_FWD && beginfwd) ||
+                (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == BUCKET_TIMER && collectState == COLLECT_FWD && beginfwd)
         {
           /* we are looking for the left corner MAYBE change to FULL_T */
           /* need to start grabbing here! */
             if (numCollectAdjust <3) {
+                DB_printf("adjusting collect fwd alignment a bit!\r\n");
                 numCollectAdjust ++;
                 beginfwd = 0;
-                DB_printf("adjusting collect fwd alignment a bit!\r\n");
-                ES_Timer_InitTimer(BEACON_TIMER, FWD_ADJUST_COLLECT);
-                SetMotor1((int16_t)-1.5*DUTY_TRANS_HALF);
-                SetMotor2((int16_t)-DUTY_TRANS_HALF);
+                if (numCollectAdjust == 1) {
+                    ES_Timer_InitTimer(BEACON_TIMER, FWD_ADJUST_COLLECT*2);
+                    SetMotor1((int16_t)-2*DUTY_TRANS_HALF);
+                    SetMotor2((int16_t)-DUTY_TRANS_HALF);
+                } else {
+                    ES_Timer_InitTimer(BEACON_TIMER, FWD_ADJUST_COLLECT);
+                    SetMotor1((int16_t)-1.5*DUTY_TRANS_HALF);
+                    SetMotor2((int16_t)-DUTY_TRANS_HALF);
+                }
+                
             }
             else{
                 beginfwd = 0;
@@ -667,6 +674,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
             collectState = COLLECT_FWD;
             followDir = FOLLOW_FWD;
             beginfwd = 1;
+            ES_Timer_InitTimer(BUCKET_TIMER, GRABBER_TIMEOUT);
         }
         
         if (ThisEvent.EventType == ES_COLLECT_BACK) {
@@ -813,19 +821,8 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
     if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == LF_POSTING_TIMER) {
               correctingForLF = 1;
     }
-  
-    if (ThisEvent.EventType == ES_TAPE_DETECT && following) {
-      if (correctingForLF) {
-        correctingForLF = 0;
-        ES_Timer_InitTimer(LF_POSTING_TIMER, LF_POSTING_DELAY);
-        LineFollow(ThisEvent, FOLLOW_FWD);
-      }
-    }
-      if (ThisEvent.EventType == ES_T_DETECTED)
-//      if (ThisEvent.EventType == ES_T_DETECTED && ThisEvent.EventParam == FULL_T)
-      {
-        DB_printf("MIDDLE: found T, starting 2-turn maneuver\r\n");
-
+    
+    if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == MOTOR_TIMER) {
         /* stage 0: do first 90-degree turn right */
         midMoveStage = 0;
         following = 0;
@@ -837,7 +834,32 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         ES_Timer_InitTimer(MOTOR_TIMER, ROTATE_90_TIME_MS);
 
         curState = MOVE_TO_MID_BUCKET;
+    }
+  
+    if (ThisEvent.EventType == ES_TAPE_DETECT && following) {
+      if (correctingForLF) {
+        correctingForLF = 0;
+        ES_Timer_InitTimer(LF_POSTING_TIMER, LF_POSTING_DELAY);
+        LineFollow(ThisEvent, FOLLOW_FWD);
       }
+    }
+//      if (ThisEvent.EventType == ES_T_DETECTED)
+////      if (ThisEvent.EventType == ES_T_DETECTED && ThisEvent.EventParam == FULL_T)
+//      {
+//        DB_printf("MIDDLE: found T, starting 2-turn maneuver\r\n");
+//
+//        /* stage 0: do first 90-degree turn right */
+//        midMoveStage = 0;
+//        following = 0;
+//        ES_Timer_StopTimer(MOTOR_TIMER);
+//
+//        /* turn 90 degrees right (your existing motor pattern) */
+//        SetMotor1((int16_t)DUTY_TRANS_HALF);
+//        SetMotor2(-(int16_t)(DUTY_TRANS_HALF * 1.4));
+//        ES_Timer_InitTimer(MOTOR_TIMER, ROTATE_90_TIME_MS);
+//
+//        curState = MOVE_TO_MID_BUCKET;
+//      }
       break;
     }
 
