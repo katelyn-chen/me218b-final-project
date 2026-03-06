@@ -620,11 +620,11 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
                 beginfwd = 0;
                 if (numCollectAdjust == 1) {
                     ES_Timer_InitTimer(BEACON_TIMER, FWD_ADJUST_COLLECT*2);
-                    SetMotor1((int16_t)-DUTY_TRANS_HALF); // was multiplied by 1.5
+                    SetMotor1((int16_t)-DUTY_TRANS_HALF*1.2); // was multiplied by 1.5
                     SetMotor2((int16_t)-DUTY_TRANS_HALF);
                 } else {
                     ES_Timer_InitTimer(BEACON_TIMER, FWD_ADJUST_COLLECT);
-                    SetMotor1((int16_t)-DUTY_TRANS_HALF); // was multiplied by 1.5
+                    SetMotor1((int16_t)-DUTY_TRANS_HALF*1.2); // was multiplied by 1.5
                     SetMotor2((int16_t)-DUTY_TRANS_HALF);
                 }
                 
