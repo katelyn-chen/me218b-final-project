@@ -100,41 +100,19 @@ ES_Event_t RunInitService(ES_Event_t ThisEvent)
     case IDLE:
       if (ThisEvent.EventType == ES_INIT) {
             DB_printf("InitService received ES_INIT\r\n");
-
-            /*
-              DEBUG: start CollectService immediately on boot.
-              This is only for bench testing. Remove when integrating full game logic.
-            */
-            if (CollectDebugStarted == false) {
-              CollectDebugStarted = true;
-
-              //ES_Event_t StartCollect;
-              //StartCollect.EventType = ES_COLLECT_START;
-              //StartCollect.EventParam = 0;
-              //PostCollectService(StartCollect);
-
-              //DB_printf("InitService: posted ES_COLLECT_START (debug)\r\n");
-            }
-            
-            /*
-             Debug encoder service*/
-//            if (EncoderDebugStart) {
-//                DB_printf("entering encoder\r\n");
-//
-//                ES_Event_t encoder;
-//                encoder.EventType = ES_ENCODER_TARGET_ROT;
-//                PostEncoderService(encoder);
-//            }
       }
 
       if (ThisEvent.EventType == ES_ENTER_IDLE) {
-        // send motor stop command to follower to stop motors
-        // indicators off
+        /* GAME END EVENT! The game timer has expired. Send motor stop command 
+         * to follower to stop motors and turn all indicators off */
         ReturnEvent.EventType = ES_END_GAME;
         ES_PostAll(ReturnEvent);
       }
 
       if (ThisEvent.EventType == ES_START_BUTTON) {
+        /* START GAME EVENT! A user has pressed the start button and the 
+         * game timer should be started. The bot should immediately begin
+         * orienting after this event is communicated with the follower */
         DB_printf("Start button has been pressed!\r\n");
         ES_Event_t NewEvent;
         NewEvent.EventType = ES_INIT_GAME;
@@ -146,7 +124,7 @@ ES_Event_t RunInitService(ES_Event_t ThisEvent)
 
     case GAME_MODE:
       if (ThisEvent.EventType == ES_INIT_GAME) {
-        LATAbits.LATA3 = 1;
+        LATAbits.LATA3 = 1;  // toggle indicator light ON
         SecondsElapsed = 0;  // reset counter
         ES_Timer_InitTimer(GAME_TIMER, GAME_TIME_MS); // start game timer
       }
@@ -155,11 +133,11 @@ ES_Event_t RunInitService(ES_Event_t ThisEvent)
         SecondsElapsed++;
 
         if (SecondsElapsed >= GAME_DURATION) {
-          ES_Timer_StopTimer(GAME_TIMER); // stop game timer
+          ES_Timer_StopTimer(GAME_TIMER); // stop game timer once timer expired
           curState = IDLE;
           ES_Event_t GameOver;
           GameOver.EventType = ES_ENTER_IDLE;
-          LATAbits.LATA3 = 0;
+          LATAbits.LATA3 = 0;   // turn indicator light OFF
           PostInitService(GameOver);
         } else {
           ES_Timer_InitTimer(GAME_TIMER, GAME_TIME_MS); // restart 1 second timer

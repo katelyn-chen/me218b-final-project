@@ -47,11 +47,9 @@
 /* SPI module selection */
 #define CG_SPI_MODULE        SPI_SPI1
 
-/* SPI clock period (ns). 500 kHz -> 2000 ns period */
-//#define SPI_CLK_PERIOD_NS    2000u
 #define SPI_CLK_PERIOD_NS      50000u
 
-/* Pulse values need to be tuned!! */
+/* ENCODER SERVICE PULSE VALUES */
 #define ROT_90_PULSES           25
 #define ROT_180_PULSES          ROT_90_PULSES*3
 #define COLLECT_REV_ALIGN       10      // FIRST reverse from dispenser before lowering arm 
@@ -130,8 +128,10 @@ ES_Event_t RunSPILeaderService(ES_Event_t ThisEvent)
     case ES_INIT_GAME:
     {
       /*
-        start-of-game hook
-        follower NavigateService can run initial orientation when CMD_INIT_ORIENT arrives
+       This starts the game and queues the first command to the follower,
+       * CMD_INIT_ORIENT which tells the bot to initially orient to determine 
+       * side. This case also starts the SPI timer to regularly send SPI comm to
+       * the follower
       */
       DB_printf("Queueing command CMD INIT ORIENT\r\n");
       QueueCommand(CMD_INIT_ORIENT);
@@ -142,8 +142,8 @@ ES_Event_t RunSPILeaderService(ES_Event_t ThisEvent)
     case ES_END_GAME:
     {
       /*
-        stop everything
-        servos stop belongs in the service that owns the servos
+       This sends the end game command to the follower and stops the SPI timer
+       * to end all communication to the follower
       */
       (void)XferByte(CMD_END_GAME);
       ES_Timer_StopTimer(SPI_TIMER);
@@ -152,23 +152,31 @@ ES_Event_t RunSPILeaderService(ES_Event_t ThisEvent)
 
     case ES_CMD_REQ:
     {
+      /*
+       This reacts to events posted by other services on the leader PIC to queue
+       * a command to be sent to the follower.
+      */
       uint8_t cmd = (uint8_t)ThisEvent.EventParam;
       QueueCommand(cmd);
       break;
     }
     case ES_ENCODER_TARGET_REACHED:
+      /*
+       Once the target number of pulses have been reached by the encoder service, it
+       * posts an event to the leader SPI Service to send to the follower.
+      */
       QueueCommand(CMD_MOVE_DONE);
       break;
 
     case ES_TIMEOUT:
     {
-      if (ThisEvent.EventParam != SPI_TIMER) break;
-
       /*
-        SPI tick:
-          - if a pending command exists, send it once
-          - otherwise query for follower status
+       This case handles what to do when the SPI timer times out. If there is a 
+       * command to be sent, it changes the state to actively sending a command.
+       * Otherwise, the state becomes a query state where the leader reads in
+       * data from the follower after sending a "query" byte.
       */
+      if (ThisEvent.EventParam != SPI_TIMER) break;
       if (HasPendingCmd)
       {
         curState = LEADER_SEND_PENDING;
@@ -246,15 +254,22 @@ static void InitSPIHardware(void)
   SPIOperate_ReadData(CG_SPI_MODULE);
 }
 
+/*
+ * This function uses the SPI HAL Send8Wait function to transfer data over SPI
+ * communication. It returns the data read in from the follower.
+*/
 static uint8_t XferByte(uint8_t outByte)
 {
     if (outByte!= CMD_QUERY) {
-//        DB_printf("SPILeaderService sending byte: %d\r\n", outByte);
     }
   SPIOperate_SPI1_Send8Wait(outByte);
   return (uint8_t)SPIOperate_ReadData(CG_SPI_MODULE);
 }
 
+/*
+ * This function adds a command to the queue and sets the HasPendingCmd flag to
+ * be true to indicate to the leader that there is a command to be sent.
+*/
 static void QueueCommand(uint8_t cmd)
 {
   /*
@@ -266,6 +281,11 @@ static void QueueCommand(uint8_t cmd)
 }
 
 /*=========================== STATUS HANDLING ============================*/
+/*
+ * This function checks to make sure the command sent by the follower is a real
+ * and existing command. If the command doesn't exist, the leader ignores it and
+ * this function returns false.
+*/
 static bool IsKnownFollowerStatus(uint8_t cmd)
 {
   switch (cmd)
@@ -301,6 +321,12 @@ static bool IsKnownFollowerStatus(uint8_t cmd)
   }
 }
 
+/*
+ * This function responds to valid commands sent by the follower to the leader.
+ * If there is an event that needs to be posted to other leader services in response
+ * to the follower request, cmdEvent.EventType is modified and posted to the
+ * desired service.
+*/
 static void HandleFollowerStatus(uint8_t statusByte)
 {
   /*
@@ -323,7 +349,6 @@ static void HandleFollowerStatus(uint8_t statusByte)
     case CMD_SIDE_FOUND_BLUE:
     {
       // move indicator servo to blue
-//      LATAbits.LATA3 = 0;
       DB_printf("Side indicated: BLUE\r\n");
       cmdEvent.EventType = ES_INDICATE_SIDE;
       cmdEvent.EventParam = FIELD_BLUE;
@@ -339,7 +364,6 @@ static void HandleFollowerStatus(uint8_t statusByte)
     case CMD_SIDE_FOUND_GREEN:
     {
       // move indicator servo to green
-//      LATAbits.LATA3 = 0;
       DB_printf("Side indicated: GREEN\r\n");
       cmdEvent.EventType = ES_INDICATE_SIDE;
       cmdEvent.EventParam = FIELD_GREEN;
@@ -379,7 +403,6 @@ static void HandleFollowerStatus(uint8_t statusByte)
       cmdEvent.EventType = ES_ENCODER_TARGET_ROT;
       cmdEvent.EventParam = ROT_90_PULSES;
       PostEncoderService(cmdEvent);
-//      LATAbits.LATA3 = 1;
       break;
     
     case CMD_ENCODER_FIRST_ALIGN:
@@ -396,7 +419,6 @@ static void HandleFollowerStatus(uint8_t statusByte)
       cmdEvent.EventType = ES_ENCODER_TARGET_STRAIGHT;
       cmdEvent.EventParam = COLLECT_REV_ALIGN;
       PostEncoderService(cmdEvent);
-//      LATAbits.LATA3 = 0;
       break;
 
     case CMD_FIRST_COLLECT_START:
@@ -466,7 +488,6 @@ static void HandleFollowerStatus(uint8_t statusByte)
         cmdEvent.EventType = ES_ENCODER_TARGET_ROT;
         cmdEvent.EventParam = ROT_180_PULSES;
         PostEncoderService(cmdEvent);
-//        LATAbits.LATA3 = 1;
         break;
         
     case CMD_DISPENSE_START:
