@@ -27,7 +27,6 @@
 #define PBCLK_HZ            20000000u
 #define PWM_FREQ_HZ         7000u
 
-/* Timer2 @ 10kHz PWM with prescale 1:1 -> PR2 = 1999 */
 #define T2_PRESCALE_BITS    (0b000u) /* 1:1 */
 #define T2_PRESCALE_VAL     1u
 #define PR2_VALUE           ((PBCLK_HZ / (T2_PRESCALE_VAL * PWM_FREQ_HZ)) - 1u)
@@ -43,31 +42,37 @@
 #define TAPE_CORR_DUTY      10u   // steering correction amount
 #define TAPE_LOST_DUTY      15u   // slow search when tape lost
 
-/* Timer Values */
-#define CHKPT3_FWD                5000u
-#define ROTATE_45_TIME_MS         550u
-#define ROTATE_90_TIME_MS         1100u
-#define ROTATE_FIRST_COLLECT_MS   400u
-#define VEER_AWAY_FROM_WALL       1000u
-#define BACKUP_RAMPUP_MS          500
-#define SEARCH_TIME               10000
-#define TURN_DELAY_PRE_LF         2700 // turn before starting to line follow, 4500 
-#define FIND_T_TIMER_BLOCK        7000
-#define LINE_FOLLOWING_BLOCKING_TIMER   300 // DO NOT CHANGE
-#define BACK_UP_PRE_COLLECT_ACTIVE 4000
-#define BACK_COLLECT_TIME          900
-#define FWD_ADJUST_COLLECT         500
-#define LF_POSTING_DELAY           20
-#define FIND_BUCKET2_FWD           2000
-#define BUCKET2_ROT                1000
-#define T_BACKUP_LF_DELAY          300 // this is so we can start LF laterwhen backing up at dispenser
-#define GRABBER_TIMEOUT            5000
+/* Timer Values  - Nav to dispenser*/
+#define CHKPT3_FWD                      5000u
+#define ROTATE_45_TIME_MS               550u
+#define ROTATE_90_TIME_MS               1100u
+#define ROTATE_FIRST_COLLECT_MS         400u
+#define VEER_AWAY_FROM_WALL             1000u
+#define BACKUP_RAMPUP_MS                500
+#define SEARCH_TIME                     10000
+#define TURN_DELAY_PRE_LF               2700 // turn before starting to line follow, 4500 
+#define FIND_T_TIMER_BLOCK              7000
+#define LINE_FOLLOWING_BLOCKING_TIMER   300 
+#define BACK_UP_PRE_COLLECT_ACTIVE      4000
 
-#define BUCKET2_APPROACH_MS    2600   // SOY  tune this
-#define BUCKET1_APPROACH_MS    1300   // SOY  tune this
+/* Timer Values  - during collect */
+#define BACK_COLLECT_TIME               900
+#define FWD_ADJUST_COLLECT              500
+#define LF_POSTING_DELAY                20
+#define FIND_BUCKET2_FWD                2000
+#define BUCKET2_ROT                     1000
+#define T_BACKUP_LF_DELAY               300 // this is so we can start LF later when backing up at dispenser
+#define GRABBER_TIMEOUT                 5000
+
+/* Timer Values  - during dispense*/
+#define BUCKET2_APPROACH_MS             2600
+#define BUCKET1_APPROACH_MS             1300
 
 
 /*---------------------------- Module Types -------------------------------*/
+/*
+ Overall navigate states
+*/
 typedef enum {
   DEBUG,
   INIT_ORIENT,
@@ -88,18 +93,27 @@ typedef enum {
   FIND_COLLECT
 } NavigateState_t;
 
+/*
+ INIT_ORIENT sub states
+*/
 typedef enum {
   ORIENT_IDLE,
   ORIENT_BEACON_SWEEP,
   ORIENT_DONE
 } InitOrientState_t;
 
+/*
+ COLLECT sub states
+*/
 typedef enum {
   COLLECT_BACK,
   COLLECT_FWD,
   COLLECT_START
 } InitCollectState_t;
 
+/*
+ Tape junction identification
+*/
 typedef enum {
     FIRST,
     MIDDLE,
@@ -117,6 +131,9 @@ typedef enum {
   FIELD_BLUE    = 2
 } Field_t;
 
+/*
+ Line following direction: used to modify line following helper function
+*/
 typedef enum {
     FOLLOW_FWD,
     FOLLOW_REV
@@ -133,7 +150,6 @@ static uint16_t            duty = DUTY_STOP;
 static uint8_t midMoveStage = 0;
 static uint8_t numCollectAdjust = 0;
 
-//static int8_t LineFollowDirection = 1;   // +1 = forward, -1 = reverse
 static bool coalSearchFlag  = 0;
 static bool following = 1;
 static bool collectStarted = 0;
@@ -145,11 +161,6 @@ static bool lookingForT = 0;
 static bool beginfwd = 0;
 
 static TapeStatus_t prevTapeState = NO_TAPE;
-
-/* beacon sweep history (store unique transitions only) */
-#define BEACON_SEQ_MAX 8u
-static BeaconId_t Seq[BEACON_SEQ_MAX];
-static uint8_t SeqLen = 0u;
 
 /*---------------------------- Private Functions --------------------------*/
 static void InitPinsAndPPS(void);
@@ -168,10 +179,6 @@ static void DoRotate(uint16_t rotateParam);
 static void DoTranslate(uint16_t translateParam);
 static void StartTapeDetect(void);
 static void StartBeaconAlignSearch(void);
-
-static void ResetBeaconSequence(void);
-static bool PushBeaconIfNew(BeaconId_t id);
-static Field_t DetermineFieldFromSequence(void);
 
 /* Tape functions */
 static void LineFollow(ES_Event_t ThisEvent, FollowDir_t followDirection);
@@ -193,7 +200,6 @@ bool InitNavigateService(uint8_t Priority)
   field = FIELD_UNKNOWN;
   duty = DUTY_STOP;
 
-  ResetBeaconSequence();
   StopMotors();
 
   DB_printf("Navigate Service: init done\r\n");
@@ -247,7 +253,6 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
                 DB_printf("Starting search for beacons to determine side\r\n");
                 orientState = ORIENT_BEACON_SWEEP;
                 field = FIELD_UNKNOWN;
-                ResetBeaconSequence();
                 StartBeaconAlignSearch();
                 PostBeaconService(startBeaconSearch);
                 ES_Timer_InitTimer(BEACON_TIMER, SEARCH_TIME);
@@ -451,12 +456,11 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
                 }
             }
         }
-        /*I JUST CHANGED THIS !!!!!*/
+        
       if (ThisEvent.EventType == ES_T_DETECTED && lookingForT )
-//      if (ThisEvent.EventType == ES_T_DETECTED && ThisEvent.EventParam == FULL_T && lookingForT )
       {
-        // rotate clockwise to face away from dispenser, start timer before line following
-//        DoRotate(PackRotateParam(ROT_90, ROT_CW));
+        /* rotate clockwise to face away from dispenser, start timer 
+         * before line following */
         DB_printf("T found!! veering initially to start turning clockwise\r\n");
         following = 0;
         cmdEvent.EventParam = CMD_ROT_CW_180;
@@ -479,20 +483,6 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
       break;
     }
     /* END INIT COAL DISPNESE SEARCH - NOW FACING AWAY FROM DISPENSER */
-    
-//    case COLLECT_POST_T: {
-//        if (ThisEvent.EventType == ES_TAPE_DETECT && following)
-//        {
-//            LineFollow(ThisEvent, FOLLOW_FWD);
-//            prevTapeState = ThisEvent.EventParam;
-//        }
-//        
-//        if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == MOTOR_TIMER) {
-//            curState = START_LOOKING_FOR_T;
-//        }
-//        
-//        break;
-//    }
     
     case START_LOOKING_FOR_T: {
         if (ThisEvent.EventType == ES_TIMEOUT) {
@@ -550,8 +540,6 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
                 /* can start moving forward! */
                 DB_printf("Timer expired for backup - now moving forward. Posting start collect\r\n");
                 collectStarted = 1; // mark collect as started
-//                SetMotor1(-(int16_t)DUTY_TRANS_HALF*1.3);
-//                SetMotor2(-(int16_t)DUTY_TRANS_HALF*0.7);
                 followDir = FOLLOW_FWD;
                 cmdEvent.EventParam = CMD_FIRST_COLLECT_START;
                 PostSPIFollowerService(cmdEvent);
@@ -566,28 +554,6 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         }
         /* END TIMER RESPONSES */
         
-//        if (ThisEvent.EventType == ES_T_DETECTED && !collectStarted) {
-//            if (ThisEvent.EventParam == LEFT_CORNER) {
-//                /* Once the T has been detected, bot moves back and lowers arm
-//                 I added this flag because I only want this code to run once */
-//                /* needs to move back bc too close*/
-//                following = 1;
-//                DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_REV));
-//                followDir = FOLLOW_REV;
-//                cmdEvent.EventParam = CMD_ALIGN_COLLECT;
-//                PostSPIFollowerService(cmdEvent);
-//            }
-//            
-//            if (ThisEvent.EventParam == FULL_T) {
-//                /* can start moving forward!*/
-//                collectStarted = 1; // mark collect as started
-//                following = 1;
-//                followDir = FOLLOW_FWD;
-//                cmdEvent.EventParam = CMD_FIRST_COLLECT_START;
-//                PostSPIFollowerService(cmdEvent);
-//                lookingForT = 1;
-//                curState = COLLECT_ACTIVE;
-//            }
         /* Line follow for  initially moving back from the dispenser */
         if (ThisEvent.EventType == ES_TAPE_DETECT && following)
         {
@@ -613,18 +579,19 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
                 (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == BUCKET_TIMER && collectState == COLLECT_FWD && beginfwd))
         {
           /* we are looking for the left corner MAYBE change to FULL_T */
-          /* need to start grabbing here! */
+          /* need to start grabbing here! these adjustments help us align fully
+           * with the dispenser */
             if (numCollectAdjust <3) {
                 DB_printf("adjusting collect fwd alignment a bit!\r\n");
                 numCollectAdjust ++;
                 beginfwd = 0;
                 if (numCollectAdjust == 1) {
                     ES_Timer_InitTimer(BEACON_TIMER, FWD_ADJUST_COLLECT*2);
-                    SetMotor1((int16_t)-DUTY_TRANS_HALF*1.2); // was multiplied by 1.5
+                    SetMotor1((int16_t)-DUTY_TRANS_HALF*1.2);
                     SetMotor2((int16_t)-DUTY_TRANS_HALF);
                 } else {
                     ES_Timer_InitTimer(BEACON_TIMER, FWD_ADJUST_COLLECT);
-                    SetMotor1((int16_t)-DUTY_TRANS_HALF*1.2); // was multiplied by 1.5
+                    SetMotor1((int16_t)-DUTY_TRANS_HALF*1.2);
                     SetMotor2((int16_t)-DUTY_TRANS_HALF);
                 }
                 
@@ -638,6 +605,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
             break;
         }
         
+        /* one the backup timer expires, tell collect service to move the arm up */
         if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == MOTOR_TIMER
                 && collectState == COLLECT_BACK) {
             DB_printf("telling collect to move arm up\r\n");
@@ -648,6 +616,8 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
             break;
         }
         
+        /* if the T hasn't been detected after awhile, just move on with grabbing
+         * anyways to avoid getting stuck */
         if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == BEACON_TIMER
                 && collectState == COLLECT_FWD) {
             DB_printf("telling collect to grab from timer!\r\n");
@@ -688,17 +658,10 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
             following = 1;
             collectState = COLLECT_BACK;
             followDir = FOLLOW_REV;
-        }
-        
-//        /* This is for the backup ramp up - moving to full backup speed */
-//        if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == MOTOR_TIMER) {
-//            SetMotor1((int16_t)DUTY_TRANS_FULL*1.2);
-//            SetMotor2((int16_t)DUTY_TRANS_FULL*0.5);
-//            ES_Timer_StopTimer(MOTOR_TIMER);
-//        }
-        
+        }    
         /* END EVENTS ORIGINATING FROM COLLECT SERVICE */
         
+        /* Line following function for fwd and back */
         if (ThisEvent.EventType == ES_TAPE_DETECT && following)
         {
           if (correctingForLF) {
@@ -708,7 +671,8 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
           }
         }
               
-           
+      
+      /* once the collecter is done collecting, find bucket for dispense */
       if (ThisEvent.EventType == ES_FIND_BUCKET)
         {
           DB_printf("exiting collect\r\n");
@@ -727,7 +691,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
           break;
         }
 
-        break; // MUST ADD HERE TO NOT SKIP TO dispense!!!!
+        break;
         }
 
     case FIRST_DISPENSE:
@@ -735,8 +699,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
             
         if (!bucketApproachActive)
         {
-            /* We want to start line following backwards here*/
-//          ES_Timer_StopTimer(BUCKET_TIMER);
+          /* We want to start line following backwards here*/
           DB_printf("FIRST bucket: starting timed approach\r\n");
           bucketApproachActive = true;
           dispenseRequested = false;
@@ -758,7 +721,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
           dispenseRequested = false;
           bucketApproachActive = false;   // reset for next approach
 
-          /* begin moving toward middle bucket (your existing behavior) */
+          /* begin moving toward middle bucket */
           followDir = FOLLOW_FWD;
           following = 0;
           DoTranslate(PackTranslateParam(TRANS_TAPE, DIR_FWD));
@@ -799,22 +762,6 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         }
         break;
       }
-
-//      case INIT_FIND_SECOND_BUCKET:
-//      {
-//          if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == MOTOR_TIMER) {
-//              // needs to start turning right for dispensing into second bucket
-//              DoRotate(PackRotateParam(ROT_90, ROT_CCW));
-//              ES_Timer_InitTimer(BEACON_TIMER, BUCKET2_ROT);
-//          }
-//          
-//          if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == BEACON_TIMER) {
-//              DoTranslate(TRANS_HALF, DIR_FWD);
-//              ES_Timer_InitTimer(BUCKET_TIMER, 1000);
-//          }
-//          
-//      
-//    }
       
    case INIT_FIND_MIDDLE:
 {
@@ -829,7 +776,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         following = 0;
         ES_Timer_StopTimer(MOTOR_TIMER);
 
-        /* turn 90 degrees right (your existing motor pattern) */
+        /* turn 90 degrees right */
         SetMotor1((int16_t)DUTY_TRANS_HALF);
         SetMotor2(-(int16_t)(DUTY_TRANS_HALF * 1.4));
         ES_Timer_InitTimer(MOTOR_TIMER, ROTATE_90_TIME_MS);
@@ -844,23 +791,6 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         LineFollow(ThisEvent, FOLLOW_FWD);
       }
     }
-//      if (ThisEvent.EventType == ES_T_DETECTED)
-////      if (ThisEvent.EventType == ES_T_DETECTED && ThisEvent.EventParam == FULL_T)
-//      {
-//        DB_printf("MIDDLE: found T, starting 2-turn maneuver\r\n");
-//
-//        /* stage 0: do first 90-degree turn right */
-//        midMoveStage = 0;
-//        following = 0;
-//        ES_Timer_StopTimer(MOTOR_TIMER);
-//
-//        /* turn 90 degrees right (your existing motor pattern) */
-//        SetMotor1((int16_t)DUTY_TRANS_HALF);
-//        SetMotor2(-(int16_t)(DUTY_TRANS_HALF * 1.4));
-//        ES_Timer_InitTimer(MOTOR_TIMER, ROTATE_90_TIME_MS);
-//
-//        curState = MOVE_TO_MID_BUCKET;
-//      }
       break;
     }
 
@@ -886,7 +816,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
       if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == BEACON_TIMER) {
         DB_printf("Begin following for middle bucket\r\n");
         following = 1;
-        //beging following!!
+        //begin following!!
       }
       
       if (ThisEvent.EventType == ES_TIMEOUT && ThisEvent.EventParam == LF_POSTING_TIMER) {
@@ -904,7 +834,6 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         }
       }
       
-      // if (ThisEvent.EventType == ES_T_DETECTED && midMoveStage == 1)
      if (ThisEvent.EventType == ES_T_DETECTED && ThisEvent.EventParam == FULL_T && midMoveStage == 1)
       {
         DB_printf("MIDDLE: second T found, doing second 90\r\n");
@@ -912,9 +841,7 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
         following = 0;
         ES_Timer_StopTimer(MOTOR_TIMER);
 
-        /* turn 90 right (your intended motor pattern, fixed syntax) */
-//        SetMotor1(-(int16_t)DUTY_TRANS_HALF*1.4);
-//        SetMotor2((int16_t)(DUTY_TRANS_HALF));
+        /* turn 90 right */
         SetMotor1((int16_t)DUTY_TRANS_HALF);
         SetMotor2(-(int16_t)(DUTY_TRANS_HALF * 1.4));
         ES_Timer_InitTimer(MOTOR_TIMER, ROTATE_90_TIME_MS*1.3);
@@ -1051,6 +978,8 @@ ES_Event_t RunNavigateService(ES_Event_t ThisEvent)
 }
 
 /*=========================== INIT HELPERS ============================*/
+/* This function initializes the pins on the follower as outputs/inputs depending
+ * on their intended use */
 static void InitPinsAndPPS(void)
 {
   /* motor pins as digital outputs (update these mappings if motor wiring changes) */
@@ -1068,6 +997,7 @@ static void InitPinsAndPPS(void)
   RPB2Rbits.RPB2R = PPS_FN_PWM;
 }
 
+/* This function initializes timer 2 to be used for motor PWM control */
 static void InitTimer2ForPWM(void)
 {
   T2CON = 0;
@@ -1078,6 +1008,7 @@ static void InitTimer2ForPWM(void)
   T2CONbits.ON = 1;
 }
 
+/* This function sets up OC channels to be used for motor control */
 static void InitOCsForPWM(void)
 {
   /* all OCs use Timer2 (OCTSEL=0) and PWM mode (OCM=0b110) */
@@ -1087,6 +1018,8 @@ static void InitOCsForPWM(void)
   OC4CON = 0; OC4R = 0; OC4RS = 0; OC4CONbits.OCTSEL = 0; OC4CONbits.OCM = 0b110; OC4CONbits.ON = 1;
 }
 
+/* This function declares an event to be sent to 
+ * SPIFollowerService --> SPILeaderService --> DispenseService */
 static void SendDispenseStart(void)
 {
   ES_Event_t e;
@@ -1096,12 +1029,14 @@ static void SendDispenseStart(void)
 }
 
 /*=========================== MOTOR OUTPUT ============================*/
+/* This converts duty to a scaled version of PR2 to set the motors to */
 static uint16_t DutyPercentToOCrs(uint16_t dutyPercent)
 {
   if (dutyPercent > 100u) dutyPercent = 100u;
   return (uint16_t)(((uint32_t)dutyPercent * (uint32_t)(PR2)) / 100u);
 }
 
+/* This function stops the motors by setting all OC channels to 0 */
 static void StopMotors(void)
 {
   DB_printf("Stopping motors\r\n");
@@ -1111,6 +1046,7 @@ static void StopMotors(void)
   OC4RS = 0;
 }
 
+/* This function sets the right motor with the desired duty cycle and direction*/
 static void SetMotor1(int16_t dutySignedPercent)
 //  right motor
 {
@@ -1134,12 +1070,12 @@ static void SetMotor1(int16_t dutySignedPercent)
   }
 }
 
+/* This function sets the left motor with the desired duty cycle and direction */
 static void SetMotor2(int16_t dutySignedPercent)
 {
   uint16_t mag = (dutySignedPercent < 0) ? (uint16_t)(-dutySignedPercent) : (uint16_t)dutySignedPercent;
   uint16_t ocrs = DutyPercentToOCrs(mag);
   DB_printf("Duty*PR2: %d\r\n", ocrs);
-//  DB_printf("Motor2 Duty: %d\r\n", dutySignedPercent);
 
   if (dutySignedPercent > 0)
   {
@@ -1159,6 +1095,8 @@ static void SetMotor2(int16_t dutySignedPercent)
 }
 
 /*=========================== MOTION PRIMITIVES ============================*/
+/* This sets the left and right motor with the same duty cycle to translate
+ forwards straight or backwards straight */
 static void DoTranslate(uint16_t translateParam)
 {
   TransSpeed_t spd;
@@ -1192,6 +1130,8 @@ static void DoTranslate(uint16_t translateParam)
   }
 }
 
+/* This function sets the left and right motor with the opposite sign duty cycle
+ * to rotate the bot either CCW or CW */
 static void DoRotate(uint16_t rotateParam)
 {
   RotAngle_t ang;
@@ -1211,12 +1151,15 @@ static void DoRotate(uint16_t rotateParam)
   }
 }
 
+/* This starts tape detecting at the specified tape detect speed */
 static void StartTapeDetect(void)
 {
   SetMotor1((int16_t)DUTY_TRANS_HALF);
   SetMotor2((int16_t)DUTY_TRANS_HALF);
 }
 
+/* This implements simple control to enable the robot to follow a line using
+ * 5 line sensors and events posted to this service from the ReflectiveSenseService */
 static void LineFollow(ES_Event_t ThisEvent, FollowDir_t followDirection)
 {
     int16_t leftDuty  = 0;
@@ -1287,13 +1230,8 @@ static void LineFollow(ES_Event_t ThisEvent, FollowDir_t followDirection)
                motorSign = 1;
            }
            
-//           if (correctingForLF) {
-//            correctingForLF = 0;
             SetMotor1(leftDuty  * motorSign);
             SetMotor2(rightDuty * motorSign);
-//            ES_Timer_InitTimer(LF_POSTING_TIMER, LF_POSTING_DELAY);
-//           }
-
             break;
         }
 
@@ -1302,120 +1240,9 @@ static void LineFollow(ES_Event_t ThisEvent, FollowDir_t followDirection)
     }
 }
 
+/* This function sets the bot to rotate CCW in-place sweep to detect beacons */
 static void StartBeaconAlignSearch(void)
 {
-  /* CCW in-place sweep to collect beacon ordering */
   SetMotor1(-(int16_t)DUTY_SEARCH);
   SetMotor2((int16_t)DUTY_SEARCH);
-}
-
-/*=========================== BEACON ORDER LOGIC ============================*/
-static void ResetBeaconSequence(void)
-{
-  for (uint8_t i = 0u; i < BEACON_SEQ_MAX; i++) Seq[i] = BEACON_ID_NONE;
-  SeqLen = 0u;
-}
-
-static bool PushBeaconIfNew(BeaconId_t id)
-{
-  if (SeqLen > 0u)
-  {
-    if (Seq[SeqLen - 1u] == id) return false;
-  }
-
-  if (SeqLen < BEACON_SEQ_MAX)
-  {
-    Seq[SeqLen++] = id;
-  }
-  else
-  {
-    /* shift left and append */
-    for (uint8_t i = 1u; i < BEACON_SEQ_MAX; i++) Seq[i - 1u] = Seq[i];
-    Seq[BEACON_SEQ_MAX - 1u] = id;
-  }
-  return true;
-}
-
-static bool MatchCycle(const BeaconId_t *cycle4, const BeaconId_t *obs, uint8_t nObs)
-{
-  /* allow any rotation offset of the 4-cycle */
-  for (uint8_t offset = 0u; offset < 4u; offset++)
-  {
-    bool ok = true;
-    for (uint8_t k = 0u; k < nObs; k++)
-    {
-      BeaconId_t expect = cycle4[(offset + k) & 0x03u];
-      if (obs[k] != expect)
-      {
-        ok = false;
-        break;
-      }
-    }
-    if (ok) return true;
-  }
-  return false;
-}
-
-static Field_t DetermineFieldFromSequence(void)
-{
-  /*
-    Green field CCW cycle: B L R G
-    Blue  field CCW cycle: G R L B
-  */
-  if (SeqLen < 5u) return FIELD_UNKNOWN;
-
-  BeaconId_t last5[5];
-  for (uint8_t i = 0u; i < 5u; i++)
-  {
-    last5[i] = Seq[SeqLen - 5u + i];
-  }
-
-  const BeaconId_t greenCycle[4] = { BEACON_ID_B, BEACON_ID_L, BEACON_ID_R, BEACON_ID_G };
-  const BeaconId_t blueCycle[4]  = { BEACON_ID_G, BEACON_ID_R, BEACON_ID_L, BEACON_ID_B };
-
-  bool greenOK = MatchCycle(greenCycle, last5, 5u);
-  bool blueOK  = MatchCycle(blueCycle,  last5, 5u);
-
-  if (greenOK && !blueOK) return FIELD_GREEN;
-  if (blueOK  && !greenOK) return FIELD_BLUE;
-
-  return FIELD_UNKNOWN;
-}
-
-static void SquareUpOnT(ES_Event_t ThisEvent)
-{
-    switch (ThisEvent.EventType)
-    {  
-     
-        case ES_T_DETECTED:
-        {
-            switch (ThisEvent.EventParam)
-            {
-                case FULL_T:
-                    // creep forward
-                    SetMotor1(-(int16_t)DUTY_TRANS_TAPE_DET);
-                    SetMotor2(-(int16_t)DUTY_TRANS_TAPE_DET);
-                    break;
-
-                case RIGHT_CORNER:
-                    // rotate LEFT (CCW)
-                    SetMotor1((int16_t)DUTY_ROTATE);      // left backward
-                    SetMotor2(-(int16_t)DUTY_ROTATE);     // right forward
-                    break;
-
-                case LEFT_CORNER:
-                    // rotate RIGHT (CW)
-                    SetMotor1(-(int16_t)DUTY_ROTATE);     // left forward
-                    SetMotor2((int16_t)DUTY_ROTATE);      // right backward
-                    break;
-
-                default:
-                    break;
-            }
-            break;
-        }
-
-        default:
-            break;
-    }
 }
