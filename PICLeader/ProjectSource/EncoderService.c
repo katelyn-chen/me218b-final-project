@@ -11,10 +11,6 @@
 
  Notes
 
- History
- When           Who     What/Why
- -------------- ---     --------
- 01/16/12 09:58 jec      began conversion from EncoderFSM.c
 ****************************************************************************/
 /*----------------------------- Include Files -----------------------------*/
 /* include header files for this state machine as well as any machines at the
@@ -30,12 +26,6 @@
 #include "PIC32_SPI_HAL.h"
 #include "SPILeaderService.h"
 /*----------------------------- Module Defines ----------------------------*/
-#define COUNTS_PER_REV 12.0
-#define GEAR_RATIO     27.0   // needs to be verified
-#define WHEEL_DIAMETER 0.1    // meters (10 cm)
-#define PI 3.14159265359
-#define ENCODER_CHECK_MS 20
-#define KP 0.1f
 
 /*----------------------------- Module Types ----------------------------*/
 
@@ -167,18 +157,29 @@ ES_Event_t RunEncoderService(ES_Event_t ThisEvent)
     case ENCODER_IDLE:
       switch(ThisEvent.EventType)
       {
+        /*
+          * We ended up only tracking the left wheel instead of taking an average
+         * of the left/right
+        */
         case ES_ENCODER_TARGET_STRAIGHT:
+        /* This is in the case the navigate service on the follower requests
+         * a straight motion to be tracked by the encoder service. This can
+         * be forward or backwards.
+         */
           GetLeftEncoder();
           GetRightEncoder();
 
           TargetLeft  =  ThisEvent.EventParam;
-//          TargetRight = StartRightCount + ThisEvent.EventParam;
           encoderMode = ENCODER_STRAIGHT;
           ES_Timer_InitTimer(ENCODER_TIMER, ENCODER_CHECK_MS);
           MoveActive = true;
           break;
 
         case ES_ENCODER_TARGET_ROT:
+        /* This is in the case the navigate service on the follower requests
+         * a rotating motion to be tracked by the encoder service. This can
+         * be clockwise or counterclockwise.
+         */
           GetLeftEncoder();
           GetRightEncoder();
           
@@ -228,7 +229,6 @@ ES_Event_t RunEncoderService(ES_Event_t ThisEvent)
       }
       if (ThisEvent.EventType == ES_ENCODER_PULSE) {
          
-        //if (MoveActive) {
         int32_t leftTravel  = LeftCount  - StartLeftCount;
         int32_t rightTravel = RightCount - StartRightCount;
 
@@ -250,11 +250,7 @@ ES_Event_t RunEncoderService(ES_Event_t ThisEvent)
           PostSPILeaderService(doneEvent);
           ES_Timer_StopTimer(ENCODER_TIMER);
           encoderMode = ENCODER_IDLE;
-        } //else {
-          //DB_printf("Starting timer \r\n");
-         // ES_Timer_InitTimer(ENCODER_TIMER, ENCODER_CHECK_MS);
-        //}
-       // }
+        } 
       }
       break;
     }
@@ -267,25 +263,13 @@ ES_Event_t RunEncoderService(ES_Event_t ThisEvent)
 /*
   Pin Hardware Mapping:
     RB11 -> IC3 -> LeftEncoderA
-    RB9  -> LeftEncoderB
-    RB13 -> IC1 -> RightEncoderA
-    RB3  -> RightEncoderB --> change to this one
-
+    RB3  -> IC1 -> RightEncoderA
 */
-
+// Sets the TRIS bits = 1 and makes pins digital
 void InitPinHardware(void)
 {
-  // Sets the TRIS bits = 1 and makes pins digital
   PIN_MapPinInput(LeftEncoderA);
-//  PIN_MapPinInput(LeftEncoderB);
   PIN_MapPinInput(RightEncoderA);
-//  PIN_MapPinInput(RightEncoderB);
-//  TRISBbits.TRISB5 = 1;
-
-  // PPS Mapping
-  //IC3R = 0b0011;
-  //IC1R = 0b0011;
-  
 }
 
 /* This function sets up timer 3 for interrupts to be used as input control
@@ -297,11 +281,8 @@ void InitTimer3() {
     T3CONbits.TCKPS = 0b0011;    // choosing 1:8 prescale value
     TMR3 = 0;                    // clearing timer register
     PR3 = 0xFFFF;
-//    IPC3bits.T3IP = 5;
     IFS0CLR = _IFS0_T3IF_MASK;  // clearing interrupt flag
-//    IEC0SET = _IEC0_T3IE_MASK;
     T3CONbits.ON = 1;          // enable timers
-
 }
 
 /* This function sets up interrupt capture 1
@@ -334,11 +315,10 @@ void InitIC3() {
   IC3CONbits.ICM = 0b0010;     // capture every falling edge
   IFS0CLR = _IFS0_IC3IF_MASK;  // clear flag
   IEC0SET = _IEC0_IC3IE_MASK;  // enable interrupt
-//  IC3R = 0b0011; // RB11
   IPC3bits.IC3IP = 7;          // priority (must match IPL7)
   IPC3bits.IC3IS = 0;          // sub-priority
   TRISBbits.TRISB13 = 1;
-  IC3R = 0b0011; // RB11
+  IC3R = 0b0011;               // RB11
   IC3CONbits.ON = 1;           // enable module
 }
 
@@ -374,7 +354,6 @@ void GetRightEncoder() {
 //    } else {
 //        LeftCount--;    // Reverse
 //    }
-//    DB_printf(" %d \r\n", capture);
     IFS0CLR = _IFS0_IC3IF_MASK;
 
     ES_Event_t encoderEvent;
@@ -395,8 +374,6 @@ void GetRightEncoder() {
      {
        IFS0CLR = _IFS0_T3IF_MASK;
      }
-//        DB_printf(" %d \r\n", capture);
-
     
     // Read B channel
 //    if(PORTBbits.RB3 == 1) {
