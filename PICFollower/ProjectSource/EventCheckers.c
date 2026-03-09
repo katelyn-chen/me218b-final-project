@@ -123,40 +123,6 @@ bool Check4Keystroke(void)
   return false;
 }
 
-
-
-// check if ultrasonic distance has been measured -- potentially switch to service with IC?
-//bool Check4Wall(void){
-//    bool ReturnVal = false; 
-////    bool CurrentEchoState = PIN_ReadDigitalPIC32Pin(UltrasonicEcho); // Read the current state of the Echo pin
-//    static bool LastEchoState = 0;
-//    static uint8_t TimeAtRise = 0;
-//    
-//    if (CurrentEchoState != LastEchoState) {
-//        if (CurrentEchoState == 1) {
-//            // start timer when echo is high (start of pulse)
-//            TimeAtRise = ES_Timer_GetTime();
-//        } else {
-//            // echo low, calculate pulse width and convert to distance
-//            uint32_t TimeDelta = ES_Timer_GetTime() - TimeAtRise;
-//            
-//            // assuming 1 tick = 1 microsecond
-//            uint16_t DistanceCM = (uint16_t)(TimeDelta / 58);
-//
-//            ES_Event_t newEvent;
-//            newEvent.EventType = ES_NEW_DIST; 
-//            newEvent.EventParam = DistanceCM;
-//            
-//            ES_PostAll(newEvent);
-//            
-//            ReturnVal = true;
-//        }
-//    }
-//    LastEchoState = CurrentEchoState;
-//    return ReturnVal;
-//}
-
-
 /*
 #define TapeSensor1 SPI_RPB4
 #define TapeSensor2 SPI_RPB5
@@ -235,7 +201,6 @@ bool Check4IRDistance (void) {
         ReturnVal = true;
         ES_Event_t NewEvent;
         NewEvent.EventType = ES_IR_TRIGGER;
-//        DB_printf("IR sensor triggered \r\n");
         PostNavigateService(NewEvent);
     }
     LastDistanceState = CurrDistanceState;
